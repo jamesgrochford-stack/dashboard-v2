@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Nutrition</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --blue: #7DD3FC;
+  --purple: #B08AF0;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #050506;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  min-height: 100vh; position: relative; overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.16), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
+  filter: blur(40px); pointer-events: none; z-index: -2;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -1;
+}
+@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
+
+.page { max-width: 760px; margin: 0 auto; }
+
+.nt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.dash-title {
+  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.nt-head-date { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-tertiary); white-space: nowrap; }
+.nt-head-sub { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 20px; }
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
+/* ===== shared card ===== */
+.card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.card-title { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
+.card-title-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); }
+.card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+.card-badge { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--text-secondary); background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 999px; }
+
+/* ===== post-training checklist ===== */
+.rest-note { text-align: center; padding: 16px 0; opacity: 0.55; }
+.rest-note-title { font-size: 13.5px; font-weight: 600; color: var(--text-secondary); }
+.card.is-rest { opacity: 0.7; }
+.check-item { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.check-item:last-child { border-bottom: none; padding-bottom: 0; }
+.check-item:first-child { padding-top: 0; }
+.check-box { flex: none; width: 23px; height: 23px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28); position: relative; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+.check-box.done { background: var(--success); border-color: var(--success); }
+.check-box.done::after { content: ''; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.check-label { flex: 1; font-size: 13.5px; color: var(--text-primary); cursor: pointer; }
+.check-label.done { color: var(--text-tertiary); text-decoration: line-through; }
+.undo-btn { flex: none; font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); background: none; border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-family: inherit; }
+.undo-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.3); }
+
+/* ===== fluid tracker ===== */
+.fluid-headline { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.fluid-total { font-size: 42px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; }
+.fluid-total span { font-size: 16px; color: var(--text-tertiary); font-weight: 500; }
+.fluid-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; margin: 12px 0 16px; }
+.fluid-bar-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width 0.4s ease; }
+.fluid-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.fluid-bd-item { text-align: center; padding: 9px 4px; border-radius: 10px; background: rgba(255,255,255,0.03); }
+.fluid-bd-val { font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.fluid-bd-label { font-size: 9.5px; color: var(--text-tertiary); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+.fluid-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.fluid-btn { flex: 1; min-width: 100px; padding: 11px 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text-primary); font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+.fluid-btn:hover { background: rgba(255,255,255,0.09); }
+.fluid-reset { width: 100%; padding: 9px; border-radius: 10px; border: 1px dashed rgba(255,255,255,0.14); background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+.fluid-reset:hover { color: var(--danger); border-color: rgba(255,107,107,0.35); }
+
+/* ===== meals ===== */
+.meal-food-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.meal-food-btn { flex: none; padding: 9px 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.meal-food-btn:hover { background: rgba(255,255,255,0.09); color: var(--text-primary); }
+.meal-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 6px; }
+.meal-item-main { flex: 1; min-width: 0; }
+.meal-item-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.meal-item-macro { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+.meal-del { flex: none; background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 17px; padding: 0 2px; line-height: 1; }
+.meal-del:hover { color: var(--danger); }
+.meal-totals { display: flex; gap: 10px; margin-top: 14px; }
+.meal-total-box { flex: 1; text-align: center; padding: 12px 8px; border-radius: 12px; background: rgba(255,255,255,0.04); }
+.meal-total-val { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+.meal-total-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 4px; }
+.empty-note { text-align: center; padding: 12px 0; font-size: 12.5px; font-style: italic; color: var(--text-tertiary); }
+
+/* ===== protein target ===== */
+.protein-headline { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.protein-num { font-size: 28px; font-weight: 800; color: var(--text-primary); }
+.protein-num span { font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
+.protein-bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.protein-bar-fill { height: 100%; border-radius: 5px; transition: width 0.4s ease, background 0.3s ease; }
+
+/* ===== supplements ===== */
+.supp-add-form { display: none; gap: 8px; margin-top: 10px; }
+.supp-add-form.show { display: flex; }
+.supp-add-form input { flex: 1; padding: 9px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; }
+.supp-add-btn { width: 100%; margin-top: 10px; padding: 10px; border: 1px dashed rgba(255,255,255,0.16); border-radius: 10px; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.supp-add-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.3); }
+.supp-save-btn { flex: none; padding: 9px 16px; border: 0; border-radius: 10px; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+
+@media (max-width: 480px) {
+  .card { padding: 16px; }
+  .fluid-breakdown { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="nt-head">
+    <h1 class="dash-title">Nutrition</h1>
+    <div class="nt-head-date" id="headDate">—</div>
+  </div>
+  <div class="nt-head-sub" id="headDayType">—</div>
+
+  <!-- POST-TRAINING CHECKLIST -->
+  <div class="card" id="postrainCard">
+    <div class="card-title"><span class="card-title-label">Post-Training</span></div>
+    <div id="postrainList"></div>
+  </div>
+
+  <!-- FLUID TRACKER -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Fluid Tracker</span></div>
+    <div class="fluid-headline">
+      <div class="fluid-total" id="fluidTotal">0<span> / 2.5L</span></div>
+    </div>
+    <div class="fluid-bar"><div class="fluid-bar-fill" id="fluidBarFill"></div></div>
+    <div class="fluid-breakdown" id="fluidBreakdown"></div>
+    <div class="fluid-btns">
+      <button type="button" class="fluid-btn" data-type="water" data-amt="250">Water +250ml</button>
+      <button type="button" class="fluid-btn" data-type="milk" data-amt="250">Milk +250ml</button>
+      <button type="button" class="fluid-btn" data-type="oj" data-amt="250">OJ +250ml</button>
+      <button type="button" class="fluid-btn" data-type="proteinMilk" data-amt="330">Protein milk +330ml</button>
+    </div>
+    <button type="button" class="fluid-reset" id="fluidResetBtn">Reset today's fluids</button>
+  </div>
+
+  <!-- MEALS -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Meals</span></div>
+    <div class="meal-food-grid" id="mealFoodGrid"></div>
+    <div id="mealList"></div>
+    <div class="meal-totals">
+      <div class="meal-total-box"><div class="meal-total-val" id="mealTotalCal">0</div><div class="meal-total-label">Calories</div></div>
+      <div class="meal-total-box"><div class="meal-total-val" id="mealTotalProtein">0g</div><div class="meal-total-label">Protein</div></div>
+    </div>
+  </div>
+
+  <!-- PROTEIN TARGET -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Protein Target</span></div>
+    <div class="protein-headline"><div class="protein-num"><span id="proteinCurrent">0</span><span>g / 140g</span></div></div>
+    <div class="protein-bar"><div class="protein-bar-fill" id="proteinBarFill"></div></div>
+  </div>
+
+  <!-- SUPPLEMENTS -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Supplements</span></div>
+    <div id="suppList"></div>
+    <div class="supp-add-form" id="suppAddForm">
+      <input type="text" id="suppNameInput" placeholder="Supplement name" maxlength="40" autocomplete="off">
+      <button type="button" class="supp-save-btn" id="suppSaveBtn">Save</button>
+    </div>
+    <button type="button" class="supp-add-btn" id="suppAddBtn">+ Add supplement</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  function loadJSON(k, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(k)); return (v == null ? fallback : v); } catch (e) { return fallback; }
+  }
+  function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayKey() { return dateKey(new Date()); }
+  function uid() { return 'nt' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  // ============================================================
+  // HEADER + day type
+  // ============================================================
+  const TRAINING_DOWS = [1, 2, 4, 6]; // Mon, Tue, Thu, Sat
+  function isTrainingDay() { return TRAINING_DOWS.indexOf(new Date().getDay()) !== -1; }
+  function renderHeader() {
+    const now = new Date();
+    $('headDate').textContent = now.toLocaleDateString('en-IE', { weekday: 'long', month: 'short', day: 'numeric' });
+    $('headDayType').textContent = isTrainingDay() ? 'Training Day' : 'Rest Day';
+  }
+
+  // ============================================================
+  // POST-TRAINING CHECKLIST
+  // ============================================================
+  const POSTRAIN_ITEMS = [
+    { id: 'proteinMilk', label: 'Protein milk — immediately after session' },
+    { id: 'nomadicYoghurt', label: 'Nomadic yoghurt — within 30 minutes' },
+    { id: 'rehydrate', label: 'Rehydrate — minimum 500ml water in first hour' },
+  ];
+  function postrainKey() { return 'nt:postrain:' + todayKey(); }
+  function renderPostrain() {
+    const card = $('postrainCard');
+    const wrap = $('postrainList');
+    if (!isTrainingDay()) {
+      card.classList.add('is-rest');
+      wrap.innerHTML = '<div class="rest-note"><div class="rest-note-title">Rest day — no post-training nutrition needed</div></div>';
+      return;
+    }
+    card.classList.remove('is-rest');
+    const state = loadJSON(postrainKey(), {});
+    wrap.innerHTML = '';
+    POSTRAIN_ITEMS.forEach(item => {
+      const on = !!state[item.id];
+      const row = document.createElement('div');
+      row.className = 'check-item';
+      row.innerHTML =
+        '<span class="check-box' + (on ? ' done' : '') + '"></span>' +
+        '<span class="check-label' + (on ? ' done' : '') + '">' + esc(item.label) + '</span>' +
+        (on ? '<button type="button" class="undo-btn">Undo</button>' : '');
+      const toggle = () => {
+        const st = loadJSON(postrainKey(), {});
+        st[item.id] = !st[item.id];
+        saveJSON(postrainKey(), st); // instant local write; sync.js pushes to Supabase in the background
+        renderPostrain();
+      };
+      row.querySelector('.check-box').addEventListener('click', toggle);
+      row.querySelector('.check-label').addEventListener('click', toggle);
+      const undoBtn = row.querySelector('.undo-btn');
+      if (undoBtn) undoBtn.addEventListener('click', toggle);
+      wrap.appendChild(row);
+    });
+  }
+
+  // ============================================================
+  // FLUID TRACKER
+  // ============================================================
+  const FLUID_TYPES = [
+    { id: 'water', label: 'Water' },
+    { id: 'milk', label: 'Milk' },
+    { id: 'oj', label: 'OJ' },
+    { id: 'proteinMilk', label: 'Protein milk' },
+  ];
+  function fluidKey() { return 'nt:fluid:' + todayKey(); }
+  function fluidTarget() { return isTrainingDay() ? 2.5 : 2.0; }
+  function renderFluid() {
+    const state = loadJSON(fluidKey(), {});
+    const totalMl = FLUID_TYPES.reduce((sum, t) => sum + (state[t.id] || 0), 0);
+    const totalL = totalMl / 1000;
+    const target = fluidTarget();
+    $('fluidTotal').innerHTML = totalL.toFixed(2) + '<span> / ' + target.toFixed(1) + 'L</span>';
+    $('fluidBarFill').style.width = Math.max(0, Math.min(100, (totalL / target) * 100)) + '%';
+    $('fluidBreakdown').innerHTML = FLUID_TYPES.map(t =>
+      '<div class="fluid-bd-item"><div class="fluid-bd-val">' + (state[t.id] || 0) + 'ml</div><div class="fluid-bd-label">' + esc(t.label) + '</div></div>'
+    ).join('');
+  }
+  document.querySelectorAll('.fluid-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const state = loadJSON(fluidKey(), {});
+      const type = btn.dataset.type;
+      state[type] = (state[type] || 0) + parseInt(btn.dataset.amt, 10);
+      saveJSON(fluidKey(), state);
+      renderFluid();
+    });
+  });
+  $('fluidResetBtn').addEventListener('click', () => {
+    saveJSON(fluidKey(), {});
+    renderFluid();
+  });
+
+  // ============================================================
+  // MEALS
+  // ============================================================
+  const FOODS = [
+    { name: 'Chicken breast', cal: 165, protein: 31 },
+    { name: 'Rice 200g cooked', cal: 260, protein: 5 },
+    { name: 'Pasta 200g cooked', cal: 280, protein: 10 },
+    { name: 'Eggs 2 large', cal: 140, protein: 12 },
+    { name: 'Protein milk 330ml', cal: 180, protein: 20 },
+    { name: 'Nomadic yoghurt', cal: 150, protein: 15 },
+    { name: 'Banana', cal: 90, protein: 1 },
+    { name: 'Toast 2 slices', cal: 160, protein: 6 },
+    { name: 'Cheese 30g', cal: 120, protein: 7 },
+    { name: 'Tuna tin', cal: 120, protein: 28 },
+    { name: 'Peanut butter 2 tbsp', cal: 190, protein: 8 },
+    { name: 'Cereal 60g', cal: 220, protein: 5 },
+    { name: 'Milk 300ml', cal: 150, protein: 10 },
+    { name: 'Orange juice 250ml', cal: 110, protein: 1 },
+    { name: 'Minced beef 150g', cal: 280, protein: 26 },
+  ];
+  function mealsKey() { return 'nt:meals:' + todayKey(); }
+  function getMeals() { return loadJSON(mealsKey(), []); }
+  function renderFoodGrid() {
+    $('mealFoodGrid').innerHTML = FOODS.map((f, i) =>
+      '<button type="button" class="meal-food-btn" data-i="' + i + '">' + esc(f.name) + '</button>'
+    ).join('');
+    document.querySelectorAll('.meal-food-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = FOODS[parseInt(btn.dataset.i, 10)];
+        const meals = getMeals();
+        meals.push({ id: uid(), name: f.name, cal: f.cal, protein: f.protein, ts: Date.now() });
+        saveJSON(mealsKey(), meals);
+        renderMeals();
+      });
+    });
+  }
+  function deleteMeal(id) {
+    saveJSON(mealsKey(), getMeals().filter(m => m.id !== id));
+    renderMeals();
+  }
+  function renderMeals() {
+    const meals = getMeals();
+    const list = $('mealList');
+    list.innerHTML = meals.length
+      ? meals.map(m => '<div class="meal-item"><div class="meal-item-main"><div class="meal-item-name">' + esc(m.name) + '</div><div class="meal-item-macro">' + m.cal + ' cal · ' + m.protein + 'g protein</div></div><button type="button" class="meal-del" data-id="' + m.id + '">&times;</button></div>').join('')
+      : '<div class="empty-note">No meals logged today.</div>';
+    list.querySelectorAll('.meal-del').forEach(btn => btn.addEventListener('click', () => deleteMeal(btn.dataset.id)));
+    const totalCal = meals.reduce((s, m) => s + m.cal, 0);
+    const totalProtein = meals.reduce((s, m) => s + m.protein, 0);
+    $('mealTotalCal').textContent = totalCal;
+    $('mealTotalProtein').textContent = totalProtein + 'g';
+    renderProteinTarget(totalProtein);
+  }
+
+  // ============================================================
+  // PROTEIN TARGET
+  // ============================================================
+  const PROTEIN_TARGET = 140;
+  function renderProteinTarget(current) {
+    $('proteinCurrent').textContent = current;
+    const pct = Math.max(0, Math.min(100, (current / PROTEIN_TARGET) * 100));
+    const fill = $('proteinBarFill');
+    fill.style.width = pct + '%';
+    const color = current < 70 ? 'var(--danger)' : (current < 120 ? 'var(--warning)' : 'var(--success)');
+    fill.style.background = color;
+  }
+
+  // ============================================================
+  // SUPPLEMENTS
+  // ============================================================
+  const SUPP_DEFS_KEY = 'nt:supplements';
+  function suppTakenKey() { return 'nt:suppTaken:' + todayKey(); }
+  function getSuppDefs() { return loadJSON(SUPP_DEFS_KEY, []); }
+  function renderSupplements() {
+    const defs = getSuppDefs();
+    const taken = loadJSON(suppTakenKey(), {});
+    const wrap = $('suppList');
+    if (!defs.length) { wrap.innerHTML = '<div class="empty-note">No supplements added yet.</div>'; return; }
+    wrap.innerHTML = defs.map(s => {
+      const isTaken = !!taken[s.id];
+      return '<div class="check-item">' +
+        '<span class="check-box' + (isTaken ? ' done' : '') + '" data-toggle="' + s.id + '"></span>' +
+        '<span class="check-label' + (isTaken ? ' done' : '') + '" data-toggle="' + s.id + '">' + esc(s.name) + '</span>' +
+        (isTaken ? '<button type="button" class="undo-btn" data-toggle="' + s.id + '">Undo</button>' : '') +
+        '<button type="button" class="meal-del" data-del="' + s.id + '">&times;</button>' +
+      '</div>';
+    }).join('');
+    wrap.querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', () => toggleSuppTaken(el.dataset.toggle)));
+    wrap.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => deleteSupp(el.dataset.del)));
+  }
+  function toggleSuppTaken(id) {
+    const taken = loadJSON(suppTakenKey(), {});
+    taken[id] = !taken[id];
+    saveJSON(suppTakenKey(), taken);
+    renderSupplements();
+  }
+  function deleteSupp(id) {
+    saveJSON(SUPP_DEFS_KEY, getSuppDefs().filter(s => s.id !== id));
+    const taken = loadJSON(suppTakenKey(), {});
+    delete taken[id];
+    saveJSON(suppTakenKey(), taken);
+    renderSupplements();
+  }
+  $('suppAddBtn').addEventListener('click', () => {
+    $('suppAddForm').classList.add('show');
+    $('suppNameInput').focus();
+  });
+  function saveNewSupp() {
+    const name = $('suppNameInput').value.trim();
+    if (!name) return;
+    const defs = getSuppDefs();
+    defs.push({ id: uid(), name });
+    saveJSON(SUPP_DEFS_KEY, defs);
+    $('suppNameInput').value = '';
+    $('suppAddForm').classList.remove('show');
+    renderSupplements();
+  }
+  $('suppSaveBtn').addEventListener('click', saveNewSupp);
+  $('suppNameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveNewSupp(); } });
+
+  // ---------- boot ----------
+  function renderAll() {
+    renderHeader();
+    renderPostrain();
+    renderFluid();
+    renderFoodGrid();
+    renderMeals();
+    renderSupplements();
+  }
+  renderAll();
+  setInterval(renderAll, 60 * 1000); // catches midnight rollover for date-keyed sections
+  window.addEventListener('storage', renderAll);
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof initCloudSync !== 'function') return;
+  initCloudSync({
+    appKey: 'nutritionPage',
+    syncedPrefixes: ['nt:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+});
+</script>
+</body>
+</html>
