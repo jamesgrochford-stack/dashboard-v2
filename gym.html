@@ -28,7 +28,7 @@
   ::selection{background:rgba(110,231,183,.25);color:#fff}
   html,body{background:var(--bg);min-height:100%}
   body{font-family:var(--sans);color:var(--fg);-webkit-font-smoothing:antialiased;letter-spacing:-.006em;
-    padding:34px 18px 90px;display:flex;justify-content:center;overflow-x:hidden}
+    padding:34px 18px 90px;overflow-x:hidden}
 
   /* ── background: light at the top, gradient down to pure black, snowy particles ── */
   .atmos{position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -37,7 +37,7 @@
       linear-gradient(180deg, #07140e 0%, #050b08 32%, #020403 64%, #000 100%);}
   #snow{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.9}
 
-  .wrap{position:relative;z-index:1;width:100%;max-width:620px}
+  .wrap{position:relative;z-index:1;width:100%;max-width:620px;margin:0 auto}
   .num,.pillValue,.pillInput{font-variant-numeric:tabular-nums}
 
   /* ── progress rail ── */
@@ -108,6 +108,15 @@
   /* small steady gold ★ beside the lift name once it's a conquered overload */
   .conqueredStar{flex:none;width:16px;height:16px;align-self:center;color:var(--gold);filter:drop-shadow(0 0 5px rgba(241,207,122,.4))}
   .conqueredStar svg{width:16px;height:16px;display:block;fill:currentColor}
+
+  /* slot pair toggle — Squat/Trap bar deadlift, RDL/Nordics: only one shows,
+     this switches which one, each keeping its own separate history/weight */
+  .slotToggle{display:inline-flex;align-items:center;gap:5px;flex:none;border:1px solid rgba(110,231,183,.24);
+    border-radius:999px;background:rgba(110,231,183,.03);color:var(--mint);font-family:var(--serif);font-style:italic;
+    font-size:12.5px;padding:5px 10px;cursor:pointer;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;
+    transition:border-color .2s,background .2s}
+  .slotToggle:hover{border-color:rgba(110,231,183,.5);background:rgba(110,231,183,.07)}
+  .slotToggle svg{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
   /* ── celebration: the one-time gold flush + star burst when a lift becomes a
         conquered overload (all sets logged + one beats the previous best). On-card,
@@ -441,14 +450,27 @@
   // card), never a second store. Point saveLog/loadLog at Supabase instead of
   // localStorage and every feature syncs across devices, untouched (sync.sql).
   const STORE = 'vitality.logger.v3';
+  // Bump this whenever SEED's exercises/numbers change. The version travels
+  // WITH the saved payload (not a separate key) so the check still catches a
+  // stale copy pulled down from Supabase, not just a stale local cache —
+  // otherwise an old push from before this fix would silently win a sync.
+  const SEED_VERSION = 2;
   let LIFTS = [];
   function loadLog(){
-    try { const raw = localStorage.getItem(STORE); if (raw){ const a = JSON.parse(raw); if (Array.isArray(a)) return (LIFTS = a); } } catch(e){}
+    try {
+      const raw = localStorage.getItem(STORE);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.seedVersion === SEED_VERSION && Array.isArray(parsed.lifts)) {
+          return (LIFTS = parsed.lifts);
+        }
+      }
+    } catch(e){}
     LIFTS = SEED.map(s => ({ rest:150, history:[], ...s, id: uid(), hidden:false, sets: blankSets(s.targetSets) }));
     saveLog();
     return LIFTS;
   }
-  function saveLog(){ try { localStorage.setItem(STORE, JSON.stringify(LIFTS)); } catch(e){} }
+  function saveLog(){ try { localStorage.setItem(STORE, JSON.stringify({ seedVersion: SEED_VERSION, lifts: LIFTS })); } catch(e){} }
   function getLift(id){ return LIFTS.find(l => l.id === id); }
   function updateLift(id, patch){
     const lift = getLift(id); if (!lift) return;
@@ -472,11 +494,11 @@
   // "conquered" state build up from here rather than fake demo data.
   const SEED = [
     // Wednesday
-    { name:'Squat',                     tier:1, muscle:'legs',  day:'wed', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:97.5 },
-    { name:'Trap bar deadlift',         tier:1, muscle:'legs',  day:'wed', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:0 },
+    { name:'Squat',                     tier:1, muscle:'legs',  day:'wed', slot:'wed-squat-trap', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:97.5 },
+    { name:'Trap bar deadlift',         tier:1, muscle:'legs',  day:'wed', slot:'wed-squat-trap', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:0 },
     { name:'Bulgarian split squat',     tier:2, muscle:'legs',  day:'wed', targetSets:2, setLabel:'2-3', targetReps:5, repLabel:'5 ea',       weight:20, perHand:true },
-    { name:'RDL',                       tier:2, muscle:'legs',  day:'wed', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:60 },
-    { name:'Nordics',                   tier:3, muscle:'legs',  day:'wed', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:0 },
+    { name:'RDL',                       tier:2, muscle:'legs',  day:'wed', slot:'wed-rdl-nordics', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:60 },
+    { name:'Nordics',                   tier:3, muscle:'legs',  day:'wed', slot:'wed-rdl-nordics', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:0 },
     { name:'Bench press',               tier:1, muscle:'chest', day:'wed', targetSets:3,                 targetReps:5, repLabel:'5-8',        weight:72.5 },
     { name:'Pull-ups',                  tier:2, muscle:'back',  day:'wed', targetSets:3,                 targetReps:5, repLabel:'5-8',        weight:5 },
     { name:'Copenhagen plank',          tier:3, muscle:'core',  day:'wed', targetSets:3,                 targetReps:20, repLabel:'20-30s ea side', weight:0 },
@@ -509,6 +531,38 @@
     if (lbl) lbl.textContent = (currentDay === 'sun' ? 'Sunday' : 'Wednesday') + ' Session';
   }
   document.querySelectorAll('.dayPill').forEach(b => b.onclick = () => { currentDay = b.dataset.day; saveDay(currentDay); render(); });
+
+  // @episode-start:slot-toggle
+  // Some slots run two alternating variations (Squat/Trap bar deadlift,
+  // RDL/Nordics) — James does one or the other each session, never both.
+  // Both variants stay in LIFTS as full, separate lifts (own history, own
+  // weight, own progression) — the slot only decides which ONE is visible.
+  // The choice is per-slot, persisted in localStorage, independent of day.
+  function slotStoreKey(slot){ return 'vitality.logger.slot.' + slot; }
+  function getSlotChoice(slot, pair){
+    try {
+      const v = localStorage.getItem(slotStoreKey(slot));
+      if (v && pair.some(l => l.name === v)) return v;
+    } catch(e){}
+    return pair[0] ? pair[0].name : null;
+  }
+  function setSlotChoice(slot, name){ try { localStorage.setItem(slotStoreKey(slot), name); } catch(e){} }
+  // Collapse each slot's pair down to whichever variant is currently chosen.
+  function visibleLifts(){
+    const base = LIFTS.filter(l => !l.hidden && l.day === currentDay);
+    const seenSlots = new Set();
+    const out = [];
+    base.forEach(l => {
+      if (!l.slot){ out.push(l); return; }
+      if (seenSlots.has(l.slot)) return;
+      seenSlots.add(l.slot);
+      const pair = base.filter(x => x.slot === l.slot);
+      const activeName = getSlotChoice(l.slot, pair);
+      out.push(pair.find(x => x.name === activeName) || pair[0]);
+    });
+    return out;
+  }
+  // @episode-end:slot-toggle
 
   loadLog();
 
@@ -544,7 +598,7 @@
   // up for it. Hidden lifts never count.
   function progress(){
     let logged = 0, total = 0;
-    LIFTS.filter(l => !l.hidden && l.day === currentDay).forEach(l => {
+    visibleLifts().forEach(l => {
       l.sets.forEach(s => { total++; if (s.done || s.failed) logged++; });
     });
     return { logged, total };
@@ -560,7 +614,7 @@
   function render(){
     renderDaySeg();
     listEl.innerHTML = '';
-    LIFTS.filter(l => !l.hidden && l.day === currentDay).forEach(lift => listEl.appendChild(liftCard(lift)));
+    visibleLifts().forEach(lift => listEl.appendChild(liftCard(lift)));
     renderHidden();
     paintProgress();
     paintFinish();
@@ -586,12 +640,16 @@
       (goalMet ? ' starPillDone' : '') +
       (anyLogged && !goalMet ? ' starPillInert' : '');
     const starAmt = armed && !goalMet ? bumpLabel(bump) : '';
+    // slot pair (e.g. Squat / Trap bar deadlift) — the other variant, if any,
+    // gets a small toggle so James can flip which one is showing today.
+    const slotOther = lift.slot ? LIFTS.find(l => l.slot === lift.slot && l.day === lift.day && l !== lift) : null;
     el.innerHTML =
       '<div class="lift-head">' +
         '<span class="glyph" title="Drag to reorder">' + SVG(GLYPH[lift.muscle] || GLYPH.chest) + '</span>' +
         '<span class="lift-name">' + esc(lift.name) + '</span>' +
         '<span class="info" title="About this lift">i</span>' +
         (conquered ? '<span class="conqueredStar" title="Progressive overload conquered">' + SVG(ICON.star) + '</span>' : '') +
+        (slotOther ? '<button class="slotToggle" data-act="slotToggle" title="Switch to ' + esc(slotOther.name) + '">' + SVG(ICON.swap) + esc(slotOther.name) + '</button>' : '') +
         '<span class="sp"></span>' +
         '<button class="lift-x" title="Remove (kept, never deleted)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
       '</div>' +
@@ -611,6 +669,8 @@
     lift.sets.forEach((set, i) => rows.appendChild(setRow(lift, set, i, unit)));
     el.querySelector('.lift-x').onclick = () => hideLift(lift.id);
     el.querySelector('.info').onclick = () => openInfo(lift);
+    const slotBtn = el.querySelector('[data-act="slotToggle"]');
+    if (slotBtn) slotBtn.onclick = () => { setSlotChoice(lift.slot, slotOther.name); render(); };
     el.querySelector('[data-act="swap"]').onclick = () => openSwap(lift);
     el.querySelector('[data-act="history"]').onclick = () => openOverload(lift);
     el.querySelector('[data-act="tune"]').onclick = () => openTune(lift);
@@ -1067,7 +1127,7 @@
   let conqueredPrev = new Set();
   function currentConquered(){
     const s = new Set();
-    LIFTS.filter(l => !l.hidden && l.day === currentDay).forEach(l => { if (isConquered(l)) s.add(l.id); });
+    visibleLifts().forEach(l => { if (isConquered(l)) s.add(l.id); });
     return s;
   }
   function syncCelebrations(){
@@ -1092,7 +1152,7 @@
   //    grows, and the rows reset for next time. This is the loop made whole. ──
   function finishSession(){
     let lifts = 0, totalSets = 0;
-    LIFTS.filter(l => !l.hidden && l.day === currentDay).forEach(lift => {
+    visibleLifts().forEach(lift => {
       const logged = lift.sets.filter(s => s.done || s.failed);
       if (!logged.length) return;
       const top = lift.sets.filter(s => s.done && !s.failed);
