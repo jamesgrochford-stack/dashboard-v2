@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Football</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --blue: #7DD3FC;
+  --purple: #B08AF0;
+  --orange: #F2A063;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #050506;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  min-height: 100vh; position: relative; overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.16), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
+  filter: blur(40px); pointer-events: none; z-index: -2;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -1;
+}
+@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
+
+.page { max-width: 760px; margin: 0 auto; }
+
+.fb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.dash-title {
+  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.fb-head-date { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-tertiary); white-space: nowrap; }
+.fb-head-sub { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 20px; }
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
+/* ===== shared card ===== */
+.card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.card-title { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
+.card-title-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); }
+.card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+.card-badge { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--text-secondary); background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 999px; }
+
+/* ===== activation card ===== */
+.activation-card { border-left: 4px solid var(--success); }
+.activation-card.match { border-left-color: var(--orange); background: linear-gradient(135deg, rgba(242,160,99,0.10), rgba(255,255,255,0.04)); padding: 26px; }
+.activation-card.match .card-title-label { color: var(--orange); font-size: 12px; }
+.activation-card.match .act-item-title { font-size: 16px; }
+.act-item { display: flex; align-items: center; gap: 14px; padding: 12px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+.act-item:last-child { border-bottom: none; }
+.act-check { flex: none; width: 24px; height: 24px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28); position: relative; transition: background 0.2s, border-color 0.2s; }
+.act-check.on { background: var(--success); border-color: var(--success); }
+.activation-card.match .act-check.on { background: var(--orange); border-color: var(--orange); }
+.act-check.on::after { content: ''; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.act-item-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.act-item.on .act-item-title { opacity: 0.55; text-decoration: line-through; }
+
+/* ===== session logger ===== */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fl { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.fi { padding: 9px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13.5px; outline: none; width: 100%; }
+.fi:focus { border-color: rgba(255,255,255,0.3); }
+.star-row { display: flex; gap: 4px; }
+.star { font-size: 22px; cursor: pointer; opacity: 0.3; transition: opacity 0.1s; }
+.star.lit { opacity: 1; color: var(--warning); }
+.btn-primary { width: 100%; margin-top: 4px; padding: 11px; border: 0; border-radius: 12px; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.session-item { padding: 11px 13px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 8px; }
+.session-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.session-type { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+.session-dur { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+.session-del { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 16px; padding: 0 2px; line-height: 1; }
+.session-del:hover { color: var(--danger); }
+.session-stars { color: var(--warning); font-size: 12px; letter-spacing: 1px; margin-top: 5px; }
+.session-notes { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4; }
+.session-date { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); margin-top: 5px; }
+.empty-note { text-align: center; padding: 14px 0; font-size: 12.5px; font-style: italic; color: var(--text-tertiary); }
+.spark-wrap { margin-top: 14px; }
+.spark-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.spark-wrap svg { width: 100%; height: 50px; display: block; }
+
+/* ===== weekly training load ===== */
+.week-grid { display: flex; flex-direction: column; gap: 8px; }
+.week-day-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--text-tertiary); }
+.week-day-row.club { border-left-color: var(--blue); }
+.week-day-row.gym { border-left-color: var(--purple); }
+.week-day-row.rest { border-left-color: var(--text-tertiary); opacity: 0.6; }
+.week-day-row.match { border-left-color: var(--orange); }
+.week-day-name { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); width: 38px; flex: none; }
+.week-day-desc { flex: 1; font-size: 13px; color: var(--text-primary); }
+.week-day-tick { flex: none; font-size: 15px; color: var(--success); opacity: 0; transition: opacity 0.2s; }
+.week-day-tick.show { opacity: 1; }
+
+/* ===== fitness tests ===== */
+.ft-row { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.ft-row:last-child { border-bottom: none; padding-bottom: 0; }
+.ft-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ft-name { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.ft-val { font-size: 20px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.ft-update-btn { flex: none; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: var(--text-secondary); border-radius: 999px; padding: 6px 13px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.ft-update-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.3); }
+.ft-prev { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+.ft-form { display: none; gap: 8px; margin-top: 10px; }
+.ft-form.show { display: flex; }
+.ft-form input[type="text"] { flex: 1; }
+.ft-form input[type="date"] { flex: none; width: 130px; }
+
+/* ===== film study ===== */
+.film-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 6px; }
+.film-item-main { flex: 1; min-width: 0; }
+.film-item-player { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.film-item-notes { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.film-item-date { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); flex: none; }
+.film-bars { display: flex; align-items: flex-end; gap: 10px; height: 90px; margin-top: 14px; }
+.film-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 5px; }
+.film-bar { width: 100%; max-width: 34px; background: var(--purple); border-radius: 5px 5px 0 0; min-height: 2px; }
+.film-bar-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-primary); font-weight: 700; }
+.film-bar-label { font-size: 9.5px; color: var(--text-tertiary); text-align: center; line-height: 1.2; }
+
+/* ===== individual session planner ===== */
+.ind-item { display: flex; align-items: center; gap: 14px; padding: 13px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+.ind-item:last-child { border-bottom: none; }
+.ind-item.done { opacity: 0.55; }
+.ind-check { flex: none; width: 24px; height: 24px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28); position: relative; }
+.ind-check.on { background: var(--success); border-color: var(--success); }
+.ind-check.on::after { content: ''; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.ind-main { flex: 1; }
+.ind-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.ind-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+@media (max-width: 480px) {
+  .card { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="fb-head">
+    <h1 class="dash-title">Football</h1>
+    <div class="fb-head-date" id="headDate">—</div>
+  </div>
+  <div class="fb-head-sub" id="headDayType">—</div>
+
+  <!-- ACTIVATION CARD (conditional) -->
+  <div class="card activation-card" id="activationCard" style="display:none">
+    <div class="card-title"><span class="card-title-label" id="activationLabel">3-Action Rule</span></div>
+    <div id="activationRows"></div>
+  </div>
+
+  <!-- SESSION LOGGER -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Session Logger</span><span class="card-badge" id="sessionCountBadge">0 sessions</span></div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Date</label><input class="fi" type="date" id="sDate"></div>
+      <div class="fg"><label class="fl">Type</label>
+        <select class="fi" id="sType">
+          <option>Club Training</option>
+          <option>Individual Technical</option>
+          <option>Individual Physical</option>
+          <option>Film Study</option>
+          <option>Match</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Duration (min)</label><input class="fi" type="number" min="0" id="sDur" placeholder="60"></div>
+      <div class="fg"><label class="fl">Confidence (1-5)</label><div class="star-row" id="sStars"></div></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label class="fl">Notes</label><input class="fi" type="text" id="sNotes" placeholder="Focus areas, key moments…"></div>
+    <button type="button" class="btn-primary" id="sLogBtn">Log Session</button>
+    <div class="spark-wrap" id="sparkWrap" style="display:none">
+      <div class="spark-label">Activation Trend — confidence, last 10 sessions</div>
+      <div id="sparkSvg"></div>
+    </div>
+    <div id="sessionList" style="margin-top:14px"></div>
+  </div>
+
+  <!-- WEEKLY TRAINING LOAD -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Weekly Training Load</span></div>
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+
+  <!-- FITNESS TESTS -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Fitness Tests</span></div>
+    <div id="fitList"></div>
+  </div>
+
+  <!-- FILM STUDY -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Film Study</span><span class="card-badge" id="filmCountBadge">0 this week</span></div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Player studied</label>
+        <select class="fi" id="filmPlayer">
+          <option>Rodri</option><option>Declan Rice</option><option>Granit Xhaka</option><option>Ndidi</option><option>Other</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><input class="fi" type="text" id="filmNotes" placeholder="Positioning, press triggers…"></div>
+    </div>
+    <button type="button" class="btn-primary" id="filmLogBtn">Log Film Session</button>
+    <div id="filmList" style="margin-top:14px"></div>
+    <div class="film-bars" id="filmBars"></div>
+  </div>
+
+  <!-- INDIVIDUAL SESSION PLANNER -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Individual Session Planner</span></div>
+    <div id="indRows"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  function loadJSON(k, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(k)); return (v == null ? fallback : v); } catch (e) { return fallback; }
+  }
+  function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayKey() { return dateKey(new Date()); }
+  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+  function mondayOf(d) { const dow = (d.getDay() + 6) % 7; return addDays(d, -dow); }
+
+  // ============================================================
+  // HEADER + day type
+  // ============================================================
+  const DOW_MON = 1, DOW_TUE = 2, DOW_WED = 3, DOW_THU = 4, DOW_FRI = 5, DOW_SAT = 6, DOW_SUN = 0;
+  function dayType(dow) {
+    if (dow === DOW_MON || dow === DOW_TUE || dow === DOW_THU) return 'Training Day';
+    if (dow === DOW_SAT) return 'Match Day';
+    return 'Rest Day';
+  }
+  function renderHeader() {
+    const now = new Date();
+    $('headDate').textContent = now.toLocaleDateString('en-IE', { weekday: 'long', month: 'short', day: 'numeric' });
+    $('headDayType').textContent = dayType(now.getDay());
+  }
+
+  // ============================================================
+  // ACTIVATION CARD — 3-Action Rule, Mon/Tue/Thu (training) + Sat (match)
+  // ============================================================
+  const ACTIVATION_ITEMS = [
+    { id: 'communicate', label: 'Communicate early from minute one' },
+    { id: 'demand', label: 'Demand the ball constantly' },
+    { id: 'duel', label: 'Win your first duel and set the tone' },
+  ];
+  function activationKey() { return 'fb:activation:' + todayKey(); }
+  function renderActivation() {
+    const dow = new Date().getDay();
+    const isTraining = dow === DOW_MON || dow === DOW_TUE || dow === DOW_THU;
+    const isMatch = dow === DOW_SAT;
+    const card = $('activationCard');
+    if (!isTraining && !isMatch) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    card.classList.toggle('match', isMatch);
+    $('activationLabel').textContent = isMatch ? '3-Action Rule — Match Day' : '3-Action Rule — Pre-Session';
+    const state = loadJSON(activationKey(), {});
+    const wrap = $('activationRows');
+    wrap.innerHTML = '';
+    ACTIVATION_ITEMS.forEach(item => {
+      const on = !!state[item.id];
+      const row = document.createElement('div');
+      row.className = 'act-item' + (on ? ' on' : '');
+      row.innerHTML = '<span class="act-check' + (on ? ' on' : '') + '"></span><span class="act-item-title">' + esc(item.label) + '</span>';
+      row.addEventListener('click', () => {
+        const st = loadJSON(activationKey(), {});
+        st[item.id] = !st[item.id];
+        saveJSON(activationKey(), st); // instant local write; sync.js pushes to Supabase in the background
+        renderActivation();
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  // ============================================================
+  // SESSION LOGGER
+  // ============================================================
+  const SESSIONS_KEY = 'fb:sessions';
+  function getSessions() { return loadJSON(SESSIONS_KEY, []); }
+  function uid() { return 'fb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  let sRating = 0;
+  function buildStars(container, onChange) {
+    container.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const s = document.createElement('span');
+      s.className = 'star'; s.textContent = '★'; s.dataset.v = i;
+      s.addEventListener('click', () => { onChange(i); paintStars(container, i); });
+      container.appendChild(s);
+    }
+  }
+  function paintStars(container, val) {
+    container.querySelectorAll('.star').forEach(s => s.classList.toggle('lit', +s.dataset.v <= val));
+  }
+  buildStars($('sStars'), (v) => { sRating = v; });
+  $('sDate').value = todayKey();
+  $('sLogBtn').addEventListener('click', () => {
+    const date = $('sDate').value || todayKey();
+    const type = $('sType').value;
+    const dur = parseInt($('sDur').value, 10) || 0;
+    const notes = $('sNotes').value.trim();
+    if (!dur) { alert('Enter a duration.'); return; }
+    const sessions = getSessions();
+    sessions.unshift({ id: uid(), date, type, duration: dur, confidence: sRating, notes, ts: Date.now() });
+    saveJSON(SESSIONS_KEY, sessions);
+    $('sDur').value = ''; $('sNotes').value = ''; $('sDate').value = todayKey();
+    sRating = 0; paintStars($('sStars'), 0);
+    renderSessions(); renderWeekGrid();
+  });
+  function deleteSession(id) {
+    const sessions = getSessions().filter(s => s.id !== id);
+    saveJSON(SESSIONS_KEY, sessions);
+    renderSessions(); renderWeekGrid();
+  }
+  function buildSparkSVG(values) {
+    const W = 300, H = 50, pad = 6;
+    if (values.length < 2) return '';
+    const min = 1, max = 5;
+    const stepX = (W - 2 * pad) / (values.length - 1);
+    const pts = values.map((v, i) => ({ x: pad + i * stepX, y: H - pad - ((v - min) / (max - min)) * (H - 2 * pad) }));
+    const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+    const dots = pts.map((p, i) => '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="' + (values[i] >= 4 ? '#6BE3A4' : values[i] >= 3 ? '#F2C063' : '#FF6B6B') + '"></circle>').join('');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '"><path d="' + line + '" fill="none" stroke="#7DD3FC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' + dots + '</svg>';
+  }
+  function renderSessions() {
+    const sessions = getSessions();
+    $('sessionCountBadge').textContent = sessions.length + ' sessions';
+    const withConf = sessions.filter(s => s.confidence > 0).slice(0, 10).reverse();
+    const sparkWrap = $('sparkWrap');
+    if (withConf.length >= 2) { sparkWrap.style.display = 'block'; $('sparkSvg').innerHTML = buildSparkSVG(withConf.map(s => s.confidence)); }
+    else { sparkWrap.style.display = 'none'; }
+    const list = $('sessionList');
+    const recent = sessions.slice(0, 10);
+    if (!recent.length) { list.innerHTML = '<div class="empty-note">No sessions logged yet.</div>'; return; }
+    list.innerHTML = recent.map(s => {
+      const stars = s.confidence ? '<div class="session-stars">' + '★'.repeat(s.confidence) + '☆'.repeat(5 - s.confidence) + '</div>' : '';
+      return '<div class="session-item">' +
+        '<div class="session-top"><span class="session-type">' + esc(s.type) + '</span>' +
+        '<span style="display:flex;align-items:center;gap:10px"><span class="session-dur">' + s.duration + ' min</span>' +
+        '<button type="button" class="session-del" data-id="' + s.id + '">&times;</button></span></div>' +
+        (s.notes ? '<div class="session-notes">' + esc(s.notes) + '</div>' : '') +
+        stars +
+        '<div class="session-date">' + esc(s.date) + '</div>' +
+      '</div>';
+    }).join('');
+    list.querySelectorAll('.session-del').forEach(btn => btn.addEventListener('click', () => deleteSession(btn.dataset.id)));
+  }
+
+  // ============================================================
+  // WEEKLY TRAINING LOAD — Mon..Sat, ticks when a session was logged that day
+  // ============================================================
+  const WEEK_PLAN = [
+    { name: 'MON', desc: 'Club Training 18:00–19:30', cls: 'club' },
+    { name: 'TUE', desc: 'Club Training 07:30–09:00', cls: 'club' },
+    { name: 'WED', desc: 'Gym only', cls: 'gym' },
+    { name: 'THU', desc: 'Club Training 07:30–09:00', cls: 'club' },
+    { name: 'FRI', desc: 'Rest', cls: 'rest' },
+    { name: 'SAT', desc: 'Match', cls: 'match' },
+  ];
+  function renderWeekGrid() {
+    const monday = mondayOf(new Date());
+    const sessions = getSessions();
+    const grid = $('weekGrid');
+    grid.innerHTML = '';
+    WEEK_PLAN.forEach((d, i) => {
+      const date = addDays(monday, i);
+      const dStr = dateKey(date);
+      const logged = sessions.some(s => s.date === dStr);
+      const row = document.createElement('div');
+      row.className = 'week-day-row ' + d.cls;
+      row.innerHTML = '<span class="week-day-name">' + d.name + '</span><span class="week-day-desc">' + esc(d.desc) + '</span><span class="week-day-tick' + (logged ? ' show' : '') + '">✓</span>';
+      grid.appendChild(row);
+    });
+  }
+
+  // ============================================================
+  // FITNESS TESTS
+  // ============================================================
+  const FIT_TESTS = [
+    { id: 'yoyo', name: 'Yo-Yo IR Level 2', unit: '', defaultVal: '21.4' },
+    { id: 'illinois', name: 'Illinois Agility', unit: 's', defaultVal: '14.39' },
+    { id: 'bronco', name: 'Bronco Test', unit: '', defaultVal: '4:35' },
+    { id: 'sprint20', name: 'Flying 20m Sprint', unit: 's', defaultVal: '2.28' },
+    { id: 'broadjump', name: 'Broad Jump', unit: 'm', defaultVal: '2.63' },
+  ];
+  function getFitHistory(id) { return loadJSON('fb:fitness:' + id, []); }
+  function saveFitResult(id, val, date) {
+    const hist = getFitHistory(id);
+    hist.unshift({ val, date });
+    saveJSON('fb:fitness:' + id, hist);
+  }
+  function renderFitTests() {
+    const wrap = $('fitList');
+    wrap.innerHTML = '';
+    FIT_TESTS.forEach(t => {
+      const hist = getFitHistory(t.id);
+      const current = hist[0] || { val: t.defaultVal, date: null };
+      const previous = hist[1] || null;
+      const row = document.createElement('div');
+      row.className = 'ft-row';
+      row.innerHTML =
+        '<div class="ft-top"><div class="ft-name">' + esc(t.name) + '</div>' +
+        '<span style="display:flex;align-items:center;gap:10px"><span class="ft-val">' + esc(current.val) + esc(t.unit) + '</span>' +
+        '<button type="button" class="ft-update-btn">Update</button></span></div>' +
+        '<div class="ft-prev">' + (previous ? 'Previous: ' + esc(previous.val) + esc(t.unit) + ' · ' + esc(previous.date) : (current.date ? 'Recorded ' + esc(current.date) : 'No history yet')) + '</div>' +
+        '<div class="ft-form" id="ftForm-' + t.id + '"><input type="text" class="fi" id="ftVal-' + t.id + '" placeholder="New result…">' +
+        '<input type="date" class="fi" id="ftDate-' + t.id + '" value="' + todayKey() + '">' +
+        '<button type="button" class="ft-update-btn" id="ftSave-' + t.id + '">Save</button></div>';
+      row.querySelector('.ft-update-btn').addEventListener('click', () => {
+        $('ftForm-' + t.id).classList.toggle('show');
+      });
+      row.querySelector('#ftSave-' + t.id).addEventListener('click', () => {
+        const val = $('ftVal-' + t.id).value.trim();
+        if (!val) return;
+        const date = $('ftDate-' + t.id).value || todayKey();
+        saveFitResult(t.id, val, date);
+        renderFitTests();
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  // ============================================================
+  // FILM STUDY TRACKER
+  // ============================================================
+  const FILM_KEY = 'fb:film';
+  const FILM_PLAYERS = ['Rodri', 'Declan Rice', 'Granit Xhaka', 'Ndidi', 'Other'];
+  function getFilm() { return loadJSON(FILM_KEY, []); }
+  $('filmLogBtn').addEventListener('click', () => {
+    const player = $('filmPlayer').value;
+    const notes = $('filmNotes').value.trim();
+    const logs = getFilm();
+    logs.unshift({ id: uid(), player, notes, date: todayKey(), ts: Date.now() });
+    saveJSON(FILM_KEY, logs);
+    $('filmNotes').value = '';
+    renderFilm();
+  });
+  function deleteFilm(id) {
+    saveJSON(FILM_KEY, getFilm().filter(f => f.id !== id));
+    renderFilm();
+  }
+  function renderFilm() {
+    const logs = getFilm();
+    const monday = mondayOf(new Date());
+    const monday0 = new Date(monday); monday0.setHours(0, 0, 0, 0);
+    const thisWeek = logs.filter(l => l.ts >= monday0.getTime());
+    $('filmCountBadge').textContent = thisWeek.length + ' this week';
+    const list = $('filmList');
+    list.innerHTML = thisWeek.length
+      ? thisWeek.map(l => '<div class="film-item"><div class="film-item-main"><div class="film-item-player">' + esc(l.player) + '</div>' + (l.notes ? '<div class="film-item-notes">' + esc(l.notes) + '</div>' : '') + '</div><span class="film-item-date">' + esc(l.date) + '</span><button type="button" class="session-del" data-id="' + l.id + '">&times;</button></div>').join('')
+      : '<div class="empty-note">No film sessions logged this week.</div>';
+    list.querySelectorAll('.session-del').forEach(btn => btn.addEventListener('click', () => deleteFilm(btn.dataset.id)));
+    const bars = $('filmBars');
+    const max = Math.max(1, ...FILM_PLAYERS.map(p => thisWeek.filter(l => l.player === p).length));
+    bars.innerHTML = FILM_PLAYERS.map(p => {
+      const count = thisWeek.filter(l => l.player === p).length;
+      const pct = Math.round((count / max) * 100);
+      return '<div class="film-bar-col"><span class="film-bar-count">' + count + '</span><div class="film-bar" style="height:' + Math.max(2, pct) + '%"></div><span class="film-bar-label">' + esc(p) + '</span></div>';
+    }).join('');
+  }
+
+  // ============================================================
+  // INDIVIDUAL SESSION PLANNER — resets daily
+  // ============================================================
+  const IND_SESSIONS = [
+    { id: 'backgarden', title: 'Backgarden Technical', sub: '30 min — touches, ball mastery, passing wall' },
+    { id: 'localPitch', title: 'Local Pitch with Brother', sub: 'Passing patterns, shooting, crossing' },
+    { id: 'soloFitness', title: 'Solo Fitness Run', sub: '' },
+  ];
+  function individualKey() { return 'fb:individual:' + todayKey(); }
+  function renderIndividual() {
+    const state = loadJSON(individualKey(), {});
+    const wrap = $('indRows');
+    wrap.innerHTML = '';
+    IND_SESSIONS.forEach(item => {
+      const on = !!state[item.id];
+      const row = document.createElement('div');
+      row.className = 'ind-item' + (on ? ' done' : '');
+      row.innerHTML =
+        '<span class="ind-check' + (on ? ' on' : '') + '"></span>' +
+        '<div class="ind-main"><div class="ind-title">' + esc(item.title) + '</div>' + (item.sub ? '<div class="ind-sub">' + esc(item.sub) + '</div>' : '') + '</div>';
+      row.addEventListener('click', () => {
+        const st = loadJSON(individualKey(), {});
+        st[item.id] = !st[item.id];
+        saveJSON(individualKey(), st);
+        renderIndividual();
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- boot ----------
+  function renderAll() {
+    renderHeader();
+    renderActivation();
+    renderSessions();
+    renderWeekGrid();
+    renderFitTests();
+    renderFilm();
+    renderIndividual();
+  }
+  renderAll();
+  setInterval(renderAll, 60 * 1000); // catches midnight rollover for activation + individual planner
+  window.addEventListener('storage', renderAll);
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof initCloudSync !== 'function') return;
+  initCloudSync({
+    appKey: 'footballPage',
+    syncedPrefixes: ['fb:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+});
+</script>
+</body>
+</html>
