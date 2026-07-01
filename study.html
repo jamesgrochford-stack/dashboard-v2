@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Study</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #050506;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  min-height: 100vh; position: relative; overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.16), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
+  filter: blur(40px); pointer-events: none; z-index: -2;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -1;
+}
+@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
+
+.page { max-width: 760px; margin: 0 auto; }
+
+/* ===== header ===== */
+.study-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.dash-title {
+  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.study-head-date { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-tertiary); white-space: nowrap; }
+.study-head-sub { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 20px; }
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+
+/* ===== shared card ===== */
+.card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.card-title { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
+.card-title-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); }
+.card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+.week-badge { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-primary); background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 999px; }
+
+/* ===== day navigator ===== */
+.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+.day-nav-btn { flex: none; width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text-secondary); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s; }
+.day-nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.09); color: var(--text-primary); }
+.day-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.day-nav-label { font-size: 15px; font-weight: 700; color: var(--text-primary); text-align: center; }
+.day-nav-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); text-align: center; margin-top: 2px; }
+
+.study-empty { text-align: center; padding: 20px 0; font-size: 13px; font-style: italic; color: var(--text-tertiary); }
+
+/* ===== study session card ===== */
+.study-session {
+  padding: 14px 16px; margin-bottom: 10px;
+  border-radius: 12px; background: rgba(255,255,255,0.03); border-left: 4px solid var(--text-tertiary);
+  transition: opacity 0.2s, background 0.2s;
+}
+.study-session.done { opacity: 0.5; background: rgba(107,227,164,0.04); }
+.study-session-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.study-subject { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.study-badge { display: inline-block; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); margin-left: 8px; }
+.study-dur { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); flex: none; white-space: nowrap; }
+.study-detail { font-size: 12.5px; color: var(--text-tertiary); margin-top: 6px; line-height: 1.5; cursor: pointer; }
+.study-detail.collapsed { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.study-actions { display: flex; gap: 8px; margin-top: 10px; }
+.study-btn { flex: none; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: var(--text-secondary); border-radius: 999px; padding: 6px 13px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; font-family: inherit; }
+.study-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); }
+.study-btn.done-btn.is-active { background: rgba(107,227,164,0.16); border-color: rgba(107,227,164,0.4); color: var(--success); }
+.study-btn.undo-btn { color: var(--text-tertiary); }
+
+/* ===== weekly completion grid ===== */
+.week-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.week-grid-col { text-align: center; padding: 10px 4px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid transparent; }
+.week-grid-col.is-today { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); }
+.week-grid-day { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
+.week-grid-dots { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.week-grid-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-tertiary); opacity: 0.4; }
+.week-grid-dot.done { background: var(--success); opacity: 1; box-shadow: 0 0 6px rgba(107,227,164,0.5); }
+.week-grid-dot.missed { background: var(--danger); opacity: 0.85; }
+.week-grid-empty { font-size: 10px; color: var(--text-tertiary); }
+
+/* ===== irish floating sessions ===== */
+.irish-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.irish-row:last-child { border-bottom: none; }
+.irish-row.locked { opacity: 0.4; }
+.irish-main { flex: 1; min-width: 0; }
+.irish-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.irish-detail { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.irish-lock { font-size: 11px; color: var(--warning); margin-top: 3px; }
+.irish-dur { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); flex: none; }
+.irish-actions { display: flex; gap: 6px; flex: none; }
+
+/* ===== applied maths counter ===== */
+.am-headline { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 16px; }
+.am-step-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: var(--text-primary); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+.am-step-btn:hover { background: rgba(255,255,255,0.09); }
+.am-count { font-size: 42px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.am-count span { font-size: 16px; color: var(--text-tertiary); font-weight: 500; }
+.am-chapters { display: flex; flex-direction: column; gap: 6px; }
+.am-chapter-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); font-size: 12.5px; color: var(--text-secondary); }
+.am-chapter-row.current { background: rgba(200,240,96,0.10); border: 1px solid rgba(200,240,96,0.3); color: var(--text-primary); font-weight: 700; }
+.am-chapter-row.complete { opacity: 0.5; }
+.am-chapter-count { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+
+/* ===== points estimator ===== */
+.pts-toggle { width: 100%; padding: 12px; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.16); background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: 0.03em; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+.pts-toggle:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.3); }
+.pts-body { display: none; margin-top: 16px; }
+.pts-body.show { display: block; }
+.pts-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.pts-row:last-of-type { border-bottom: none; }
+.pts-row-name { font-size: 13.5px; color: var(--text-primary); font-weight: 600; }
+.pts-row select { padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13px; }
+.pts-summary { margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pts-total { font-size: 26px; font-weight: 800; color: var(--text-primary); }
+.pts-total span { font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
+.pts-gap { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); text-align: right; }
+.pts-gap.met { color: var(--success); }
+
+/* ===== subject OS ===== */
+.subj-card { border-radius: 12px; background: rgba(255,255,255,0.03); margin-bottom: 8px; overflow: hidden; }
+.subj-head { display: flex; align-items: center; gap: 10px; padding: 13px 14px; cursor: pointer; }
+.subj-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.subj-name { flex: 1; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.subj-grade { font-family: var(--font-mono); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+.subj-caret { font-size: 12px; color: var(--text-tertiary); transition: transform 0.2s; flex: none; }
+.subj-card.open .subj-caret { transform: rotate(90deg); }
+.subj-body { display: none; padding: 0 14px 16px; }
+.subj-card.open .subj-body { display: block; }
+.subj-rag { display: flex; gap: 8px; margin-bottom: 14px; }
+.subj-rag button { flex: 1; padding: 8px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--text-secondary); font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+.subj-rag button.rag-red.active { background: rgba(255,107,107,0.18); border-color: var(--danger); color: var(--danger); }
+.subj-rag button.rag-amber.active { background: rgba(242,192,99,0.18); border-color: var(--warning); color: var(--warning); }
+.subj-rag button.rag-green.active { background: rgba(107,227,164,0.18); border-color: var(--success); color: var(--success); }
+.topic-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.topic-row:last-of-type { border-bottom: none; }
+.topic-name { flex: 1; font-size: 12.5px; color: var(--text-secondary); }
+.topic-srs { flex: none; font-family: var(--font-mono); font-size: 10px; padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--text-tertiary); cursor: pointer; white-space: nowrap; }
+.topic-srs.new { color: var(--text-tertiary); }
+.topic-srs.due { color: var(--warning); border-color: rgba(242,192,99,0.35); }
+.topic-srs.overdue { color: var(--danger); border-color: rgba(255,107,107,0.35); }
+.topic-srs.ahead { color: var(--success); border-color: rgba(107,227,164,0.35); }
+.topic-add { display: flex; gap: 8px; margin-top: 10px; }
+.topic-add input { flex: 1; padding: 8px 11px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 12.5px; outline: none; }
+.topic-add button { padding: 8px 14px; border-radius: 9px; border: 0; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+/* ===== AAC tracker ===== */
+.aac-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.aac-row:last-child { border-bottom: none; }
+.aac-name { font-size: 13.5px; color: var(--text-primary); font-weight: 600; }
+.aac-row select { padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 12.5px; }
+.aac-card { transition: border-color 0.3s; border: 1px solid transparent; }
+.aac-card.all-selected { border-color: rgba(107,227,164,0.4); }
+
+/* ===== streaks ===== */
+.streaks-row { display: flex; gap: 10px; }
+.streak-item { flex: 1; text-align: center; padding: 12px 6px; border-radius: 12px; background: rgba(255,255,255,0.03); }
+.streak-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+.streak-val { font-size: 22px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.streak-btns { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
+.streak-btns button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--text-secondary); font-size: 14px; cursor: pointer; }
+.streak-btns button:hover { background: rgba(255,255,255,0.09); color: var(--text-primary); }
+
+@media (max-width: 480px) {
+  .card { padding: 16px; }
+  .week-grid { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .pts-row { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="study-head">
+    <h1 class="dash-title">Study</h1>
+    <div class="study-head-date" id="headDate">—</div>
+  </div>
+  <div class="study-head-sub" id="headWeek">—</div>
+
+  <!-- TODAY'S STUDY -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Today's Study</span><span class="week-badge" id="studyWeekBadge">WEEK — OF 10</span></div>
+    <div class="day-nav" id="dayNav" style="display:none">
+      <button type="button" class="day-nav-btn" id="dayPrev">‹</button>
+      <div>
+        <div class="day-nav-label" id="dayNavLabel">—</div>
+        <div class="day-nav-sub" id="dayNavSub">—</div>
+      </div>
+      <button type="button" class="day-nav-btn" id="dayNext">›</button>
+    </div>
+    <div id="studySessions"></div>
+  </div>
+
+  <!-- WEEKLY COMPLETION GRID -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">This Week</span></div>
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+
+  <!-- IRISH FLOATING SESSIONS -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Irish — Floating Sessions</span></div>
+    <div id="irishRows"></div>
+  </div>
+
+  <!-- APPLIED MATHS COUNTER -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Applied Maths Counter</span></div>
+    <div class="am-headline">
+      <button type="button" class="am-step-btn" id="amMinus">&minus;</button>
+      <div class="am-count"><span id="amCount">0</span><span> / 27 lessons</span></div>
+      <button type="button" class="am-step-btn" id="amPlus">+</button>
+    </div>
+    <div class="am-chapters" id="amChapters"></div>
+  </div>
+
+  <!-- POINTS ESTIMATOR -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Points Estimator</span></div>
+    <button type="button" class="pts-toggle" id="ptsToggle">Tap to expand</button>
+    <div class="pts-body" id="ptsBody">
+      <div id="ptsRows"></div>
+      <div class="pts-summary">
+        <div class="pts-total"><span id="ptsTotal">0</span><span> / 625</span></div>
+        <div class="pts-gap" id="ptsGap">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBJECT OS -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Subject OS</span></div>
+    <div id="subjectCards"></div>
+  </div>
+
+  <!-- AAC PROJECTS TRACKER -->
+  <div class="card aac-card" id="aacCard">
+    <div class="card-title"><span class="card-title-label">AAC Projects</span></div>
+    <div id="aacRows"></div>
+  </div>
+
+  <!-- STREAKS -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Streaks</span></div>
+    <div class="streaks-row" id="streaksRow"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  function loadJSON(k, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(k)); return (v == null ? fallback : v); } catch (e) { return fallback; }
+  }
+  function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+  function startOfDay(d) { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; }
+
+  // ============================================================
+  // HEADER
+  // ============================================================
+  const SUMMER_START = startOfDay(new Date('2026-06-23')); // Monday, week 1
+  const SUMMER_END_WEEK = 10;
+  function getSummerWeek() {
+    const diffDays = Math.floor((startOfDay(new Date()) - SUMMER_START) / (1000 * 60 * 60 * 24));
+    return Math.floor(diffDays / 7) + 1;
+  }
+  function weekMonday(weekNum) { return addDays(SUMMER_START, (weekNum - 1) * 7); }
+  function renderHeader() {
+    const now = new Date();
+    $('headDate').textContent = now.toLocaleDateString('en-IE', { weekday: 'long', month: 'short', day: 'numeric' });
+    const week = getSummerWeek();
+    if (week < 1) $('headWeek').textContent = 'Pre-summer — plan starts 23 Jun 2026';
+    else if (week > SUMMER_END_WEEK) $('headWeek').textContent = 'Summer plan complete — return to school';
+    else $('headWeek').textContent = 'Week ' + week + ' of ' + SUMMER_END_WEEK + ' — Summer Plan';
+  }
+
+  // ============================================================
+  // 10-WEEK SCHEDULE — copied verbatim from james_master_plan_reference.md
+  // ============================================================
+  const schedule = {
+    1: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L1 — Horizontal UAM', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 1 — Revaluation of Fixed Assets. Grinds360 book p.27 + video lessons.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L2 — Vertical UAM (Free-fall)', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'PE', type: 'Session 1', detail: 'Type A — Analysing Performance, Safe Practice, Role of Coach. Grinds360 3A/3B/3C.', duration: 60, color: 'green' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Read SEC PAP guidelines (curriculumonline.ie) — 45 min', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L3 — Successive Times and Distances', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Session 1', detail: 'LC Section A format familiarisation. Download 2023/2022/2019 papers. Build Section A template card.', duration: 55, color: 'purple' }
+      ]
+    },
+    2: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L4 — Catch-up Problems', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 2 — Suspense + Control Accounts. Grinds360 book p.131 + p.135. Suspense recorded grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L5 — Bodies Moving in Opposite Directions', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 2 — Unseen Suspense or Control Account past paper question. Cold. Verify if 84% was real.', duration: 50, color: 'amber' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Watch PAP Masterclasses 1+2 on Grinds360 (at 1.75x)', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L6 — Velocity-Time Graphs. Take the full session — most nuanced UAM lesson.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 1', detail: 'Read official AAC Physics in Practice guidelines. Download from examinations.ie. Note assessment criteria.', duration: 30, color: 'purple' }
+      ]
+    },
+    3: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L7 — Dimensional Analysis (short lesson)', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 3 — Club Accounts rebuild. Grinds360 book p.108 + Club Accounts recorded grind (69 min).', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: UAM — 2 Old LC Questions timed, marked against scheme. Below 70% on both → do a third.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session — alternating Friday/Wednesday', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 3 — 2019 Q6 Club Accounts. 45-minute timer. Do not watch Grinds360 solution first.', duration: 50, color: 'amber' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'PAP Masterclass 3. Decide activity (gym recommended), confirm with PE teacher.', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L1 — Basic Vectors', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish Session 1 (if not done): Essay Phrases + Topic Selection. ~50 min. Must happen before S2 and S6.', duration: 50, color: 'red' }
+      ]
+    },
+    4: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L2 — Components of a Vector and Dot Product', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 4 — Service Firms rebuild. Grinds360 book p.112 + Loan Workings + Investment Workings + Service Accounts grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L3 — i and j Vectors. TWO exercises (Ex3 + Ex4) — both must be completed.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 4 — 2020 Q7 Service Firm. 45-minute timer. Score vs 53% class result = measure of summer progress.', duration: 50, color: 'amber' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Complete Stage 1 performance analysis. Run all tests. Compile Hevy + Garmin data.', duration: 60, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Vectors — 2 Old LC Questions timed. Below 70% → check i/j notation from L3 before proceeding.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 2', detail: 'Confirm AAC topic (leading: Phase Change Materials). Draft research question naming IV, DV, context.', duration: 30, color: 'purple' }
+      ]
+    },
+    5: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L1 — Applying equations of motion in x and y directions', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 5 — Q1 Sole Trader Final Accounts: structure. Grinds360 book p.39 + Quick Guide to Q1 + Week 1 Final Accounts grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L2 — Proving general rules (range and max height from first principles)', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 5 — First Q1 Sole Trader attempt. 54-minute timer. Studyclix. Identify every adjustment type missed.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 3', detail: 'Type A — Physical Activity Participation and Promoting Pathways (5A + 5B). Grinds360 + 2–3 Studyclix Qs.', duration: 50, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L3 — Finding Angles', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S2, S3, S4, or S5 depending on what’s been done. Check sequence constraints.', duration: 55, color: 'red' }
+      ]
+    },
+    6: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L4 — i and j Vector Approach. New territory — take the full session.', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 6 — Q1 Sole Trader: adjustments in depth. Depreciation adjustment lessons + Week 2 Final Accounts grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L5 — Projectiles and Elasticity', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 6 — Second Q1 Sole Trader (different year). 54-minute timer.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 4', detail: 'Type A — Ethics and Fair Play (Ch 6). Grinds360 ethics videos + 2–3 written practice answers.', duration: 55, color: 'green' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Design Stage 3 training programme targeting all 4 SMART goals.', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Projectiles — 2 Old LC Questions timed. If L5 ran long Wed, push checkpoint to Mon Wk7.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 3', detail: 'Background reading on confirmed PCM topic. Wikipedia level. Notes: phenomenon, physics principles, prior measurements.', duration: 30, color: 'purple' }
+      ]
+    },
+    7: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch4 L2 — Connected Particles. (Ch4 L1 may be here if Wk6 checkpoint was pushed)', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 7 — Company Final Accounts. Grinds360 Company section + Q1 Company video. Note: share capital, debentures, corp tax, dividends.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch4 L3 Pulleys + Newton’s Laws checkpoint — budget full 50 min (Pulleys + checkpoint is tight).', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 7 — Q1 Company from 2022, 2023, or 2024. 54-minute timer.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 5', detail: 'Type B — Section 1 timed practice. 50 min timed. Mark + categorise every dropped mark.', duration: 55, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch6 L1 — Work and Energy', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — use whichever session has not been done. Check S1→S2→S6 sequence constraint.', duration: 55, color: 'red' }
+      ]
+    },
+    8: {
+      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch6 L2 Conservation Laws + Work & Energy checkpoint immediately after.', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 8 — Q1 consolidation. Re-read error log Wks 5–7. Find 3 most-missed adjustment types, re-read book sections. Watch 2024 Q1 Suspense & Bank Rec workings.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L1 — Equations of Circular Motion. New conceptual territory — go slowly.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 8 — Q1 from unused year. Choose A or B on the day as in the exam.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 6', detail: 'Type B — Section 2 case study (40 min) + Section 3 long questions (50 min). Mark both against scheme.', duration: 90, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L2 — Horizontal Circular Motion', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 4', detail: 'Outline methodology: what to measure, how, equipment needed, number of trials, data recording format.', duration: 30, color: 'purple' }
+      ]
+    },
+    9: {
+      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch7 L3 Vertical Circular Motion + Circular Motion checkpoint — 2 LC questions.', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 9 — Q5 Interpretation of Accounts. Grinds360 book p.125 + Interpretation grind (70 min) + Writing to a Shareholder (71 min).', duration: 90, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L1 — Direct Collisions', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 9 — Q5 from 2023 or 2024. 45-minute timer. Calculate all ratios + full written commentary.', duration: 45, color: 'amber' },
+        { subject: 'PE', type: 'PAP Run', detail: 'Stage 3 programme running. Log in Hevy. Write one reflection per goal (ongoing).', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L2 — More than one collision', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S5 or S6 (S6 requires S1 + S3 done first). Final sessions before September.', duration: 60, color: 'red' }
+      ]
+    },
+    10: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L3 — Collisions with Strings', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 10 — Review. Read full error log and all topic checklists. Write one-page handover note to self for September.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L4 — Oblique Collisions. Hardest lesson all summer. Video + notes only — exercises on a separate day if needed.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — final week', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 10 — Second Q5 attempt (different year). 45-minute timer. Baseline for 6th year.', duration: 45, color: 'amber' },
+        { subject: 'PE', type: 'Session 7', detail: '✓ CHECKPOINT: Full 100-min exam conditions. Section 1 (50 min) → Section 2 (40 min) → begin S3. Mark all. Compare to Sessions 5 and 6.', duration: 100, color: 'green' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Draft Stage 4 concluding analysis (interim — programme continues into 6th year).', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ FINAL CHECKPOINT: Collisions — 2 Old LC Questions. Course complete. Log final lesson count.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 5', detail: 'September readiness review. Consolidate all Physics project sessions into one-page summary for supervisor.', duration: 30, color: 'purple' }
+      ]
+    }
+  };$
+  const SUBJECT_COLOR_HEX = { accent: '#c8f060', amber: '#f0a040', blue: '#60b4f0', purple: '#b08af0', green: '#60d090', red: '#ff6b6b', grey: '#888888' };
+  function badgeFor(type) {
+    const map = { Lesson: 'LESSON', Checkpoint: '✓ CHECK', Understand: 'UNDERSTAND', Attempt: 'ATTEMPT', 'Type A': 'THEORY', 'Type B': 'EXAM PRACTICE', PAP: 'PAP', Theory: 'THEORY', Application: 'PAST PAPER', Float: 'IRISH', Maintenance: 'ANKI', 'PAP Run': 'PAP' };
+    if (map[type]) return map[type];
+    if (/^Project/.test(type) || /^Session/.test(type)) return /^Project/.test(type) ? 'AAC PROJECT' : type.toUpperCase();
+    return type.toUpperCase();
+  }
+  function sessionsFor(week, dayKey) {
+    if (dayKey === 'sat') return [];
+    if (dayKey === 'sun') return [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10, color: 'grey' }];
+    const wp = schedule[week];
+    if (!wp) return [];
+    return wp[dayKey] || [];
+  }
+  function studyDoneKey(dStr) { return 'sd:studyDone:' + dStr; }
+
+  // ============================================================
+  // TODAY'S STUDY PANEL (dominant) — day navigator across Mon–Fri
+  // ============================================================
+  const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+  const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  let selectedIdx = (function () {
+    const dow = new Date().getDay(); // 0 Sun .. 6 Sat
+    return (dow >= 1 && dow <= 5) ? dow - 1 : 0;
+  })();
+  function renderStudyPanel() {
+    const week = getSummerWeek();
+    $('studyWeekBadge').textContent = week < 1 ? 'PRE-SUMMER' : (week > SUMMER_END_WEEK ? 'PLAN COMPLETE' : ('WEEK ' + week + ' OF ' + SUMMER_END_WEEK));
+    const todayDow = new Date().getDay();
+    const nav = $('dayNav');
+    const wrap = $('studySessions');
+    if (week < 1) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Pre-summer — plan starts 23 Jun 2026.</div>'; return; }
+    if (week > SUMMER_END_WEEK) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Summer plan complete — return to school.</div>'; return; }
+    if (todayDow === 6) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Match Day — Zero Study</div>'; return; }
+    if (todayDow === 0) {
+      nav.style.display = 'none';
+      wrap.innerHTML = '';
+      renderSessionCards(wrap, sessionsFor(week, 'sun'), dateKey(new Date()));
+      return;
+    }
+    nav.style.display = 'flex';
+    $('dayPrev').disabled = selectedIdx <= 0;
+    $('dayNext').disabled = selectedIdx >= 4;
+    const dKey = WEEKDAY_KEYS[selectedIdx];
+    const date = addDays(weekMonday(week), selectedIdx);
+    $('dayNavLabel').textContent = WEEKDAY_LABELS[selectedIdx];
+    $('dayNavSub').textContent = date.toLocaleDateString('en-IE', { month: 'short', day: 'numeric' });
+    wrap.innerHTML = '';
+    const sessions = sessionsFor(week, dKey);
+    if (!sessions.length) { wrap.innerHTML = '<div class="study-empty">Nothing scheduled.</div>'; return; }
+    renderSessionCards(wrap, sessions, dateKey(date));
+  }
+  function renderSessionCards(wrap, sessions, dStr) {
+    const done = loadJSON(studyDoneKey(dStr), {});
+    sessions.forEach((s, i) => {
+      const isDone = !!done[i];
+      const row = document.createElement('div');
+      row.className = 'study-session' + (isDone ? ' done' : '');
+      row.style.borderLeftColor = SUBJECT_COLOR_HEX[s.color] || '#888';
+      row.innerHTML =
+        '<div class="study-session-top">' +
+          '<span><span class="study-subject">' + esc(s.subject) + '</span><span class="study-badge">' + esc(badgeFor(s.type)) + '</span></span>' +
+          '<span class="study-dur">' + s.duration + ' min</span>' +
+        '</div>' +
+        '<div class="study-detail collapsed">' + esc(s.detail) + '</div>' +
+        '<div class="study-actions">' +
+          '<button type="button" class="study-btn done-btn' + (isDone ? ' is-active' : '') + '">Mark Done</button>' +
+          '<button type="button" class="study-btn undo-btn">Undo</button>' +
+        '</div>';
+      const detailEl = row.querySelector('.study-detail');
+      detailEl.addEventListener('click', () => detailEl.classList.toggle('collapsed'));
+      row.querySelector('.done-btn').addEventListener('click', () => {
+        const d = loadJSON(studyDoneKey(dStr), {}); d[i] = true; saveJSON(studyDoneKey(dStr), d);
+        renderStudyPanel(); renderWeekGrid();
+      });
+      row.querySelector('.undo-btn').addEventListener('click', () => {
+        const d = loadJSON(studyDoneKey(dStr), {}); d[i] = false; saveJSON(studyDoneKey(dStr), d);
+        renderStudyPanel(); renderWeekGrid();
+      });
+      wrap.appendChild(row);
+    });
+  }
+  $('dayPrev').addEventListener('click', () => { if (selectedIdx > 0) { selectedIdx--; renderStudyPanel(); } });
+  $('dayNext').addEventListener('click', () => { if (selectedIdx < 4) { selectedIdx++; renderStudyPanel(); } });
+
+  // ============================================================
+  // WEEKLY COMPLETION GRID
+  // ============================================================
+  function renderWeekGrid() {
+    const week = getSummerWeek();
+    const grid = $('weekGrid');
+    grid.innerHTML = '';
+    if (week < 1 || week > SUMMER_END_WEEK) { grid.innerHTML = '<div class="week-grid-empty">No active week.</div>'; return; }
+    const today0 = startOfDay(new Date());
+    WEEKDAY_KEYS.forEach((dk, i) => {
+      const date = addDays(weekMonday(week), i);
+      const date0 = startOfDay(date);
+      const isToday = date0.getTime() === today0.getTime();
+      const isPast = date0.getTime() < today0.getTime();
+      const sessions = sessionsFor(week, dk);
+      const done = loadJSON(studyDoneKey(dateKey(date)), {});
+      const col = document.createElement('div');
+      col.className = 'week-grid-col' + (isToday ? ' is-today' : '');
+      const dots = sessions.map((s, i2) => {
+        const isDone = !!done[i2];
+        const cls = isDone ? 'done' : (isPast ? 'missed' : '');
+        return '<span class="week-grid-dot ' + cls + '"></span>';
+      }).join('');
+      col.innerHTML = '<div class="week-grid-day">' + WEEKDAY_LABELS[i].slice(0, 3) + '</div><div class="week-grid-dots">' + (dots || '<span class="week-grid-empty">—</span>') + '</div>';
+      grid.appendChild(col);
+    });
+  }
+
+  // ============================================================
+  // IRISH FLOATING SESSIONS
+  // ============================================================
+  const IRISH_SESSIONS = [
+    { id: 's1', title: 'S1 — Essay phrases and topic selection', duration: 50 },
+    { id: 's2', title: 'S2 — First timed essay', duration: 60, requires: ['s1'] },
+    { id: 's3', title: 'S3 — Reading comprehension', duration: 55 },
+    { id: 's4', title: 'S4 — Prose exam technique', duration: 50 },
+    { id: 's5', title: 'S5 — Poetry exam technique', duration: 50 },
+    { id: 's6', title: 'S6 — Second essay consolidation', duration: 60, requires: ['s1', 's3'] },
+  ];
+  function getIrish() { return loadJSON('sd:irish', {}); }
+  function renderIrish() {
+    const state = getIrish();
+    const wrap = $('irishRows');
+    wrap.innerHTML = '';
+    IRISH_SESSIONS.forEach(s => {
+      const done = !!state[s.id];
+      const lockedBy = (s.requires || []).filter(r => !state[r]);
+      const locked = lockedBy.length > 0 && !done;
+      const row = document.createElement('div');
+      row.className = 'irish-row' + (locked ? ' locked' : '');
+      row.innerHTML =
+        '<div class="irish-main">' +
+          '<div class="irish-title">' + esc(s.title) + '</div>' +
+          (locked ? '<div class="irish-lock">Locked until ' + lockedBy.map(r => r.toUpperCase()).join(' + ') + ' done</div>' : '') +
+        '</div>' +
+        '<span class="irish-dur">' + s.duration + ' min</span>' +
+        '<div class="irish-actions">' +
+          '<button type="button" class="study-btn done-btn' + (done ? ' is-active' : '') + '"' + (locked ? ' disabled' : '') + '>Mark Done</button>' +
+          '<button type="button" class="study-btn undo-btn">Undo</button>' +
+        '</div>';
+      if (!locked) {
+        row.querySelector('.done-btn').addEventListener('click', () => {
+          const st = getIrish(); st[s.id] = true; saveJSON('sd:irish', st); renderIrish();
+        });
+      }
+      row.querySelector('.undo-btn').addEventListener('click', () => {
+        const st = getIrish(); st[s.id] = false; saveJSON('sd:irish', st); renderIrish();
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  // ============================================================
+  // APPLIED MATHS COUNTER
+  // ============================================================
+  const AM_CHAPTERS = [
+    { name: 'Ch1 — UAM', lessons: 7 },
+    { name: 'Ch2 — Vectors', lessons: 3 },
+    { name: 'Ch3 — Projectiles', lessons: 5 },
+    { name: 'Ch4 — Newton’s Laws', lessons: 3 },
+    { name: 'Ch6 — Work and Energy', lessons: 2 },
+    { name: 'Ch7 — Circular Motion', lessons: 3 },
+    { name: 'Ch8 — Collisions', lessons: 4 },
+  ];
+  const AM_TARGET = 27;
+  function renderAM() {
+    const count = loadJSON('sd:amCounter', 0);
+    $('amCount').textContent = count;
+    let cum = 0;
+    let currentSet = false;
+    const wrap = $('amChapters');
+    wrap.innerHTML = '';
+    AM_CHAPTERS.forEach(ch => {
+      const prevCum = cum;
+      cum += ch.lessons;
+      const complete = count >= cum;
+      const isCurrent = !currentSet && count < cum;
+      if (isCurrent) currentSet = true;
+      const row = document.createElement('div');
+      row.className = 'am-chapter-row' + (isCurrent ? ' current' : '') + (complete ? ' complete' : '');
+      row.innerHTML = '<span>' + esc(ch.name) + '</span><span class="am-chapter-count">' + Math.max(0, Math.min(ch.lessons, count - prevCum)) + ' / ' + ch.lessons + '</span>';
+      wrap.appendChild(row);
+    });
+  }
+  $('amPlus').addEventListener('click', () => {
+    const c = Math.min(AM_TARGET, loadJSON('sd:amCounter', 0) + 1);
+    saveJSON('sd:amCounter', c); renderAM();
+  });
+  $('amMinus').addEventListener('click', () => {
+    const c = Math.max(0, loadJSON('sd:amCounter', 0) - 1);
+    saveJSON('sd:amCounter', c); renderAM();
+  });
+
+  // ============================================================
+  // SUBJECTS (shared by Points Estimator + Subject OS)
+  // ============================================================
+  const TOPICS_CHEMISTRY = ['Atomic structure', 'Electronic configuration', 'Periodic table trends', 'Chemical bonding', 'Shapes of molecules VSEPR', 'Intermolecular forces', 'Stoichiometry and moles', 'Gas laws', 'Thermochemistry', 'Rates of reaction', 'Chemical equilibrium', 'Acids and bases', 'Oxidation and reduction', 'Electrochemistry', 'Organic chemistry', 'Polymers', 'Environmental chemistry', 'Industrial chemistry', 'Volumetric analysis', 'Water chemistry'];
+  const TOPICS_PHYSICS = ['Measurement and units', 'Linear motion', 'Newton’s laws and forces', 'Momentum and collisions', 'Work energy and power', 'Circular motion', 'Gravity and planetary motion', 'Simple harmonic motion', 'Waves', 'Sound', 'Light reflection and refraction', 'Lenses and mirrors', 'Interference and diffraction', 'Electrostatics', 'Electric fields and potential', 'Current electricity', 'Capacitors', 'Magnetic fields', 'Electromagnetic induction', 'AC circuits and transformers', 'Particle physics', 'Nuclear physics', 'Radioactivity', 'The electron', 'Semiconductors', 'Relativity'];
+  const TOPICS_ACCOUNTING = ['Double entry bookkeeping', 'Trial balance', 'Final accounts sole trader', 'Final accounts partnership', 'Final accounts company', 'Club accounts', 'Farm accounts', 'Service firm accounts', 'Tabular statement', 'Cash flow statement', 'Interpretation of accounts', 'Budgeting', 'Break-even analysis', 'Marginal costing', 'Standard costing and variance', 'Depreciation methods', 'Control accounts', 'Bank reconciliation', 'VAT and payroll', 'Government and national accounts'];
+  const TOPICS_APPLIED_MATHS = ['Ch1 Horizontal UAM', 'Ch1 Vertical UAM', 'Ch1 Successive times', 'Ch1 Catch-up problems', 'Ch1 Bodies in opposite directions', 'Ch1 Velocity-time graphs', 'Ch1 Dimensional analysis', 'Ch2 Basic vectors', 'Ch2 Components and dot product', 'Ch2 i and j vectors', 'Ch3 Applying equations x and y', 'Ch3 Proving general rules', 'Ch3 Finding angles', 'Ch3 i and j vector approach', 'Ch3 Projectiles and elasticity', 'Ch4 Newton’s laws L1', 'Ch4 Newton’s laws L2', 'Ch4 Pulleys', 'Ch6 Work and energy L1', 'Ch6 Work and energy L2', 'Ch7 Circular motion L1', 'Ch7 Circular motion L2', 'Ch7 Circular motion L3', 'Ch8 Collisions L1', 'Ch8 Collisions L2', 'Ch8 Collisions L3', 'Ch8 Oblique collisions'];
+  const SUBJECTS = [
+    { id: 'maths', name: 'Maths', color: '#5ecbe8', topics: [] },
+    { id: 'irish', name: 'Irish', color: '#ff6b6b', topics: [] },
+    { id: 'physics', name: 'Physics', color: '#b08af0', topics: TOPICS_PHYSICS },
+    { id: 'chemistry', name: 'Chemistry', color: '#60b4f0', topics: TOPICS_CHEMISTRY },
+    { id: 'pe', name: 'PE', color: '#60d090', topics: [] },
+    { id: 'accounting', name: 'Accounting', color: '#f0a040', topics: TOPICS_ACCOUNTING },
+    { id: 'appliedMaths', name: 'Applied Maths', color: '#c8f060', topics: TOPICS_APPLIED_MATHS },
+    { id: 'english', name: 'English', color: '#c9a36b', topics: [] },
+    { id: 'french', name: 'French', color: '#a7f3d0', topics: [] },
+  ];
+  const GRADE_POINTS = { H1: 100, H2: 88, H3: 77, H4: 66, H5: 56, H6: 46, H7: 37, H8: 0 };
+  const DEFAULT_GRADES = { maths: 'H1', irish: 'H1', physics: 'H1', chemistry: 'H2', pe: 'H1', accounting: 'H3', appliedMaths: 'H1', english: 'H7', french: 'H7' };
+  function getGrades() { return loadJSON('sd:points', DEFAULT_GRADES); }
+
+  // ============================================================
+  // POINTS ESTIMATOR
+  // ============================================================
+  function computePoints() {
+    const grades = getGrades();
+    const scores = SUBJECTS.map(s => ({ id: s.id, points: GRADE_POINTS[grades[s.id]] || 0 }));
+    scores.sort((a, b) => b.points - a.points);
+    const top6 = scores.slice(0, 6);
+    let total = top6.reduce((sum, s) => sum + s.points, 0);
+    if (grades.maths === 'H1') total += 25;
+    return total;
+  }
+  function renderPointsRows() {
+    const grades = getGrades();
+    const wrap = $('ptsRows');
+    wrap.innerHTML = '';
+    SUBJECTS.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'pts-row';
+      const opts = Object.keys(GRADE_POINTS).map(g => '<option value="' + g + '"' + (grades[s.id] === g ? ' selected' : '') + '>' + g + '</option>').join('');
+      row.innerHTML = '<span class="pts-row-name">' + esc(s.name) + '</span><select>' + opts + '</select>';
+      row.querySelector('select').addEventListener('change', (e) => {
+        const g = getGrades(); g[s.id] = e.target.value; saveJSON('sd:points', g);
+        renderPointsSummary(); renderSubjectCards();
+      });
+      wrap.appendChild(row);
+    });
+    renderPointsSummary();
+  }
+  function renderPointsSummary() {
+    const total = computePoints();
+    $('ptsTotal').textContent = total;
+    const gap = 625 - total;
+    const gapEl = $('ptsGap');
+    if (gap <= 0) { gapEl.textContent = '625 reached — +' + (-gap) + ' over'; gapEl.classList.add('met'); }
+    else { gapEl.textContent = gap + ' points short of 625'; gapEl.classList.remove('met'); }
+  }
+  $('ptsToggle').addEventListener('click', () => {
+    const showing = $('ptsBody').classList.toggle('show');
+    $('ptsToggle').textContent = showing ? 'Tap to collapse' : 'Tap to expand';
+  });
+
+  // ============================================================
+  // SUBJECT OS — confidence RAG + topic checklist w/ lightweight SRS
+  // ============================================================
+  const SRS_INTERVALS = [1, 3, 7, 14, 30, 60]; // days, by level
+  function getConfidence() { return loadJSON('sd:confidence', {}); }
+  function getTopicState() { return loadJSON('sd:topics', {}); }
+  function getCustomTopics() { return loadJSON('sd:customTopics', {}); }
+  function allTopicsFor(subj) { return subj.topics.concat(getCustomTopics()[subj.id] || []); }
+  function srsStatus(entry) {
+    if (!entry || !entry.due) return { label: 'Not reviewed', cls: 'new' };
+    const today0 = startOfDay(new Date());
+    const due0 = startOfDay(new Date(entry.due));
+    const days = Math.round((due0 - today0) / (1000 * 60 * 60 * 24));
+    if (days < 0) return { label: 'Overdue ' + (-days) + 'd', cls: 'overdue' };
+    if (days === 0) return { label: 'Due today', cls: 'due' };
+    return { label: 'Next in ' + days + 'd', cls: 'ahead' };
+  }
+  function reviewTopic(subjId, topicName) {
+    const all = getTopicState();
+    all[subjId] = all[subjId] || {};
+    const cur = all[subjId][topicName] || { level: -1 };
+    const level = Math.min(SRS_INTERVALS.length - 1, cur.level + 1);
+    const due = addDays(new Date(), SRS_INTERVALS[level]);
+    all[subjId][topicName] = { level, due: dateKey(due) };
+    saveJSON('sd:topics', all);
+  }
+  const subjOpenState = {};
+  function renderSubjectCards() {
+    const grades = getGrades();
+    const conf = getConfidence();
+    const topicState = getTopicState();
+    const wrap = $('subjectCards');
+    wrap.innerHTML = '';
+    SUBJECTS.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'subj-card' + (subjOpenState[s.id] ? ' open' : '');
+      const topics = allTopicsFor(s);
+      const subjConf = conf[s.id] || null;
+      const topicRows = topics.map(t => {
+        const st = srsStatus((topicState[s.id] || {})[t]);
+        return '<div class="topic-row"><span class="topic-name">' + esc(t) + '</span><button type="button" class="topic-srs ' + st.cls + '" data-topic="' + esc(t) + '">' + esc(st.label) + '</button></div>';
+      }).join('') || '<div class="study-empty">No topics yet — add one below.</div>';
+      card.innerHTML =
+        '<div class="subj-head">' +
+          '<span class="subj-dot" style="background:' + s.color + '"></span>' +
+          '<span class="subj-name">' + esc(s.name) + '</span>' +
+          '<span class="subj-grade">' + esc(grades[s.id] || '—') + '</span>' +
+          '<span class="subj-caret">▸</span>' +
+        '</div>' +
+        '<div class="subj-body">' +
+          '<div class="subj-rag">' +
+            '<button type="button" class="rag-red' + (subjConf === 'red' ? ' active' : '') + '" data-c="red">Red</button>' +
+            '<button type="button" class="rag-amber' + (subjConf === 'amber' ? ' active' : '') + '" data-c="amber">Amber</button>' +
+            '<button type="button" class="rag-green' + (subjConf === 'green' ? ' active' : '') + '" data-c="green">Green</button>' +
+          '</div>' +
+          '<div class="subj-topics">' + topicRows + '</div>' +
+          '<div class="topic-add"><input type="text" placeholder="Add topic" maxlength="60"><button type="button">Add</button></div>' +
+        '</div>';
+      card.querySelector('.subj-head').addEventListener('click', () => {
+        subjOpenState[s.id] = !subjOpenState[s.id];
+        renderSubjectCards();
+      });
+      card.querySelectorAll('.subj-rag button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const c = getConfidence();
+          c[s.id] = (c[s.id] === btn.dataset.c) ? null : btn.dataset.c;
+          saveJSON('sd:confidence', c);
+          renderSubjectCards();
+        });
+      });
+      card.querySelectorAll('.topic-srs').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          reviewTopic(s.id, btn.dataset.topic);
+          renderSubjectCards();
+        });
+      });
+      const addInput = card.querySelector('.topic-add input');
+      const addBtn = card.querySelector('.topic-add button');
+      const doAdd = () => {
+        const name = addInput.value.trim();
+        if (!name) return;
+        const custom = getCustomTopics();
+        custom[s.id] = custom[s.id] || [];
+        custom[s.id].push(name);
+        saveJSON('sd:customTopics', custom);
+        renderSubjectCards();
+      };
+      addBtn.addEventListener('click', (e) => { e.stopPropagation(); doAdd(); });
+      addInput.addEventListener('click', (e) => e.stopPropagation());
+      addInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+      wrap.appendChild(card);
+    });
+  }
+
+  // ============================================================
+  // AAC PROJECTS TRACKER
+  // ============================================================
+  const AAC_STATUSES = ['Not Started', 'Topic Selected', 'Research Started', 'Draft Complete'];
+  const AAC_ROWS = [
+    { id: 'physicsInPractice', label: 'Physics in Practice' },
+    { id: 'chemistryInvestigation', label: 'Chemistry Investigation' },
+    { id: 'peAssessment', label: 'PE Performance Assessment' },
+    { id: 'peProject', label: 'PE Physical Activity Project' },
+  ];
+  function getAAC() { return loadJSON('sd:aac', {}); }
+  function renderAAC() {
+    const state = getAAC();
+    const wrap = $('aacRows');
+    wrap.innerHTML = '';
+    let allSelected = true;
+    AAC_ROWS.forEach(r => {
+      const val = state[r.id] || AAC_STATUSES[0];
+      if (AAC_STATUSES.indexOf(val) < 1) allSelected = false;
+      const row = document.createElement('div');
+      row.className = 'aac-row';
+      const opts = AAC_STATUSES.map(st => '<option value="' + st + '"' + (val === st ? ' selected' : '') + '>' + st + '</option>').join('');
+      row.innerHTML = '<span class="aac-name">' + esc(r.label) + '</span><select>' + opts + '</select>';
+      row.querySelector('select').addEventListener('change', (e) => {
+        const s = getAAC(); s[r.id] = e.target.value; saveJSON('sd:aac', s); renderAAC();
+      });
+      wrap.appendChild(row);
+    });
+    $('aacCard').classList.toggle('all-selected', allSelected);
+  }
+
+  // ============================================================
+  // STREAKS
+  // ============================================================
+  const STREAKS = [
+    { id: 'duolingo', label: 'Duolingo' },
+    { id: 'anki', label: 'Anki' },
+    { id: 'studyDays', label: 'Study Days' },
+  ];
+  function getStreaks() { return loadJSON('sd:streaks', {}); }
+  function renderStreaks() {
+    const state = getStreaks();
+    const wrap = $('streaksRow');
+    wrap.innerHTML = '';
+    STREAKS.forEach(s => {
+      const val = state[s.id] || 0;
+      const item = document.createElement('div');
+      item.className = 'streak-item';
+      item.innerHTML =
+        '<div class="streak-label">' + esc(s.label) + '</div>' +
+        '<div class="streak-val">' + val + '</div>' +
+        '<div class="streak-btns"><button type="button" data-d="-1">&minus;</button><button type="button" data-d="1">+</button></div>';
+      item.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const st = getStreaks();
+          st[s.id] = Math.max(0, (st[s.id] || 0) + parseInt(btn.dataset.d, 10));
+          saveJSON('sd:streaks', st);
+          renderStreaks();
+        });
+      });
+      wrap.appendChild(item);
+    });
+  }
+
+  // ---------- boot ----------
+  function renderAll() {
+    renderHeader();
+    renderStudyPanel();
+    renderWeekGrid();
+    renderIrish();
+    renderAM();
+    renderPointsRows();
+    renderSubjectCards();
+    renderAAC();
+    renderStreaks();
+  }
+  renderAll();
+  setInterval(renderHeader, 60 * 1000);
+  window.addEventListener('storage', renderAll);
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof initCloudSync !== 'function') return;
+  initCloudSync({
+    appKey: 'studyPage',
+    syncedPrefixes: ['sd:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+});
+</script>
+</body>
+</html>
