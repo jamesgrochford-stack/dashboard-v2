@@ -1,23 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="lock.js"></script>
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050506">
-<title>Dashboard</title>
+<title>Today</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 
 <style>
-/* ===== Shared design tokens (same as the rest of the dashboard) ===== */
 :root {
   --text-primary: #FAFAFA;
   --text-secondary: #B8B6B0;
   --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --blue: #7DD3FC;
+  --green: #6BE3A4;
+  --orange: #F2A063;
+  --purple: #B08AF0;
   --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -34,7 +39,6 @@ body {
   min-height: 100vh; position: relative; overflow-x: hidden;
   padding: max(28px, env(safe-area-inset-top)) 20px 60px;
 }
-/* Soft drifting glow + dot texture (matches the other pages). */
 body::before {
   content: ''; position: fixed; inset: 0;
   background:
@@ -50,522 +54,961 @@ body::after {
 }
 @keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
 
-.page { max-width: 1100px; margin: 0 auto; }
+.page { max-width: 720px; margin: 0 auto; }
+.hub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .dash-title {
-  margin: 0 0 18px; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
   background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
-
-/* ===== BENTO GRID ===== */
-.bento {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 168px;
-  grid-auto-flow: dense;
-  gap: 14px;
-}
-.tile {
-  --accent: #6BE3A4;                 /* each tile overrides this */
-  position: relative; overflow: hidden;
-  display: flex; flex-direction: column;
-  padding: 20px;
-  border-radius: 18px;
-  text-decoration: none;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-}
-/* The "its own style" bit — a faint accent glow per tile. */
-.tile::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 78% 18%,
-              color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
-  opacity: 0.7; transition: opacity 0.18s ease;
-}
-.tile:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.55);
-}
-.tile:hover::before { opacity: 1; }
-
-/* Tile sizes */
-.tile.big  { grid-column: span 2; grid-row: span 2; }
-.tile.wide { grid-column: span 2; }
-
-/* Tile contents */
-.tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.tile-num {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.08em; color: var(--text-tertiary);
-}
-.tile-emoji {
-  font-size: 26px; line-height: 1;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent));
-}
-.tile-spacer { flex: 1; }
-.tile-title {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
-  color: var(--text-primary); margin: 0 0 4px;
-}
-.tile.big .tile-title { font-size: 28px; }
-.tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.tile-sub {
-  font-size: 13px; color: var(--text-tertiary);
-}
-.tile-arrow {
-  font-size: 18px; color: var(--accent);
-  transition: transform 0.18s ease; flex-shrink: 0;
-}
-.tile:hover .tile-arrow { transform: translateX(4px); }
-
-/* ===== Responsive: collapse the bento on small screens ===== */
-@media (max-width: 720px) {
-  .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 150px; }
-  .tile.big { grid-column: span 2; grid-row: span 1; }
-  .tile.big .tile-title { font-size: 22px; }
-}
-@media (max-width: 440px) {
-  body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
-  .bento { grid-template-columns: 1fr; grid-auto-rows: 132px; }
-  .tile.big, .tile.wide { grid-column: span 1; }
-}
-
-/* ===== Header row + gear ===== */
-.hub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.hub-head .dash-title { margin: 0; }
-.gear-btn {
+.apps-btn {
   width: 42px; height: 42px; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 12px; border: 1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.04); color: var(--text-secondary);
-  cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
+  text-decoration: none; cursor: pointer; transition: background 0.15s, color 0.15s;
 }
-.gear-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.gear-btn:active { transform: scale(0.94) rotate(35deg); }
-.gear-btn svg { width: 22px; height: 22px; }
+.apps-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.apps-btn svg { width: 20px; height: 20px; }
 
-/* ===== Settings modal ===== */
-.modal-bg {
-  position: fixed; inset: 0; z-index: 120; display: none;
-  align-items: center; justify-content: center; padding: 20px;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+/* ===== shared card ===== */
+.card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
 }
-.modal-bg.show { display: flex; }
-.modal {
-  width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto;
-  background: #0e0e10; border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+.card-title {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-tertiary); margin: 0 0 14px; display: flex; align-items: center; gap: 10px;
 }
-.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
-.modal-close { border: 0; background: transparent; color: var(--text-tertiary); font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
-.modal-close:hover { color: var(--text-primary); }
-.field { margin-bottom: 14px; }
-.field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 7px; display: block; }
-.field-row { display: flex; gap: 8px; align-items: center; }
-.set-input {
-  flex: 1; min-width: 0; padding: 11px 13px;
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 11px;
-  background: rgba(0,0,0,0.3); color: var(--text-primary);
-  font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.2s;
+.card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+
+/* ===== Day Banner ===== */
+.day-banner {
+  --accent: #7DD3FC;
+  position: relative; overflow: hidden;
+  border-radius: 18px; padding: 20px 22px;
+  margin-bottom: 16px;
+  background: rgba(255,255,255,0.04);
+  border-left: 5px solid var(--accent);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
 }
-.set-input:focus { border-color: rgba(255,255,255,0.28); }
-.seg { display: inline-flex; border: 1px solid rgba(255,255,255,0.10); border-radius: 11px; overflow: hidden; flex-shrink: 0; }
-.seg button { border: 0; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 13px; font-weight: 600; padding: 11px 14px; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.seg button.on { background: rgba(255,255,255,0.12); color: var(--text-primary); }
-.set-save {
-  width: 100%; margin-top: 6px; padding: 13px; border: 0; border-radius: 12px;
-  background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B;
-  font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.25);
-  transition: filter 0.15s, transform 0.1s;
+.day-banner-left { min-width: 0; }
+.day-banner-type {
+  font-size: 26px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);
+  margin: 0 0 10px;
 }
-.set-save:hover { filter: brightness(1.05); }
-.set-save:active { transform: translateY(1px); }
-.set-status { text-align: center; font-size: 12px; color: var(--success); min-height: 16px; margin-top: 8px; }
-.section-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 20px 0 14px; }
-.whoop-box { margin-top: 8px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); }
-.whoop-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.whoop-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.whoop-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #76746E; }
-.whoop-status.on .dot { background: #6BE3A4; box-shadow: 0 0 8px rgba(107,227,164,0.7); }
-.whoop-sync { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); text-align: right; }
-.whoop-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 14px; }
-.whoop-stat { text-align: center; }
-.whoop-stat .v { font-size: 20px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
-.whoop-stat .l { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 5px; }
-.whoop-btn { width: 100%; margin-top: 14px; padding: 11px; border: 1px solid rgba(255,255,255,0.12); border-radius: 11px; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.whoop-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+@media (max-width: 480px) { .day-banner-type { font-size: 21px; } }
+.day-banner-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+.day-banner-row:last-child { margin-bottom: 0; }
+.day-banner-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); }
+.day-arc { flex-shrink: 0; width: 62px; height: 62px; position: relative; }
+.day-arc svg { width: 100%; height: 100%; display: block; }
+.day-arc-track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6; }
+.day-arc-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 31px 31px; transition: stroke-dashoffset 0.6s ease; }
+.day-arc-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); }
+
+/* ===== Schedule timeline ===== */
+.sched-list { list-style: none; margin: 0; padding: 0; }
+.sched-item {
+  border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 8px; overflow: hidden; cursor: pointer; transition: background 0.15s;
+}
+.sched-item:hover { background: rgba(255,255,255,0.055); }
+.sched-item.no-expand { cursor: default; }
+.sched-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.sched-time { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: var(--text-tertiary); flex: none; width: 82px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sched-title { font-size: 14px; font-weight: 600; color: var(--text-primary); flex: 1; }
+.sched-caret { flex: none; font-size: 12px; color: var(--text-tertiary); transition: transform 0.2s; }
+.sched-item.open .sched-caret { transform: rotate(90deg); }
+.sched-body { display: none; padding: 0 14px 14px 96px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); white-space: pre-line; }
+.sched-item.open .sched-body { display: block; }
+.sched-body ul { margin: 6px 0 0; padding-left: 18px; }
+.sched-body li { margin-bottom: 3px; }
+
+/* ===== Study ===== */
+.study-week { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 2px; }
+.study-empty { text-align: center; padding: 18px 0; font-size: 13px; font-style: italic; color: var(--text-tertiary); }
+.study-session {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px;
+  border-radius: 10px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--text-tertiary);
+  transition: opacity 0.2s;
+}
+.study-session.done { opacity: 0.45; }
+.study-session-main { flex: 1; min-width: 0; }
+.study-subject { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.study-badge { display: inline-block; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); margin-left: 8px; }
+.study-detail { font-size: 12px; color: var(--text-tertiary); margin-top: 3px; line-height: 1.4; }
+.study-dur { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); flex: none; }
+.study-done-btn {
+  flex: none; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: var(--text-secondary);
+  border-radius: 999px; padding: 6px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.study-done-btn.is-done { background: rgba(107,227,164,0.14); border-color: rgba(107,227,164,0.35); color: var(--success); }
+.study-done-btn:hover { border-color: rgba(255,255,255,0.3); }
+
+/* ===== Habits ===== */
+.habit-overall { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 10px 14px; border-radius: 12px; background: rgba(242,192,99,0.08); border: 1px solid rgba(242,192,99,0.2); }
+.habit-overall-num { font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--warning); }
+.habit-overall-label { font-size: 12px; color: var(--text-secondary); }
+.habit-row { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: opacity 0.15s; }
+.habit-row:last-of-type { border-bottom: none; }
+.habit-row.disabled { opacity: 0.35; cursor: default; }
+.habit-check {
+  flex: none; width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.28); position: relative; transition: background 0.2s, border-color 0.2s;
+}
+.habit-check.on { background: var(--success); border-color: var(--success); }
+.habit-check.on::after { content: ''; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.habit-label { flex: 1; font-size: 14px; color: var(--text-primary); }
+.habit-streak { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); flex: none; }
+.habit-streak.active { color: var(--warning); }
+.habit-edit-btn { width: 100%; margin-top: 12px; padding: 10px; border: 1px dashed rgba(255,255,255,0.14); border-radius: 10px; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+.habit-edit-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.28); }
+.habit-yesterday { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); display: none; }
+.habit-yesterday.show { display: block; }
+.habit-yesterday-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+
+/* ===== Water ===== */
+.water-num { font-size: 40px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1; }
+.water-num span { font-size: 16px; color: var(--text-tertiary); font-weight: 500; }
+.water-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; margin: 12px 0 16px; }
+.water-bar-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width 0.4s ease; }
+.water-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.water-btn { flex: 1; min-width: 64px; padding: 11px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text-primary); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+.water-btn:hover { background: rgba(255,255,255,0.09); }
+.water-btn.minus { color: var(--danger); }
+
+/* ===== Garmin ===== */
+.garmin-headline { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.garmin-bb { font-size: 46px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1; }
+.garmin-bb-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+.garmin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+.garmin-stat { text-align: center; padding: 10px 6px; border-radius: 10px; background: rgba(255,255,255,0.03); }
+.garmin-stat .v { font-size: 17px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.garmin-stat .l { font-size: 9px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 4px; }
+.garmin-updated { font-size: 11px; color: var(--text-tertiary); margin-bottom: 10px; }
+.garmin-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.garmin-field { display: flex; flex-direction: column; gap: 5px; }
+.garmin-field label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.garmin-field input { padding: 9px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; }
+.garmin-field input:focus { border-color: rgba(255,255,255,0.3); }
+.garmin-save { width: 100%; margin-top: 12px; padding: 11px; border: 0; border-radius: 12px; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.garmin-spark { margin-top: 16px; }
+.garmin-spark svg { width: 100%; height: 50px; display: block; }
+.garmin-spark-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+
+/* ===== Journal ===== */
+.journal-textarea { width: 100%; min-height: 100px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: vertical; }
+.journal-textarea:focus { border-color: rgba(255,255,255,0.3); }
+.journal-save { margin-top: 10px; padding: 10px 20px; border: 0; border-radius: 999px; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.journal-status { display: inline-block; margin-left: 10px; font-size: 11.5px; color: var(--success); }
+.journal-yesterday { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); }
+.journal-yesterday-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.journal-yesterday-text { font-size: 13px; color: var(--text-tertiary); line-height: 1.5; font-style: italic; white-space: pre-wrap; }
+
+@media (max-width: 480px) {
+  .card { padding: 16px; }
+  .day-banner { padding: 16px 18px; }
+  .garmin-form { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
 <div class="page">
 
   <div class="hub-head">
-    <h1 class="dash-title">James</h1>
-    <button class="gear-btn" id="settingsOpen" type="button" aria-label="Settings">
+    <h1 class="dash-title">Today</h1>
+    <a class="apps-btn" href="hub.html" aria-label="All apps" title="All apps">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
       </svg>
-    </button>
+    </a>
   </div>
 
-  <div class="bento">
-
-    <!-- Big tile -->
-    <a class="tile big" href="main.html" style="--accent:#6BE3A4">
-      <div class="tile-top">
-        <span class="tile-num">·01</span>
-        <span class="tile-emoji">🏠</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Main</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Goals & daily plan</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="gym.html" style="--accent:#7DD3FC">
-      <div class="tile-top">
-        <span class="tile-num">·02</span>
-        <span class="tile-emoji">💪</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Fitness</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Workouts, splits, sessions</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="health.html" style="--accent:#A7F3D0">
-      <div class="tile-top">
-        <span class="tile-num">·03</span>
-        <span class="tile-emoji">💊</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Health</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Supplements & vitals</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="po-water.html" style="--accent:#60A5FA">
-      <div class="tile-top">
-        <span class="tile-num">·04</span>
-        <span class="tile-emoji">💧</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Water</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Hydration</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="finance.html" style="--accent:#F2C063">
-      <div class="tile-top">
-        <span class="tile-num">·05</span>
-        <span class="tile-emoji">📊</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Finance</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Net worth & spending</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="caffeine.html" style="--accent:#C9A36B">
-      <div class="tile-top">
-        <span class="tile-num">·06</span>
-        <span class="tile-emoji">☕</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Caffeine</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Intake & timing</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Wide tile -->
-    <a class="tile wide" href="nova-lite.html" style="--accent:#A78BFA">
-      <div class="tile-top">
-        <span class="tile-num">·07</span>
-        <span class="tile-emoji">🧠</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Nova</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Your AI mentor</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-  </div>
-</div>
-
-<!-- ===== Settings / Your Data ===== -->
-<div class="modal-bg" id="settingsBg">
-  <div class="modal" role="dialog" aria-label="Your data">
-    <div class="modal-head">
-      <span class="modal-title">Your Data</span>
-      <button class="modal-close" id="settingsClose" type="button" aria-label="Close">×</button>
+  <!-- Day Banner -->
+  <div class="day-banner" id="dayBanner">
+    <div class="day-banner-left">
+      <div class="day-banner-type" id="dbType">—</div>
+      <div class="day-banner-row"><span class="day-banner-label">Wake</span><span id="dbWake">—</span></div>
+      <div class="day-banner-row"><span class="day-banner-label">Key event</span><span id="dbEvent">—</span></div>
     </div>
-
-    <div class="field">
-      <label class="field-label">Height</label>
-      <div class="field-row">
-        <input class="set-input" id="heightA" type="number" min="0" inputmode="decimal" placeholder="cm">
-        <input class="set-input" id="heightB" type="number" min="0" inputmode="decimal" placeholder="in" style="display:none">
-        <div class="seg" id="heightUnitSeg">
-          <button type="button" data-u="cm" class="on">cm</button>
-          <button type="button" data-u="ft">ft/in</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="field-label">Weight</label>
-      <div class="field-row">
-        <input class="set-input" id="weight" type="number" min="0" inputmode="decimal" placeholder="weight">
-        <div class="seg" id="weightUnitSeg">
-          <button type="button" data-u="kg" class="on">kg</button>
-          <button type="button" data-u="lb">lb</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="field-label">Age</label>
-      <input class="set-input" id="age" type="number" min="0" inputmode="numeric" placeholder="years">
-    </div>
-
-    <div class="field">
-      <label class="field-label">Sex</label>
-      <div class="seg" id="sexSeg" style="width:100%;display:flex">
-        <button type="button" data-s="m" style="flex:1">Male</button>
-        <button type="button" data-s="f" style="flex:1">Female</button>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="field-label">Active hours / week</label>
-      <input class="set-input" id="activity" type="number" min="0" inputmode="decimal" placeholder="e.g. 5">
-    </div>
-
-    <button class="set-save" id="settingsSave" type="button">Save</button>
-    <div class="set-status" id="settingsStatus"></div>
-
-    <div class="section-divider"></div>
-
-    <label class="field-label">WHOOP</label>
-    <div class="whoop-box">
-      <div class="whoop-row">
-        <span class="whoop-status" id="whStatus"><span class="dot"></span><span id="whStatusText">Not connected</span></span>
-        <span class="whoop-sync" id="whSync"></span>
-      </div>
-      <div class="whoop-stats" id="whStats" style="display:none">
-        <div class="whoop-stat"><div class="v" id="whRec">—</div><div class="l">Recovery</div></div>
-        <div class="whoop-stat"><div class="v" id="whSleep">—</div><div class="l">Sleep</div></div>
-        <div class="whoop-stat"><div class="v" id="whRhr">—</div><div class="l">Rest HR</div></div>
-      </div>
-      <button class="whoop-btn" id="whAction" type="button">Sync now</button>
+    <div class="day-arc">
+      <svg viewBox="0 0 62 62">
+        <circle class="day-arc-track" cx="31" cy="31" r="26"/>
+        <circle class="day-arc-fill" cx="31" cy="31" r="26" id="dbArcFill"/>
+      </svg>
+      <div class="day-arc-pct" id="dbArcPct">—</div>
     </div>
   </div>
+
+  <!-- Today's Schedule -->
+  <div class="card">
+    <div class="card-title">Today's Schedule</div>
+    <ul class="sched-list" id="schedList"></ul>
+  </div>
+
+  <!-- Today's Study -->
+  <div class="card">
+    <div class="card-title">Today's Study</div>
+    <div class="study-week" id="studyWeek"></div>
+    <div id="studySessions"></div>
+  </div>
+
+  <!-- Habits -->
+  <div class="card">
+    <div class="card-title">Habits</div>
+    <div class="habit-overall" id="habitOverall">
+      <span class="habit-overall-num" id="habitOverallNum">0</span>
+      <span class="habit-overall-label">day streak &mdash; all habits</span>
+    </div>
+    <div id="habitRows"></div>
+    <button type="button" class="habit-edit-btn" id="habitEditYesterday">Edit yesterday</button>
+    <div class="habit-yesterday" id="habitYesterdayPanel">
+      <div class="habit-yesterday-label" id="habitYesterdayLabel">Yesterday</div>
+      <div id="habitYesterdayRows"></div>
+    </div>
+  </div>
+
+  <!-- Water Tracker -->
+  <div class="card">
+    <div class="card-title">Water</div>
+    <div class="water-num" id="waterNum">0.00<span> / 2.5L</span></div>
+    <div class="water-bar"><div class="water-bar-fill" id="waterBarFill"></div></div>
+    <div class="water-btns">
+      <button type="button" class="water-btn minus" data-amt="-0.25">&minus;0.25L</button>
+      <button type="button" class="water-btn" data-amt="0.25">+0.25L</button>
+      <button type="button" class="water-btn" data-amt="0.5">+0.5L</button>
+      <button type="button" class="water-btn" data-amt="0.75">+0.75L</button>
+    </div>
+  </div>
+
+  <!-- Garmin -->
+  <div class="card">
+    <div class="card-title">Garmin</div>
+    <div class="garmin-updated" id="garminUpdated">No data logged yet</div>
+    <div class="garmin-headline">
+      <span class="garmin-bb" id="garminBB">&mdash;</span>
+      <span class="garmin-bb-label">Body Battery / 100</span>
+    </div>
+    <div class="garmin-grid">
+      <div class="garmin-stat"><div class="v" id="garminSleep">&mdash;</div><div class="l">Sleep score</div></div>
+      <div class="garmin-stat"><div class="v" id="garminRHR">&mdash;</div><div class="l">RHR</div></div>
+      <div class="garmin-stat"><div class="v" id="garminSteps">&mdash;</div><div class="l">Steps</div></div>
+      <div class="garmin-stat"><div class="v" id="garminBed">&mdash;</div><div class="l">Bedtime</div></div>
+      <div class="garmin-stat"><div class="v" id="garminWakeStat">&mdash;</div><div class="l">Wake time</div></div>
+    </div>
+    <div class="garmin-spark" id="garminSparkWrap" style="display:none">
+      <div class="garmin-spark-label">Body Battery &middot; last 7 days</div>
+      <div id="garminSpark"></div>
+    </div>
+    <form class="garmin-form" id="garminForm">
+      <div class="garmin-field"><label>Body Battery</label><input type="number" min="0" max="100" id="gBodyBattery"></div>
+      <div class="garmin-field"><label>Sleep score</label><input type="number" min="0" max="100" id="gSleepScore"></div>
+      <div class="garmin-field"><label>RHR</label><input type="number" min="0" max="220" id="gRHR"></div>
+      <div class="garmin-field"><label>Bedtime</label><input type="time" id="gBedtime"></div>
+      <div class="garmin-field"><label>Wake time</label><input type="time" id="gWakeTime"></div>
+      <div class="garmin-field"><label>Steps</label><input type="number" min="0" id="gSteps"></div>
+    </form>
+    <button type="button" class="garmin-save" id="garminSaveBtn">Save today's Garmin data</button>
+  </div>
+
+  <!-- Daily Journal -->
+  <div class="card">
+    <div class="card-title">Daily Journal</div>
+    <textarea class="journal-textarea" id="journalText" placeholder="How did today go?"></textarea>
+    <div>
+      <button type="button" class="journal-save" id="journalSaveBtn">Save entry</button>
+      <span class="journal-status" id="journalStatus"></span>
+    </div>
+    <div class="journal-yesterday" id="journalYesterdayWrap" style="display:none">
+      <div class="journal-yesterday-label" id="journalYesterdayLabel">Yesterday</div>
+      <div class="journal-yesterday-text" id="journalYesterdayText"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const WATER_KEY = 'po_water_v1';
-  const WHOOP_KEY = 'whoop_tokens_v1';
-  const SYNC_KEY  = 'whoop_last_sync';
 
-  function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
-  function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
-
-  // Mirror of topbar.js defaultWaterState so we never clobber the water tracker.
-  function defaultWater() {
-    return { unit:'bottle', bottleMl:500, glassMl:250, weightUnit:'kg',
-      profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
-      caffeineMgPerDay:200, substances:[], logs:{} };
+  // ---------- generic storage (namespaced under 'td:' so one Supabase
+  // sync prefix covers everything on this page) ----------
+  function loadJSON(k, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(k)); return (v == null ? fallback : v); } catch (e) { return fallback; }
   }
+  function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
-  /* ---------- unit state ---------- */
-  let heightUnit = 'cm';   // 'cm' | 'ft'
-  let weightUnit = 'kg';   // 'kg' | 'lb'
-  let sex = 'm';
-
-  function setHeightUnit(u) {
-    heightUnit = u;
-    $('heightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
-    const a = $('heightA'), b = $('heightB');
-    if (u === 'cm') { a.placeholder = 'cm'; b.style.display = 'none'; }
-    else { a.placeholder = 'ft'; b.placeholder = 'in'; b.style.display = ''; }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayKey() { return dateKey(new Date()); }
+  function yesterdayKey() { const d = new Date(); d.setDate(d.getDate() - 1); return dateKey(d); }
+  function dayKeyOf(dateStr) {
+    const names = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const parts = dateStr.split('-').map(Number);
+    return names[new Date(parts[0], parts[1] - 1, parts[2]).getDay()];
   }
-  function setWeightUnit(u) {
-    weightUnit = u;
-    $('weightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
+  function formatDateLabel(dateStr) {
+    const parts = dateStr.split('-').map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+    return wk + ', ' + mo + ' ' + d.getDate();
   }
-  function setSex(s) {
-    sex = s;
-    $('sexSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
-  }
-
-  function getHeightCm() {
-    if (heightUnit === 'cm') { const v = parseFloat($('heightA').value); return v > 0 ? v : null; }
-    const ft = parseFloat($('heightA').value) || 0;
-    const inch = parseFloat($('heightB').value) || 0;
-    const cm = ft * 30.48 + inch * 2.54;
-    return cm > 0 ? Math.round(cm) : null;
-  }
-  function fillHeight(cm) {
-    if (!cm) { $('heightA').value = ''; $('heightB').value = ''; return; }
-    if (heightUnit === 'cm') { $('heightA').value = Math.round(cm); }
-    else { const totalIn = cm / 2.54; $('heightA').value = Math.floor(totalIn / 12); $('heightB').value = Math.round(totalIn % 12); }
-  }
-
-  /* ---------- load existing profile into the form ---------- */
-  function populate() {
-    const w = loadJSON(WATER_KEY, defaultWater());
-    const p = w.profile || {};
-    setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
-    setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
-    setSex(p.sex === 'f' ? 'f' : 'm');
-    fillHeight(p.heightCm || null);
-    if (p.weightKg) $('weight').value = weightUnit === 'lb' ? Math.round(p.weightKg * 2.20462) : Math.round(p.weightKg);
-    else $('weight').value = '';
-    $('age').value = p.age || '';
-    $('activity').value = (p.activityHrsPerWeek != null ? p.activityHrsPerWeek : '');
-  }
-
-  /* ---------- save back into po_water_v1 (merge, never overwrite logs) ---------- */
-  function save() {
-    const w = loadJSON(WATER_KEY, defaultWater());
-    w.profile = w.profile || {};
-    const cm = getHeightCm();
-    if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
-    const wv = parseFloat($('weight').value);
-    if (wv > 0) { w.profile.weightKg = weightUnit === 'lb' ? +(wv / 2.20462).toFixed(1) : wv; w.weightUnit = weightUnit; }
-    const age = parseInt($('age').value, 10); if (age > 0) w.profile.age = age;
-    w.profile.sex = sex;
-    const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) w.profile.activityHrsPerWeek = act;
-    saveJSON(WATER_KEY, w);
-    const s = $('settingsStatus'); s.textContent = 'Saved ✓';
-    setTimeout(() => { s.textContent = ''; }, 1800);
-  }
-
-  /* ---------- open / close ---------- */
-  function open() { populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
-  function close() { $('settingsBg').classList.remove('show'); }
-  $('settingsOpen').addEventListener('click', open);
-  $('settingsClose').addEventListener('click', close);
-  $('settingsBg').addEventListener('click', (e) => { if (e.target === $('settingsBg')) close(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  $('settingsSave').addEventListener('click', save);
-  $('heightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const cm = getHeightCm(); setHeightUnit(b.dataset.u); fillHeight(cm);
-  }));
-  $('weightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const v = parseFloat($('weight').value);
-    const kg = v > 0 ? (weightUnit === 'lb' ? v / 2.20462 : v) : null;
-    setWeightUnit(b.dataset.u);
-    if (kg) $('weight').value = weightUnit === 'lb' ? Math.round(kg * 2.20462) : Math.round(kg);
-  }));
-  $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
-
-  /* ---------- WHOOP ---------- */
-  let whStats = null;
   function relTime(ts) {
     if (!ts) return 'never';
     const s = Math.floor((Date.now() - ts) / 1000);
     if (s < 60) return 'just now';
-    if (s < 3600) return Math.floor(s/60) + ' min ago';
-    if (s < 86400) return Math.floor(s/3600) + ' h ago';
-    return Math.floor(s/86400) + ' d ago';
+    if (s < 3600) return Math.floor(s / 60) + ' min ago';
+    if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+    return Math.floor(s / 86400) + ' d ago';
   }
-  function renderWhoop(err) {
-    const t = loadJSON(WHOOP_KEY, null);
-    const statusEl = $('whStatus'), txt = $('whStatusText'), syncEl = $('whSync'), action = $('whAction');
-    if (!t || !t.access) {
-      statusEl.classList.remove('on'); txt.textContent = 'Not connected';
-      syncEl.textContent = ''; $('whStats').style.display = 'none';
-      action.textContent = 'Connect on Health page';
-      return;
+
+  // ============================================================
+  // DAY BANNER
+  // ============================================================
+  const DAY_CONFIG = {
+    1: { key: 'mon', type: 'Evening Training Day', wake: '07:30', bed: '22:00', event: 'Club Training 18:00–19:30', accent: 'blue' },
+    2: { key: 'tue', type: 'Morning Training Day', wake: '06:15', bed: '22:00', event: 'Club Training 07:30–09:00', accent: 'blue' },
+    3: { key: 'wed', type: 'Gym Day',              wake: '07:30', bed: '22:30', event: 'Gym 08:30–10:00',           accent: 'green' },
+    4: { key: 'thu', type: 'Morning Training Day', wake: '06:15', bed: '22:00', event: 'Club Training 07:30–09:00', accent: 'blue' },
+    5: { key: 'fri', type: 'Free Day',             wake: '07:30', bed: '22:30', event: 'Study',                          accent: 'green' },
+    6: { key: 'sat', type: 'Match Day',            wake: '08:00', bed: '23:00', event: 'Match',                          accent: 'orange' },
+    0: { key: 'sun', type: 'Recovery Day',         wake: '07:30', bed: '22:00', event: 'Pool and Sauna',                 accent: 'purple' },
+  };
+  const ACCENT_HEX = { blue: '#7DD3FC', green: '#6BE3A4', orange: '#F2A063', purple: '#B08AF0' };
+  function todayConfig() { return DAY_CONFIG[new Date().getDay()]; }
+
+  function timeToDateToday(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  }
+  function wakingPercent(cfg) {
+    const now = new Date();
+    const wake = timeToDateToday(cfg.wake);
+    const bed = timeToDateToday(cfg.bed);
+    if (bed <= wake) bed.setDate(bed.getDate() + 1);
+    const pct = ((now - wake) / (bed - wake)) * 100;
+    return Math.max(0, Math.min(100, pct));
+  }
+  const ARC_C = 2 * Math.PI * 26;
+  function renderDayBanner() {
+    const cfg = todayConfig();
+    const banner = $('dayBanner');
+    banner.style.setProperty('--accent', ACCENT_HEX[cfg.accent]);
+    $('dbType').textContent = cfg.type;
+    $('dbWake').textContent = cfg.wake;
+    $('dbEvent').textContent = cfg.event;
+    const pct = wakingPercent(cfg);
+    const fill = $('dbArcFill');
+    fill.setAttribute('stroke-dasharray', ARC_C);
+    fill.setAttribute('stroke-dashoffset', ARC_C * (1 - pct / 100));
+    $('dbArcPct').textContent = Math.round(pct) + '%';
+    return cfg;
+  }
+
+  // ============================================================
+  // TODAY'S SCHEDULE (tappable timeline)
+  // ============================================================
+  const SKINCARE_AM = 'CeraVe Facial Moisturising Lotion AM (SPF50).\nConsistency is the priority — especially important post-Roaccutane.';
+  const SKINCARE_PM = 'Azelaic acid 10% → Vaseline → lip balm.';
+  const ACTION_RULE = '3-Action Rule — commit to these before kickoff:\n• Communicate early — talk from the first minute\n• Demand the ball — show for it constantly\n• Win the first duel — set the tone physically';
+  const NUTRITION = 'Protein milk + yoghurt protocol:\n• ~500ml milk with a scoop of whey protein\n• A high-protein yoghurt\nWithin 30–45 min of finishing.';
+  const GYM_WED = ['Squat or Trap bar deadlift', 'Bulgarian split squat', 'RDL or Nordics', 'Bench press', 'Pull-ups', 'Copenhagen plank', 'Pallof press', 'Box jumps', 'Pogos', 'Accelerations'];
+  const GYM_SUN = ['Speed trap bar deadlift', 'Single-leg hip thrust', 'Copenhagen plank', 'Single-arm landmine press', 'Bent-over row', 'Hip flexor KB hold', 'Isometric calf raise', 'Tibialis raises'];
+  function gymListHtml(list) { return '<ul>' + list.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'; }
+  function studyBlocksHtml() {
+    const sessions = getTodaySessions();
+    if (!sessions.length) return 'No study sessions scheduled today.';
+    return '<ul>' + sessions.map(s => '<li><b>' + esc(s.subject) + '</b> — ' + esc(s.type) + '</li>').join('') + '</ul>';
+  }
+
+  const SCHEDULE = {
+    mon: [
+      { time: '07:30', title: 'Wake & morning routine', expand: SKINCARE_AM },
+      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: '17:30', title: 'Leave for Limerick' },
+      { time: '18:00–19:30', title: 'Club training', expand: ACTION_RULE },
+      { time: '20:00', title: 'Home & post-training nutrition', expand: NUTRITION },
+      { time: '21:30', title: 'Phone down' },
+      { time: '22:00', title: 'Bed' },
+    ],
+    tue: [
+      { time: '06:15', title: 'Wake' },
+      { time: '06:45', title: 'Leave for Limerick' },
+      { time: '07:30–09:00', title: 'Club training', expand: ACTION_RULE },
+      { time: '09:30', title: 'Home & post-training nutrition', expand: NUTRITION },
+      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: '21:30', title: 'Phone down' },
+      { time: '22:00', title: 'Bed' },
+    ],
+    wed: [
+      { time: '07:30', title: 'Wake' },
+      { time: '08:30–10:00', title: 'Gym — strength session', expand: gymListHtml(GYM_WED), isHtml: true },
+      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: '21:30', title: 'Phone down' },
+      { time: '22:30', title: 'Bed' },
+    ],
+    thu: [
+      { time: '06:15', title: 'Wake' },
+      { time: '06:45', title: 'Leave for Limerick' },
+      { time: '07:30–09:00', title: 'Club training', expand: ACTION_RULE },
+      { time: '09:30', title: 'Home & post-training nutrition', expand: NUTRITION },
+      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: '21:30', title: 'Phone down' },
+      { time: '22:00', title: 'Bed' },
+    ],
+    fri: [
+      { time: '07:30', title: 'Wake' },
+      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: '21:30', title: 'Phone down' },
+      { time: '22:30', title: 'Bed' },
+    ],
+    sat: [
+      { time: '08:00', title: 'Wake' },
+      { time: 'Prep', title: 'Match preparation' },
+      { time: 'Travel', title: 'Travel to match' },
+      { time: 'Match', title: 'Match', expand: ACTION_RULE },
+      { time: 'Post-match', title: 'Post-match nutrition', expand: NUTRITION },
+      { time: 'Home', title: 'Home' },
+    ],
+    sun: [
+      { time: '07:30', title: 'Wake' },
+      { time: '08:30', title: 'Gym — power session', expand: gymListHtml(GYM_SUN), isHtml: true },
+      { time: '11:00', title: 'Pool, steam & sauna' },
+      { time: 'Free', title: 'Free time' },
+      { time: 'Evening', title: 'Evening routine', expand: SKINCARE_PM },
+      { time: '22:00', title: 'Bed' },
+    ],
+  };
+  function renderSchedule(cfg) {
+    const list = $('schedList');
+    list.innerHTML = '';
+    (SCHEDULE[cfg.key] || []).forEach(item => {
+      const li = document.createElement('li');
+      const hasExpand = !!(item.expand || item.expandFn);
+      li.className = 'sched-item' + (hasExpand ? '' : ' no-expand');
+      li.innerHTML =
+        '<div class="sched-head">' +
+          '<span class="sched-time">' + esc(item.time) + '</span>' +
+          '<span class="sched-title">' + esc(item.title) + '</span>' +
+          (hasExpand ? '<span class="sched-caret">▸</span>' : '') +
+        '</div>' +
+        (hasExpand ? '<div class="sched-body">' + (item.isHtml ? item.expand : esc(item.expandFn ? item.expandFn() : item.expand)) + '</div>' : '');
+      if (hasExpand) li.addEventListener('click', () => li.classList.toggle('open'));
+      list.appendChild(li);
+    });
+  }
+
+  // ============================================================
+  // TODAY'S STUDY (from james_master_plan_reference.md)
+  // ============================================================
+  const SUMMER_START = new Date('2026-06-23'); // Monday, week 1
+  const SUMMER_END_WEEK = 10;
+  const schedule = {
+    1: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L1 — Horizontal UAM', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 1 — Revaluation of Fixed Assets. Grinds360 book p.27 + video lessons.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L2 — Vertical UAM (Free-fall)', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'PE', type: 'Session 1', detail: 'Type A — Analysing Performance, Safe Practice, Role of Coach. Grinds360 3A/3B/3C.', duration: 60, color: 'green' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Read SEC PAP guidelines (curriculumonline.ie) — 45 min', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L3 — Successive Times and Distances', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Session 1', detail: 'LC Section A format familiarisation. Download 2023/2022/2019 papers. Build Section A template card.', duration: 55, color: 'purple' }
+      ]
+    },
+    2: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L4 — Catch-up Problems', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 2 — Suspense + Control Accounts. Grinds360 book p.131 + p.135. Suspense recorded grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L5 — Bodies Moving in Opposite Directions', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 2 — Unseen Suspense or Control Account past paper question. Cold. Verify if 84% was real.', duration: 50, color: 'amber' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Watch PAP Masterclasses 1+2 on Grinds360 (at 1.75x)', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L6 — Velocity-Time Graphs. Take the full session — most nuanced UAM lesson.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 1', detail: 'Read official AAC Physics in Practice guidelines. Download from examinations.ie. Note assessment criteria.', duration: 30, color: 'purple' }
+      ]
+    },
+    3: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L7 — Dimensional Analysis (short lesson)', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 3 — Club Accounts rebuild. Grinds360 book p.108 + Club Accounts recorded grind (69 min).', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: UAM — 2 Old LC Questions timed, marked against scheme. Below 70% on both → do a third.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session — alternating Friday/Wednesday', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 3 — 2019 Q6 Club Accounts. 45-minute timer. Do not watch Grinds360 solution first.', duration: 50, color: 'amber' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'PAP Masterclass 3. Decide activity (gym recommended), confirm with PE teacher.', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L1 — Basic Vectors', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish Session 1 (if not done): Essay Phrases + Topic Selection. ~50 min. Must happen before S2 and S6.', duration: 50, color: 'red' }
+      ]
+    },
+    4: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L2 — Components of a Vector and Dot Product', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 4 — Service Firms rebuild. Grinds360 book p.112 + Loan Workings + Investment Workings + Service Accounts grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L3 — i and j Vectors. TWO exercises (Ex3 + Ex4) — both must be completed.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 4 — 2020 Q7 Service Firm. 45-minute timer. Score vs 53% class result = measure of summer progress.', duration: 50, color: 'amber' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Complete Stage 1 performance analysis. Run all tests. Compile Hevy + Garmin data.', duration: 60, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Vectors — 2 Old LC Questions timed. Below 70% → check i/j notation from L3 before proceeding.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 2', detail: 'Confirm AAC topic (leading: Phase Change Materials). Draft research question naming IV, DV, context.', duration: 30, color: 'purple' }
+      ]
+    },
+    5: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L1 — Applying equations of motion in x and y directions', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 5 — Q1 Sole Trader Final Accounts: structure. Grinds360 book p.39 + Quick Guide to Q1 + Week 1 Final Accounts grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L2 — Proving general rules (range and max height from first principles)', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 5 — First Q1 Sole Trader attempt. 54-minute timer. Studyclix. Identify every adjustment type missed.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 3', detail: 'Type A — Physical Activity Participation and Promoting Pathways (5A + 5B). Grinds360 + 2–3 Studyclix Qs.', duration: 50, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L3 — Finding Angles', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S2, S3, S4, or S5 depending on what’s been done. Check sequence constraints.', duration: 55, color: 'red' }
+      ]
+    },
+    6: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L4 — i and j Vector Approach. New territory — take the full session.', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 6 — Q1 Sole Trader: adjustments in depth. Depreciation adjustment lessons + Week 2 Final Accounts grind.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L5 — Projectiles and Elasticity', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 6 — Second Q1 Sole Trader (different year). 54-minute timer.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 4', detail: 'Type A — Ethics and Fair Play (Ch 6). Grinds360 ethics videos + 2–3 written practice answers.', duration: 55, color: 'green' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Design Stage 3 training programme targeting all 4 SMART goals.', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Projectiles — 2 Old LC Questions timed. If L5 ran long Wed, push checkpoint to Mon Wk7.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 3', detail: 'Background reading on confirmed PCM topic. Wikipedia level. Notes: phenomenon, physics principles, prior measurements.', duration: 30, color: 'purple' }
+      ]
+    },
+    7: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch4 L2 — Connected Particles. (Ch4 L1 may be here if Wk6 checkpoint was pushed)', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 7 — Company Final Accounts. Grinds360 Company section + Q1 Company video. Note: share capital, debentures, corp tax, dividends.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch4 L3 Pulleys + Newton’s Laws checkpoint — budget full 50 min (Pulleys + checkpoint is tight).', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 7 — Q1 Company from 2022, 2023, or 2024. 54-minute timer.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 5', detail: 'Type B — Section 1 timed practice. 50 min timed. Mark + categorise every dropped mark.', duration: 55, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch6 L1 — Work and Energy', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — use whichever session has not been done. Check S1→S2→S6 sequence constraint.', duration: 55, color: 'red' }
+      ]
+    },
+    8: {
+      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch6 L2 Conservation Laws + Work & Energy checkpoint immediately after.', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 8 — Q1 consolidation. Re-read error log Wks 5–7. Find 3 most-missed adjustment types, re-read book sections. Watch 2024 Q1 Suspense & Bank Rec workings.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L1 — Equations of Circular Motion. New conceptual territory — go slowly.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 8 — Q1 from unused year. Choose A or B on the day as in the exam.', duration: 54, color: 'amber' },
+        { subject: 'PE', type: 'Session 6', detail: 'Type B — Section 2 case study (40 min) + Section 3 long questions (50 min). Mark both against scheme.', duration: 90, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L2 — Horizontal Circular Motion', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 4', detail: 'Outline methodology: what to measure, how, equipment needed, number of trials, data recording format.', duration: 30, color: 'purple' }
+      ]
+    },
+    9: {
+      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch7 L3 Vertical Circular Motion + Circular Motion checkpoint — 2 LC questions.', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 9 — Q5 Interpretation of Accounts. Grinds360 book p.125 + Interpretation grind (70 min) + Writing to a Shareholder (71 min).', duration: 90, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L1 — Direct Collisions', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 9 — Q5 from 2023 or 2024. 45-minute timer. Calculate all ratios + full written commentary.', duration: 45, color: 'amber' },
+        { subject: 'PE', type: 'PAP Run', detail: 'Stage 3 programme running. Log in Hevy. Write one reflection per goal (ongoing).', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L2 — More than one collision', duration: 50, color: 'accent' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S5 or S6 (S6 requires S1 + S3 done first). Final sessions before September.', duration: 60, color: 'red' }
+      ]
+    },
+    10: {
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L3 — Collisions with Strings', duration: 50, color: 'accent' }],
+      tue: [
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 10 — Review. Read full error log and all topic checklists. Write one-page handover note to self for September.', duration: 50, color: 'amber' },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+      ],
+      wed: [
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L4 — Oblique Collisions. Hardest lesson all summer. Video + notes only — exercises on a separate day if needed.', duration: 50, color: 'accent' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — final week', duration: 50, color: 'blue' }
+      ],
+      thu: [
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 10 — Second Q5 attempt (different year). 45-minute timer. Baseline for 6th year.', duration: 45, color: 'amber' },
+        { subject: 'PE', type: 'Session 7', detail: '✓ CHECKPOINT: Full 100-min exam conditions. Section 1 (50 min) → Section 2 (40 min) → begin S3. Mark all. Compare to Sessions 5 and 6.', duration: 100, color: 'green' },
+        { subject: 'PE-PAP', type: 'PAP', detail: 'Draft Stage 4 concluding analysis (interim — programme continues into 6th year).', duration: 45, color: 'green' }
+      ],
+      fri: [
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ FINAL CHECKPOINT: Collisions — 2 Old LC Questions. Course complete. Log final lesson count.', duration: 50, color: 'accent' },
+        { subject: 'Physics', type: 'Project 5', detail: 'September readiness review. Consolidate all Physics project sessions into one-page summary for supervisor.', duration: 30, color: 'purple' }
+      ]
     }
-    statusEl.classList.add('on'); txt.textContent = err ? 'Connected (sync failed)' : 'Connected';
-    const last = Number(localStorage.getItem(SYNC_KEY)) || 0;
-    syncEl.textContent = 'Last synced ' + relTime(last);
-    action.textContent = 'Sync now';
-    if (whStats) {
-      $('whStats').style.display = '';
-      $('whRec').textContent   = whStats.rec   != null ? whStats.rec + '%'  : '—';
-      $('whSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
-      $('whRhr').textContent   = whStats.rhr   != null ? whStats.rhr         : '—';
-    }
+  };
+  const SUBJECT_COLOR_HEX = { accent: '#c8f060', amber: '#f0a040', blue: '#60b4f0', purple: '#b08af0', green: '#60d090', red: '#ff6b6b', grey: '#888888' };
+  function badgeFor(type) {
+    const map = { Lesson: 'LESSON', Checkpoint: '✓ CHECK', Understand: 'UNDERSTAND', Attempt: 'ATTEMPT', 'Type A': 'THEORY', 'Type B': 'EXAM PRACTICE', PAP: 'PAP', Theory: 'THEORY', Application: 'PAST PAPER', Float: 'IRISH', Maintenance: 'ANKI' };
+    if (map[type]) return map[type];
+    if (/^Project/.test(type) || /^Session/.test(type) || type === 'PAP Run') return type === 'PAP Run' ? 'PAP' : (/^Project/.test(type) ? 'AAC PROJECT' : type.toUpperCase());
+    return type.toUpperCase();
   }
-  async function wRefresh(t) {
-    if (!t.refresh) return null;
-    try {
-      const r = await fetch('/api/whoop-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
-      const j = await r.json();
-      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||3500)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
-    } catch (e) {}
-    return null;
+  function getSummerWeek() {
+    const now = new Date();
+    const diffDays = Math.floor((now - SUMMER_START) / (1000 * 60 * 60 * 24));
+    return Math.floor(diffDays / 7) + 1;
   }
-  async function wFetch(path, t) {
-    const [p, qs] = path.split('?');
-    const params = new URLSearchParams(qs || ''); params.set('path', p);
-    const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
-    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n); throw new Error('unauthorized'); }
-    if (!r.ok) throw new Error('whoop ' + r.status);
-    return r.json();
+  function getDayKey() {
+    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    return days[new Date().getDay()];
   }
-  async function syncWhoop() {
-    let t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) return;
-    if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
-    try {
-      const [rec, sleep] = await Promise.all([
-        wFetch('/recovery?limit=1', t).catch(()=>null),
-        wFetch('/activity/sleep?limit=1', t).catch(()=>null),
-      ]);
-      const r0 = rec && rec.records && rec.records[0];
-      const s0 = sleep && sleep.records && sleep.records[0];
-      whStats = {
-        rec:   r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
-        rhr:   r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
-        sleep: s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
+  function getTodaySessions() {
+    const week = getSummerWeek();
+    const day = getDayKey();
+    if (week < 1) return [];
+    if (week > SUMMER_END_WEEK) return [];
+    if (day === 'sat') return [];
+    if (day === 'sun') return [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10, color: 'grey' }];
+    const weekPlan = schedule[week];
+    if (!weekPlan) return [];
+    return weekPlan[day] || [];
+  }
+  function studyDoneKey() { return 'td:studyDone:' + todayKey(); }
+  function renderStudy() {
+    const week = getSummerWeek();
+    const day = getDayKey();
+    const weekLabel = week < 1 ? 'Pre-summer' : (week > SUMMER_END_WEEK ? 'Return to school' : ('WEEK ' + week + ' OF ' + SUMMER_END_WEEK));
+    $('studyWeek').textContent = weekLabel;
+    const wrap = $('studySessions');
+    wrap.innerHTML = '';
+    if (week < 1) { wrap.innerHTML = '<div class="study-empty">Pre-summer — plan starts 23 Jun 2026.</div>'; return; }
+    if (week > SUMMER_END_WEEK) { wrap.innerHTML = '<div class="study-empty">Summer plan complete — return to school.</div>'; return; }
+    if (day === 'sat') { wrap.innerHTML = '<div class="study-empty">Match Day — Zero Study</div>'; return; }
+    const sessions = getTodaySessions();
+    if (!sessions.length) { wrap.innerHTML = '<div class="study-empty">Nothing scheduled today.</div>'; return; }
+    const done = loadJSON(studyDoneKey(), {});
+    sessions.forEach((s, i) => {
+      const isDone = !!done[i];
+      const row = document.createElement('div');
+      row.className = 'study-session' + (isDone ? ' done' : '');
+      row.style.borderLeftColor = SUBJECT_COLOR_HEX[s.color] || '#888';
+      row.innerHTML =
+        '<div class="study-session-main">' +
+          '<span class="study-subject">' + esc(s.subject) + '</span>' +
+          '<span class="study-badge">' + esc(badgeFor(s.type)) + '</span>' +
+          '<div class="study-detail">' + esc(s.detail) + '</div>' +
+        '</div>' +
+        '<span class="study-dur">' + s.duration + ' min</span>' +
+        '<button type="button" class="study-done-btn' + (isDone ? ' is-done' : '') + '">' + (isDone ? 'Done' : 'Mark done') + '</button>';
+      row.querySelector('.study-done-btn').onclick = () => {
+        const d = loadJSON(studyDoneKey(), {});
+        d[i] = !d[i];
+        saveJSON(studyDoneKey(), d);
+        renderStudy();
       };
-      localStorage.setItem(SYNC_KEY, String(Date.now()));
-      renderWhoop();
-    } catch (e) { renderWhoop(e); }
+      wrap.appendChild(row);
+    });
   }
-  $('whAction').addEventListener('click', () => {
-    const t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) { window.location.href = 'health.html'; return; }
-    $('whAction').textContent = 'Syncing…'; syncWhoop();
+
+  // ============================================================
+  // HABITS
+  // ============================================================
+  const HABITS = [
+    { id: 'skincareAM', label: 'Morning skincare and SPF' },
+    { id: 'journalHabit', label: 'Journal' },
+    { id: 'waterTarget', label: 'Water target hit' },
+    { id: 'postTrainNutrition', label: 'Post-training nutrition', disabledDays: ['wed', 'fri', 'sun'] },
+    { id: 'phoneDown', label: 'Phone down by 21:30' },
+    { id: 'retainer', label: 'Retainer' },
+    { id: 'skincarePM', label: 'Evening skincare' },
+  ];
+  function habitLogKey(dateStr) { return 'td:habitLog:' + dateStr; }
+  function getHabitLog(dateStr) { return loadJSON(habitLogKey(dateStr), {}); }
+  function setHabitLog(dateStr, log) { saveJSON(habitLogKey(dateStr), log); }
+  function habitApplies(habit, dayKey) { return !(habit.disabledDays && habit.disabledDays.indexOf(dayKey) !== -1); }
+  function habitStreak(habitId) {
+    const todayD = new Date();
+    const doneToday = !!(getHabitLog(dateKey(todayD))[habitId]);
+    let streak = doneToday ? 1 : 0;
+    const cursor = new Date(todayD);
+    cursor.setDate(cursor.getDate() - 1);
+    for (let i = 0; i < 3650; i++) {
+      const key = dateKey(cursor);
+      if (getHabitLog(key)[habitId]) { streak++; cursor.setDate(cursor.getDate() - 1); }
+      else break;
+    }
+    return streak;
+  }
+  function dayFullyDone(dateStr) {
+    const dk = dayKeyOf(dateStr);
+    const log = getHabitLog(dateStr);
+    return HABITS.every(h => !habitApplies(h, dk) || !!log[h.id]);
+  }
+  function overallStreak() {
+    const todayD = new Date();
+    let streak = dayFullyDone(dateKey(todayD)) ? 1 : 0;
+    const cursor = new Date(todayD);
+    cursor.setDate(cursor.getDate() - 1);
+    for (let i = 0; i < 3650; i++) {
+      const key = dateKey(cursor);
+      if (dayFullyDone(key)) { streak++; cursor.setDate(cursor.getDate() - 1); }
+      else break;
+    }
+    return streak;
+  }
+  function renderHabitRowsInto(container, dateStr, editable) {
+    container.innerHTML = '';
+    const dk = dayKeyOf(dateStr);
+    const log = getHabitLog(dateStr);
+    HABITS.forEach(h => {
+      const applies = habitApplies(h, dk);
+      const on = !!log[h.id];
+      const row = document.createElement('div');
+      row.className = 'habit-row' + (applies ? '' : ' disabled');
+      const streak = editable ? habitStreak(h.id) : null;
+      row.innerHTML =
+        '<span class="habit-check' + (on ? ' on' : '') + '"></span>' +
+        '<span class="habit-label">' + esc(h.label) + '</span>' +
+        (streak != null ? '<span class="habit-streak' + (streak > 0 ? ' active' : '') + '">' + streak + 'd</span>' : '');
+      if (applies) {
+        row.addEventListener('click', () => {
+          const l = getHabitLog(dateStr);
+          l[h.id] = !l[h.id];
+          setHabitLog(dateStr, l); // instant local write; sync.js pushes to Supabase in the background
+          if (editable) {
+            renderHabits();
+          } else {
+            // Editing a past day changes the consecutive-day count streaks
+            // are derived from, so today's numbers need a refresh too.
+            renderHabitRowsInto(container, dateStr, editable);
+            renderHabits();
+          }
+        });
+      }
+      container.appendChild(row);
+    });
+  }
+  function renderHabits() {
+    $('habitOverallNum').textContent = overallStreak();
+    renderHabitRowsInto($('habitRows'), todayKey(), true);
+  }
+  $('habitEditYesterday').addEventListener('click', () => {
+    const panel = $('habitYesterdayPanel');
+    const showing = panel.classList.toggle('show');
+    if (showing) {
+      $('habitYesterdayLabel').textContent = 'Yesterday — ' + formatDateLabel(yesterdayKey());
+      renderHabitRowsInto($('habitYesterdayRows'), yesterdayKey(), false);
+    }
   });
+
+  // ============================================================
+  // WATER TRACKER
+  // ============================================================
+  function waterTargetFor(dayKey) {
+    return (dayKey === 'mon' || dayKey === 'tue' || dayKey === 'thu' || dayKey === 'sat') ? 2.5 : 2.0;
+  }
+  function waterKey() { return 'td:water:' + todayKey(); }
+  function renderWater(cfg) {
+    const target = waterTargetFor(cfg.key);
+    const amt = loadJSON(waterKey(), 0);
+    $('waterNum').innerHTML = amt.toFixed(2) + '<span> / ' + target.toFixed(1) + 'L</span>';
+    $('waterBarFill').style.width = Math.max(0, Math.min(100, (amt / target) * 100)) + '%';
+  }
+  document.querySelectorAll('.water-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const delta = parseFloat(btn.dataset.amt);
+      const amt = Math.max(0, +(loadJSON(waterKey(), 0) + delta).toFixed(2));
+      saveJSON(waterKey(), amt);
+      renderWater(todayConfig());
+    });
+  });
+
+  // ============================================================
+  // GARMIN
+  // ============================================================
+  const GARMIN_LOG_KEY = 'td:garminLog';
+  function getGarminLog() { return loadJSON(GARMIN_LOG_KEY, {}); }
+  function buildSparkSVG(entries) {
+    const W = 300, H = 50, pad = 6;
+    const vals = entries.map(e => e.bodyBattery).filter(v => v != null);
+    if (vals.length < 2) return '';
+    const stepX = (W - 2 * pad) / (entries.length - 1);
+    const pts = entries.map((e, i) => ({
+      x: pad + i * stepX,
+      y: H - pad - (((e.bodyBattery || 0) / 100) * (H - 2 * pad))
+    }));
+    const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+    const dots = pts.map(p => '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2.6" fill="#6BE3A4"></circle>').join('');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '"><path d="' + line + '" fill="none" stroke="#6BE3A4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' + dots + '</svg>';
+  }
+  function renderGarmin() {
+    const log = getGarminLog();
+    const dates = Object.keys(log).sort();
+    const todays = log[todayKey()];
+    if (todays) {
+      $('garminBB').textContent = todays.bodyBattery != null ? todays.bodyBattery : '—';
+      $('garminSleep').textContent = todays.sleepScore != null ? todays.sleepScore : '—';
+      $('garminRHR').textContent = todays.rhr != null ? todays.rhr : '—';
+      $('garminSteps').textContent = todays.steps != null ? todays.steps : '—';
+      $('garminBed').textContent = todays.bedtime || '—';
+      $('garminWakeStat').textContent = todays.wakeTime || '—';
+      $('garminUpdated').textContent = 'Last updated ' + relTime(todays.updatedAt);
+      $('gBodyBattery').value = todays.bodyBattery != null ? todays.bodyBattery : '';
+      $('gSleepScore').value = todays.sleepScore != null ? todays.sleepScore : '';
+      $('gRHR').value = todays.rhr != null ? todays.rhr : '';
+      $('gBedtime').value = todays.bedtime || '';
+      $('gWakeTime').value = todays.wakeTime || '';
+      $('gSteps').value = todays.steps != null ? todays.steps : '';
+    } else {
+      $('garminUpdated').textContent = 'No data logged yet today';
+    }
+    const last7 = dates.slice(-7).map(d => log[d]);
+    const wrap = $('garminSparkWrap');
+    if (last7.filter(e => e.bodyBattery != null).length >= 2) {
+      wrap.style.display = '';
+      $('garminSpark').innerHTML = buildSparkSVG(last7);
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+  $('garminSaveBtn').addEventListener('click', () => {
+    const log = getGarminLog();
+    const num = (v) => (v === '' ? null : Number(v));
+    log[todayKey()] = {
+      bodyBattery: num($('gBodyBattery').value),
+      sleepScore: num($('gSleepScore').value),
+      rhr: num($('gRHR').value),
+      bedtime: $('gBedtime').value || null,
+      wakeTime: $('gWakeTime').value || null,
+      steps: num($('gSteps').value),
+      updatedAt: Date.now()
+    };
+    saveJSON(GARMIN_LOG_KEY, log);
+    renderGarmin();
+  });
+
+  // ============================================================
+  // DAILY JOURNAL
+  // ============================================================
+  const JOURNAL_KEY = 'td:journal';
+  function renderJournal() {
+    const log = loadJSON(JOURNAL_KEY, {});
+    $('journalText').value = log[todayKey()] || '';
+    const y = log[yesterdayKey()];
+    if (y) {
+      $('journalYesterdayWrap').style.display = '';
+      $('journalYesterdayLabel').textContent = 'Yesterday — ' + formatDateLabel(yesterdayKey());
+      $('journalYesterdayText').textContent = y;
+    } else {
+      $('journalYesterdayWrap').style.display = 'none';
+    }
+  }
+  $('journalSaveBtn').addEventListener('click', () => {
+    const log = loadJSON(JOURNAL_KEY, {});
+    log[todayKey()] = $('journalText').value;
+    saveJSON(JOURNAL_KEY, log);
+    const status = $('journalStatus');
+    status.textContent = 'Saved ✓';
+    setTimeout(() => { status.textContent = ''; }, 2000);
+  });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ---------- boot ----------
+  function renderAll() {
+    const cfg = renderDayBanner();
+    renderSchedule(cfg);
+    renderStudy();
+    renderHabits();
+    renderWater(cfg);
+    renderGarmin();
+    renderJournal();
+  }
+  renderAll();
+  setInterval(renderDayBanner, 60 * 1000);
+  window.addEventListener('storage', renderAll);
 })();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof initCloudSync !== 'function') return;
+  initCloudSync({
+    appKey: 'todayDashboard',
+    syncedPrefixes: ['td:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+});
 </script>
 </body>
 </html>
