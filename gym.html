@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050b08">
 <title>Workout logger</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -470,28 +472,28 @@
   // "conquered" state build up from here rather than fake demo data.
   const SEED = [
     // Wednesday
-    { name:'Squat',                        tier:1, muscle:'legs',  day:'wed', targetSets:4, targetReps:6,  weight:80 },
-    { name:'Trap bar deadlift',            tier:1, muscle:'legs',  day:'wed', targetSets:4, targetReps:6,  weight:80 },
-    { name:'Bulgarian split squat',        tier:2, muscle:'legs',  day:'wed', targetSets:3, targetReps:12, weight:20, perHand:true },
-    { name:'RDL',                          tier:2, muscle:'legs',  day:'wed', targetSets:3, targetReps:10, weight:60 },
-    { name:'Nordics',                      tier:3, muscle:'legs',  day:'wed', targetSets:3, targetReps:8,  weight:0 },
-    { name:'Bench press',                  tier:1, muscle:'chest', day:'wed', targetSets:4, targetReps:8,  weight:60 },
-    { name:'Pull-ups',                     tier:2, muscle:'back',  day:'wed', targetSets:4, targetReps:10, weight:0 },
-    { name:'Copenhagen plank',             tier:3, muscle:'core',  day:'wed', targetSets:3, targetReps:30, weight:0 },
-    { name:'Pallof press',                 tier:3, muscle:'core',  day:'wed', targetSets:3, targetReps:15, weight:10 },
-    { name:'Box jumps',                    tier:3, muscle:'legs',  day:'wed', targetSets:3, targetReps:8,  weight:0 },
-    { name:'Pogos',                        tier:3, muscle:'legs',  day:'wed', targetSets:3, targetReps:20, weight:0 },
-    { name:'Accelerations',                tier:3, muscle:'legs',  day:'wed', targetSets:4, targetReps:6,  weight:0 },
+    { name:'Squat',                     tier:1, muscle:'legs',  day:'wed', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:97.5 },
+    { name:'Trap bar deadlift',         tier:1, muscle:'legs',  day:'wed', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:0 },
+    { name:'Bulgarian split squat',     tier:2, muscle:'legs',  day:'wed', targetSets:2, setLabel:'2-3', targetReps:5, repLabel:'5 ea',       weight:20, perHand:true },
+    { name:'RDL',                       tier:2, muscle:'legs',  day:'wed', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:60 },
+    { name:'Nordics',                   tier:3, muscle:'legs',  day:'wed', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:0 },
+    { name:'Bench press',               tier:1, muscle:'chest', day:'wed', targetSets:3,                 targetReps:5, repLabel:'5-8',        weight:72.5 },
+    { name:'Pull-ups',                  tier:2, muscle:'back',  day:'wed', targetSets:3,                 targetReps:5, repLabel:'5-8',        weight:5 },
+    { name:'Copenhagen plank',          tier:3, muscle:'core',  day:'wed', targetSets:3,                 targetReps:20, repLabel:'20-30s ea side', weight:0 },
+    { name:'Pallof press',              tier:3, muscle:'core',  day:'wed', targetSets:3,                 targetReps:10, weight:10 },
+    { name:'Box jumps',                 tier:3, muscle:'legs',  day:'wed', targetSets:3,                 targetReps:3, weight:0 },
+    { name:'Pogos',                     tier:3, muscle:'legs',  day:'wed', targetSets:3,                 targetReps:3, weight:0 },
+    { name:'Accelerations',             tier:3, muscle:'legs',  day:'wed', targetSets:3,                 targetReps:1, repLabel:'sprint', unit:'m', weight:0 },
 
     // Sunday
-    { name:'Speed trap bar deadlift',      tier:1, muscle:'legs',     day:'sun', targetSets:5, targetReps:5,  weight:60 },
-    { name:'Single-leg hip thrust',        tier:2, muscle:'legs',     day:'sun', targetSets:3, targetReps:12, weight:20 },
-    { name:'Copenhagen plank',             tier:3, muscle:'core',     day:'sun', targetSets:3, targetReps:30, weight:0 },
-    { name:'Single-arm landmine press',    tier:2, muscle:'shoulders',day:'sun', targetSets:3, targetReps:12, weight:15, perHand:true },
-    { name:'Bent-over row',                tier:1, muscle:'back',    day:'sun', targetSets:4, targetReps:10, weight:50 },
-    { name:'Hip flexor KB hold',           tier:3, muscle:'core',    day:'sun', targetSets:3, targetReps:30, weight:8 },
-    { name:'Isometric calf raise',         tier:3, muscle:'legs',    day:'sun', targetSets:3, targetReps:30, weight:10 },
-    { name:'Tibialis raises',              tier:3, muscle:'legs',    day:'sun', targetSets:3, targetReps:15, weight:0 },
+    { name:'Speed trap bar deadlift',   tier:1, muscle:'legs',      day:'sun', targetSets:5, targetReps:2, repLabel:'2 @ 50-60%',       weight:0 },
+    { name:'Single-leg hip thrust',     tier:2, muscle:'legs',      day:'sun', targetSets:3, targetReps:5, repLabel:'5 ea',             weight:20 },
+    { name:'Copenhagen plank',          tier:3, muscle:'core',      day:'sun', targetSets:3, targetReps:20, repLabel:'20-30s',          weight:0 },
+    { name:'Single-arm landmine press', tier:2, muscle:'shoulders', day:'sun', targetSets:3, targetReps:5, weight:15, perHand:true },
+    { name:'Bent-over row',             tier:1, muscle:'back',      day:'sun', targetSets:3, targetReps:5, weight:50 },
+    { name:'Hip flexor KB hold',        tier:3, muscle:'core',      day:'sun', targetSets:3, targetReps:20, repLabel:'20-30s ea leg',   weight:8 },
+    { name:'Isometric calf raise',      tier:3, muscle:'legs',      day:'sun', targetSets:3, targetReps:30, repLabel:'30-45s',          weight:10 },
+    { name:'Tibialis raises',           tier:3, muscle:'legs',      day:'sun', targetSets:3, targetReps:12, repLabel:'12-15',           weight:0 },
   ];
 
   const DAY_KEY = 'vitality.logger.day.v1';
@@ -570,7 +572,9 @@
     const conquered = isConquered(lift);
     el.className = 'lift' + (conquered ? ' conquered' : '') + (celebratingIds.has(lift.id) ? ' celebrate' : '');
     el.dataset.id = lift.id;
-    const unit = lift.perHand ? 'kg/ea' : 'kg';
+    const unit = lift.unit || (lift.perHand ? 'kg/ea' : 'kg');
+    const setsDisplay = lift.setLabel || lift.targetSets;
+    const repsDisplay = lift.repLabel || lift.targetReps;
     // ★ overload state — matches the app: armed (gold, breathing) before you lift,
     // inert (dim) once any set is logged, done (calm) once the goal is met.
     const anyLogged = lift.sets.some(s => s.done || s.failed);
@@ -591,7 +595,7 @@
         '<span class="sp"></span>' +
         '<button class="lift-x" title="Remove (kept, never deleted)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
       '</div>' +
-      '<div class="lift-meta"><span class="tierchip">TIER ' + lift.tier + '</span> &middot; <b>' + lift.targetSets + ' &times; ' + lift.targetReps + '</b> &middot; last ' + lift.weight + ' ' + unit + '</div>' +
+      '<div class="lift-meta"><span class="tierchip">TIER ' + lift.tier + '</span> &middot; <b>' + setsDisplay + ' &times; ' + repsDisplay + '</b> &middot; last ' + lift.weight + ' ' + unit + '</div>' +
       '<div class="chips">' +
         '<button class="chip" data-act="swap">' + SVG(ICON.swap) + 'swap</button>' +
         '<button class="chip" data-act="history">' + SVG(ICON.history) + 'history</button>' +
@@ -757,13 +761,15 @@
 
   // info card: a plain-language note on the lift and how to beat it
   function openInfo(lift){
-    const unit = lift.perHand ? 'kg/ea' : 'kg';
+    const unit = lift.unit || (lift.perHand ? 'kg/ea' : 'kg');
+    const setsDisplay = lift.setLabel || lift.targetSets;
+    const repsDisplay = lift.repLabel || lift.targetReps;
     openSheet(
       '<div class="sheet-eyebrow">About this lift</div>' +
       '<div class="sheet-title">' + esc(lift.name) + '</div>' +
       '<div class="sheet-sub">Tier ' + lift.tier + ' lift. To beat your best, go heavier than ' + lift.weight + ' ' + unit + ', or hit ' + lift.weight + ' ' + unit + ' for one more rep than ' + lift.targetReps + '.</div>' +
       '<div class="sheet-stats">' +
-        '<div class="sheet-stat"><div class="k">Target</div><div class="v">' + lift.targetSets + ' &times; ' + lift.targetReps + '</div></div>' +
+        '<div class="sheet-stat"><div class="k">Target</div><div class="v">' + setsDisplay + ' &times; ' + repsDisplay + '</div></div>' +
         '<div class="sheet-stat"><div class="k">Last</div><div class="v">' + lift.weight + ' ' + unit + '</div></div>' +
       '</div>');
   }
@@ -811,8 +817,8 @@
     return out;
   }
   function openTune(lift){
-    const unit = lift.perHand ? 'kg/ea' : 'kg';
-    const muscleLabel = { chest:'Chest', shoulders:'Shoulders', arms:'Arms' }[lift.muscle] || 'Lift';
+    const unit = lift.unit || (lift.perHand ? 'kg/ea' : 'kg');
+    const muscleLabel = { chest:'Chest', shoulders:'Shoulders', arms:'Arms', legs:'Legs', back:'Back', core:'Core' }[lift.muscle] || 'Lift';
     const DEFAULT_REST = 150;
     const d = { weight: lift.weight, targetSets: lift.targetSets, targetReps: lift.targetReps, rest: lift.rest ?? DEFAULT_REST };
     const fmtRest = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
@@ -1153,6 +1159,24 @@
 
   conqueredPrev = currentConquered();  // lifts already conquered from saved state shouldn't burst on load
   render();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof initCloudSync !== 'function') return;
+  initCloudSync({
+    appKey: 'gymLogger',
+    syncedKeys: ['vitality.logger.v3'],
+    onApplied: function () {
+      // Remote (phone/laptop) pushed new sets — reload LIFTS from the
+      // now-updated localStorage and redraw, without re-bursting the
+      // gold "conquered" celebration for lifts that were already done.
+      if (typeof loadLog === 'function') loadLog();
+      if (typeof currentConquered === 'function') conqueredPrev = currentConquered();
+      if (typeof render === 'function') render();
+    }
+  });
+});
 </script>
 </body>
 </html>
