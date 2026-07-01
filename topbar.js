@@ -107,13 +107,15 @@
 }
 .bottombar-tab {
   flex: 1;
+  min-width: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 3px;
-  padding: 6px 0 4px;
+  padding: 6px 2px 4px;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.45);
   font-size: 10px; font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s;
 }
@@ -144,8 +146,8 @@ body.has-bottombar {
   .topbar-water-add { width: 40px; font-size: 18px; }
   .topbar-finance-btn { width: 40px; height: 38px; }
   .topbar-finance-icon { font-size: 18px; }
-  .bottombar-tab-icon { font-size: 22px; }
-  .bottombar-tab { font-size: 10px; }
+  .bottombar-tab-icon { font-size: 19px; }
+  .bottombar-tab { font-size: 9px; padding-left: 1px; padding-right: 1px; }
 }
 
 /* === Global mobile lockdown ===
@@ -212,17 +214,29 @@ body.topbar-modal-open {
 
   const bottombarHtml = `
 <nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
-  <a href="index.html" class="bottombar-tab" data-page="main">
+  <a href="index.html" class="bottombar-tab" data-page="today">
     <span class="bottombar-tab-icon">🏠</span>
-    <span>Main</span>
+    <span>Today</span>
   </a>
-  <a href="health.html" class="bottombar-tab" data-page="health">
-    <span class="bottombar-tab-icon">💊</span>
-    <span>Health</span>
+  <a href="study.html" class="bottombar-tab" data-page="study">
+    <span class="bottombar-tab-icon">📚</span>
+    <span>Study</span>
   </a>
-  <a href="gym.html" class="bottombar-tab" data-page="fitness">
+  <a href="football.html" class="bottombar-tab" data-page="football">
+    <span class="bottombar-tab-icon">⚽</span>
+    <span>Football</span>
+  </a>
+  <a href="gym.html" class="bottombar-tab" data-page="gym">
     <span class="bottombar-tab-icon">💪</span>
-    <span>Fitness</span>
+    <span>Gym</span>
+  </a>
+  <a href="nutrition.html" class="bottombar-tab" data-page="nutrition">
+    <span class="bottombar-tab-icon">🥗</span>
+    <span>Nutrition</span>
+  </a>
+  <a href="finance.html" class="bottombar-tab" data-page="finance">
+    <span class="bottombar-tab-icon">📊</span>
+    <span>Finance</span>
   </a>
 </nav>
 `;
@@ -243,9 +257,12 @@ body.topbar-modal-open {
   }
   function currentPageKey() {
     const p = (window.location.pathname || '').toLowerCase();
-    if (p.endsWith('health.html')) return 'health';
-    if (p.endsWith('gym.html')) return 'fitness';
-    return 'main'; // index.html, /, or anything else falls back to main
+    if (p.endsWith('study.html')) return 'study';
+    if (p.endsWith('football.html')) return 'football';
+    if (p.endsWith('gym.html')) return 'gym';
+    if (p.endsWith('nutrition.html')) return 'nutrition';
+    if (p.endsWith('finance.html')) return 'finance';
+    return 'today'; // index.html, /, or anything else falls back to today
   }
 
   function injectStyleAndHTML() {

@@ -824,9 +824,13 @@ body::after {
     }
     return streak;
   }
-  function renderHabitRowsInto(container, dateStr, editable) {
+  function renderHabitRowsInto(container, dateStr, editable, dayKeyOverride) {
     container.innerHTML = '';
-    const dk = dayKeyOf(dateStr);
+    // For "today" specifically, use the exact same day-key source as the Day
+    // Banner (todayConfig().key, driven by new Date().getDay() directly)
+    // rather than re-deriving it by parsing the date string back apart —
+    // one authoritative source for "what day is it" everywhere on the page.
+    const dk = dayKeyOverride || dayKeyOf(dateStr);
     const log = getHabitLog(dateStr);
     HABITS.forEach(h => {
       const applies = habitApplies(h, dk);
@@ -858,7 +862,7 @@ body::after {
   }
   function renderHabits() {
     $('habitOverallNum').textContent = overallStreak();
-    renderHabitRowsInto($('habitRows'), todayKey(), true);
+    renderHabitRowsInto($('habitRows'), todayKey(), true, todayConfig().key);
   }
   $('habitEditYesterday').addEventListener('click', () => {
     const panel = $('habitYesterdayPanel');
