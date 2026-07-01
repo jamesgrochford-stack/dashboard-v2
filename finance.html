@@ -107,10 +107,35 @@ body::after {
 }
 .fin-back-btn svg { display: block; }
 
+/* ===== Site-wide bottom navigation (Today/Football/Study/Gym/Nutrition/Finance) ===== */
+/* Sits below finance's own section tabs, which are shifted up to make room. */
+.site-bottombar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 101;
+  display: flex; justify-content: space-around; align-items: stretch;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+  background: #0a0a0b;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: inherit;
+}
+.site-tab {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; padding: 6px 2px 4px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 9px; font-weight: 600; letter-spacing: 0.02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s;
+}
+.site-tab-icon { font-size: 19px; line-height: 1; filter: grayscale(100%) brightness(1.2); opacity: 0.55; }
+.site-tab.active { color: #FAFAFA; }
+.site-tab.active .site-tab-icon { filter: grayscale(100%) brightness(1.6); opacity: 1; }
+
 /* ===== Bottom tab bar ===== */
 .bottom-tabs {
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  bottom: calc(58px + env(safe-area-inset-bottom)); left: 0; right: 0;
   z-index: 100;
   display: flex;
   justify-content: center;
@@ -1604,7 +1629,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         <span style="font-size:11px;color:var(--text-tertiary)">CHF</span>
         <select id="netWorthCurrency" style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;cursor:pointer">
           <option value="CHF">CHF</option>
-          <option value="USD">USD</option>
           <option value="EUR">EUR</option>
           <option value="GBP">GBP</option>
         </select>
@@ -1751,7 +1775,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <input type="number" placeholder="Amount" id="subAmount" step="0.01" style="flex:1;max-width:100px" />
       <select id="subCurrency" style="padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary);max-width:90px">
         <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
         <option value="EUR">EUR</option>
         <option value="GBP">GBP</option>
       </select>
@@ -1788,7 +1811,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <input type="number" id="ordCost"   placeholder="Cost" step="0.01" class="ord-input ord-input-cost">
       <select id="ordCurrency" class="ord-input ord-input-ccy">
         <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
         <option value="EUR">EUR</option>
         <option value="GBP">GBP</option>
       </select>
@@ -1845,7 +1867,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <input type="number" id="wishAmount" placeholder="Cost" step="0.01" class="wish-input wish-input-amt">
       <select id="wishCurrency" class="wish-input wish-input-ccy">
         <option value="CHF">CHF</option>
-        <option value="USD">USD</option>
         <option value="EUR">EUR</option>
         <option value="GBP">GBP</option>
       </select>
@@ -1863,6 +1884,46 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <div class="wish-empty-icon">🎯</div>
     <div class="wish-empty-title">No wishes yet</div>
     <div class="wish-empty-sub">Add anything you're saving for — the dashboard will calculate what % of your net worth it'd cost.</div>
+  </div>
+</div>
+
+<!-- ===== VINTED INCOME ===== -->
+<div class="section" data-section="vinted">
+  <div class="section-title">
+    <span class="section-title-text">VINTED INCOME</span>
+  </div>
+
+  <!-- Manual balance — feeds into Net Worth exactly like Bank/Stocks/Crypto/Other -->
+  <div class="card nw-subcard">
+    <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>🛍️ Vinted balance</span><span id="vintedTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></div>
+    <div id="vintedList" class="nw-list"></div>
+    <div class="quick-add">
+      <input type="text" placeholder="Balance name (e.g. Vinted wallet)" id="vintedName" />
+      <input type="number" placeholder="Balance" id="vintedAmount" step="0.01" />
+      <button class="quick-add-btn" id="vintedAddBtn">+</button>
+    </div>
+  </div>
+
+  <!-- Individual sales log -->
+  <div class="card" style="margin-top:10px">
+    <div class="label"><span>🧾 Sales log</span></div>
+    <div class="quick-add">
+      <input type="text" placeholder="Item sold (e.g. Old hoodie)" id="vsItemName" />
+      <input type="number" placeholder="Amount" id="vsAmount" step="0.01" />
+      <button class="quick-add-btn" id="vsAddBtn">Log sale</button>
+    </div>
+    <div id="vintedSalesList" class="nw-list" style="margin-top:8px"></div>
+    <div class="empty-state" id="vintedSalesEmpty">No sales logged yet</div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--bg-card)">
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary)" id="vintedTotalEarned">0</div>
+        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-top:2px">Total earned</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--bg-card)">
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary)" id="vintedSaleCount">0</div>
+        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-top:2px">Sales</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1886,6 +1947,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <span class="bot-tab-icon">🎯</span>
     <span class="bot-tab-label">Wishlist</span>
   </button>
+  <button class="bot-tab" data-tab="vinted">
+    <span class="bot-tab-icon">🛍️</span>
+    <span class="bot-tab-label">Vinted</span>
+  </button>
+</nav>
+
+<nav class="site-bottombar" aria-label="Main tabs">
+  <a href="index.html" class="site-tab"><span class="site-tab-icon">🏠</span><span>Today</span></a>
+  <a href="football.html" class="site-tab"><span class="site-tab-icon">⚽</span><span>Football</span></a>
+  <a href="study.html" class="site-tab"><span class="site-tab-icon">📚</span><span>Study</span></a>
+  <a href="gym.html" class="site-tab"><span class="site-tab-icon">💪</span><span>Gym</span></a>
+  <a href="nutrition.html" class="site-tab"><span class="site-tab-icon">🥗</span><span>Nutrition</span></a>
+  <a href="finance.html" class="site-tab active"><span class="site-tab-icon">📊</span><span>Finance</span></a>
 </nav>
 
 <script>
@@ -1945,13 +2019,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     { key: 'bank',   listId: 'bankList',   totalId: 'bankTotal',   nameId: 'bankName',   amtId: 'bankAmount',   addId: 'bankAddBtn' },
     { key: 'stocks', listId: 'stocksList', totalId: 'stocksTotal', nameId: 'stocksName', amtId: 'stocksAmount', addId: 'stocksAddBtn' },
     { key: 'crypto', listId: 'cryptoList', totalId: 'cryptoTotal', nameId: 'cryptoName', amtId: 'cryptoAmount', addId: 'cryptoAddBtn' },
-    { key: 'other',  listId: 'otherList',  totalId: 'otherTotal',  nameId: 'otherName',  amtId: 'otherAmount',  addId: 'otherAddBtn' }
+    { key: 'other',  listId: 'otherList',  totalId: 'otherTotal',  nameId: 'otherName',  amtId: 'otherAmount',  addId: 'otherAddBtn' },
+    { key: 'vinted', listId: 'vintedList', totalId: 'vintedTotal', nameId: 'vintedName', amtId: 'vintedAmount', addId: 'vintedAddBtn' }
   ];
   const currencyEl = document.getElementById('netWorthCurrency');
   const netWorthTotal = document.getElementById('netWorthTotal');
   const netWorthBreakdown = document.getElementById('netWorthBreakdown');
 
-  let exchangeRates = { CHF: 1, USD: 1, EUR: 1, GBP: 1 };
+  let exchangeRates = { CHF: 1, EUR: 1, GBP: 1 };
   async function loadExchangeRates() {
     try {
       const res = await fetch('https://open.er-api.com/v6/latest/CHF');
@@ -1959,7 +2034,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       if (data && data.rates) {
         exchangeRates = {
           CHF: 1,
-          USD: data.rates.USD || 1,
           EUR: data.rates.EUR || 1,
           GBP: data.rates.GBP || 1
         };
@@ -2098,6 +2172,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     if (typeof renderWishlist === 'function') renderWishlist();
     if (typeof renderOrders   === 'function') renderOrders();
     if (typeof updateOrdPreview === 'function') updateOrdPreview();
+    if (typeof renderVintedSales === 'function') renderVintedSales();
   }
 
   // ============================================================
@@ -2168,6 +2243,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     stocks: { name: 'Stocks',   color: '#6EE7B7' },
     crypto: { name: 'Crypto',   color: '#FBBF24' },
     other:  { name: 'Other',    color: '#B794F4' },
+    vinted: { name: 'Vinted',   color: '#F2A063' },
     subs:   { name: 'Subs/yr',  color: '#FF8A8A' }
   };
   function donutArcPath(cx, cy, rOuter, rInner, startAngle, endAngle) {
@@ -2393,8 +2469,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const a = parseFloat(amtInput.value);
       if (!n || isNaN(a)) return;
       // Interpret the input in the CURRENTLY SELECTED display currency, then
-      // convert to CHF for storage. So if USD is selected and user types 40000,
-      // we store 40000 / USD-per-CHF rate — 31,400 CHF; displays as $40,000.
+      // convert to CHF for storage. So if EUR is selected and user types 40000,
+      // we store 40000 / EUR-per-CHF rate — 31,400 CHF; displays as €40,000.
       const symbol = currencyEl ? currencyEl.value : 'CHF';
       const rate = exchangeRates[symbol] || 1;
       const amountCHF = a / rate;
@@ -2409,6 +2485,64 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
     amtInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
   });
+
+  // ============================================================
+  // VINTED SALES LOG — a running journal of individual sales.
+  // Separate from the balance above: the balance feeds net worth,
+  // this is just a history + running total/count.
+  // ============================================================
+  const VINTED_SALES_KEY = 'nw:vintedSales';
+  function getVintedSales() { return storeGet(VINTED_SALES_KEY) || []; }
+  function renderVintedSales() {
+    const sales = getVintedSales();
+    const list = document.getElementById('vintedSalesList');
+    const empty = document.getElementById('vintedSalesEmpty');
+    if (!list) return;
+    if (empty) empty.style.display = sales.length ? 'none' : '';
+    list.innerHTML = sales.map((s, idx) =>
+      '<div class="nw-row">' +
+        '<span class="nw-name">' + escapeHtml(s.name) + '</span>' +
+        '<span class="nw-amt">' + fmtMoney(s.amount) + '</span>' +
+        '<button class="nw-del" data-idx="' + idx + '">×</button>' +
+      '</div>'
+    ).join('');
+    list.querySelectorAll('.nw-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const arr = getVintedSales();
+        arr.splice(parseInt(btn.dataset.idx, 10), 1);
+        storeSet(VINTED_SALES_KEY, arr);
+        renderVintedSales();
+      });
+    });
+    const totalCHF = sales.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    const totalEl = document.getElementById('vintedTotalEarned');
+    const countEl = document.getElementById('vintedSaleCount');
+    if (totalEl) totalEl.textContent = fmtMoney(totalCHF);
+    if (countEl) countEl.textContent = String(sales.length);
+  }
+  (function wireVintedSaleForm() {
+    const addBtn = document.getElementById('vsAddBtn');
+    const nameInput = document.getElementById('vsItemName');
+    const amtInput = document.getElementById('vsAmount');
+    if (!addBtn) return;
+    function doAdd() {
+      const n = nameInput.value.trim();
+      const a = parseFloat(amtInput.value);
+      if (!n || isNaN(a)) return;
+      const symbol = currencyEl ? currencyEl.value : 'CHF';
+      const rate = exchangeRates[symbol] || 1;
+      const amountCHF = a / rate;
+      const sales = getVintedSales();
+      sales.push({ name: n, amount: amountCHF, ts: Date.now() });
+      storeSet(VINTED_SALES_KEY, sales); // instant local write; sync.js pushes to Supabase in the background
+      nameInput.value = ''; amtInput.value = '';
+      renderVintedSales();
+    }
+    addBtn.addEventListener('click', doAdd);
+    nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+    amtInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+  })();
+  renderVintedSales();
 
   if (currencyEl) {
     const savedCur = storeGet(CURRENCY_KEY);
@@ -2655,7 +2789,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     const periodOpts = ['monthly','yearly','weekly'].map(p =>
       '<option value="' + p + '"' + (p === it.period ? ' selected' : '') + '>' + p.charAt(0).toUpperCase() + p.slice(1) + '</option>'
     ).join('');
-    const ccyOpts = ['CHF','USD','EUR','GBP'].map(c =>
+    const ccyOpts = ['CHF','EUR','GBP'].map(c =>
       '<option value="' + c + '"' + (c === enteredCcy ? ' selected' : '') + '>' + c + '</option>'
     ).join('');
     // Build From-account options from the live NW accounts

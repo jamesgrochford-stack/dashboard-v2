@@ -218,13 +218,13 @@ body.topbar-modal-open {
     <span class="bottombar-tab-icon">🏠</span>
     <span>Today</span>
   </a>
-  <a href="study.html" class="bottombar-tab" data-page="study">
-    <span class="bottombar-tab-icon">📚</span>
-    <span>Study</span>
-  </a>
   <a href="football.html" class="bottombar-tab" data-page="football">
     <span class="bottombar-tab-icon">⚽</span>
     <span>Football</span>
+  </a>
+  <a href="study.html" class="bottombar-tab" data-page="study">
+    <span class="bottombar-tab-icon">📚</span>
+    <span>Study</span>
   </a>
   <a href="gym.html" class="bottombar-tab" data-page="gym">
     <span class="bottombar-tab-icon">💪</span>
