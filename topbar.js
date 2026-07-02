@@ -1,12 +1,13 @@
-﻿// =============================================================
-// Persistent dashboard top bar.
+// =============================================================
+// Persistent dashboard top bar + bottom navigation.
 // Drop this on any page with:
 //     <script src="topbar.js" defer></script>
-// It self-injects HTML + CSS, reads progress from the same
-// localStorage keys the dashboard's tabs already use, and a
-// water "+1" button writes to localStorage and (if configured)
-// pushes a merged update to the Supabase health row so the
-// new bottle appears on every device within ~1 second.
+// It self-injects HTML + CSS. The topbar shows today's date and a
+// Body Battery indicator read from Supabase (the same 'td:garminLog'
+// key index.html's Garmin card writes to), and the bottom bar is the
+// six-tab site nav (Today/Football/Study/Gym/Nutrition/Finance),
+// each tab tinted its own colour so the active page is always obvious
+// at a glance.
 // =============================================================
 (function () {
   'use strict';
@@ -23,80 +24,44 @@
   const css = `
 .topbar {
   position: sticky; top: 0; z-index: 40;
-  display: flex; justify-content: flex-end; align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
   gap: 8px;
   padding: max(10px, env(safe-area-inset-top)) 14px 8px;
   background: #0a0a0b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
-.topbar-water-wrap {
-  display: flex; align-items: stretch;
+.topbar-date {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
 }
-.topbar-water-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 14px;
-  background: rgba(125, 211, 252, 0.08);
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  border-right: none;
-  border-radius: 12px 0 0 12px;
-  text-decoration: none;
-  color: #FAFAFA;
-  -webkit-tap-highlight-color: transparent;
+.topbar-battery {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
-.topbar-water-pill .topbar-pill-dot {
+.topbar-battery-dot {
   width: 8px; height: 8px; border-radius: 50%;
-  background: #7DD3FC; flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
 }
-.topbar-water-pill.warn .topbar-pill-dot { background: #fbbf24; }
-.topbar-water-pill.miss .topbar-pill-dot {
-  background: #ff8a8a;
-  animation: topbar-miss-pulse 1.6s ease-in-out infinite;
-}
-@keyframes topbar-miss-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50%      { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
-}
-.topbar-pill-count {
+.topbar-battery-dot.good { background: #6BE3A4; box-shadow: 0 0 6px rgba(107, 227, 164, 0.65); }
+.topbar-battery-dot.warn { background: #F2C063; box-shadow: 0 0 6px rgba(242, 192, 99, 0.55); }
+.topbar-battery-dot.bad  { background: #FF6B6B; box-shadow: 0 0 6px rgba(255, 107, 107, 0.55); }
+.topbar-battery-num {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 13px; font-weight: 700;
   color: #FAFAFA;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.topbar-water-add {
-  width: 44px;
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.28), rgba(110, 231, 183, 0.28));
-  color: #FFFFFF;
-  font-family: inherit; font-size: 20px; font-weight: 700; line-height: 1;
-  cursor: pointer;
-  border-radius: 0 12px 12px 0;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, transform 0.10s;
-}
-.topbar-water-add:active { transform: scale(0.94); }
-.topbar-water-add.flash {
-  background: linear-gradient(180deg, rgba(125, 211, 252, 0.7), rgba(110, 231, 183, 0.7));
-}
-.topbar-finance-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 44px; height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 12px;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
-}
-.topbar-finance-btn:hover { background: rgba(255, 255, 255, 0.08); }
-.topbar-finance-icon {
-  font-size: 20px; line-height: 1;
-  filter: grayscale(100%) brightness(1.4);
-  opacity: 0.85;
-}
 
-/* Bottom tab bar — Instagram-style */
+/* Bottom tab bar — Instagram-style, each tab tinted its own colour */
 .bottombar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
   display: flex; justify-content: space-around; align-items: stretch;
@@ -106,6 +71,7 @@
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
 .bottombar-tab {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -117,20 +83,34 @@
   letter-spacing: 0.02em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   -webkit-tap-highlight-color: transparent;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
+.tab-today      { --accent: #F2C063; --accent-bg: rgba(242, 192, 99, 0.14); }
+.tab-football   { --accent: #6BE3A4; --accent-bg: rgba(107, 227, 164, 0.14); }
+.tab-study      { --accent: #7DD3FC; --accent-bg: rgba(125, 211, 252, 0.14); }
+.tab-gym        { --accent: #F2A063; --accent-bg: rgba(242, 160, 99, 0.14); }
+.tab-nutrition  { --accent: #C8F060; --accent-bg: rgba(200, 240, 96, 0.14); }
+.tab-finance    { --accent: #D4AF37; --accent-bg: rgba(212, 175, 55, 0.14); }
 .bottombar-tab-icon {
-  font-size: 24px; line-height: 1;
-  filter: grayscale(100%) brightness(1.2);
-  opacity: 0.55;
-  transition: opacity 0.15s, filter 0.15s, transform 0.10s;
+  color: var(--accent);
+  opacity: 0.6;
+  line-height: 1;
+  transition: opacity 0.15s, transform 0.10s;
 }
+.bottombar-tab-icon svg { width: 23px; height: 23px; display: block; }
+.bottombar-tab.active .bottombar-tab-icon { opacity: 1; }
 .bottombar-tab.active {
   color: #FAFAFA;
+  background: var(--accent-bg);
+  border-radius: 12px 12px 0 0;
 }
-.bottombar-tab.active .bottombar-tab-icon {
-  filter: grayscale(100%) brightness(1.6);
-  opacity: 1;
+.bottombar-tab.active::after {
+  content: '';
+  position: absolute; left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: 26px; height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
 }
 .bottombar-tab:active .bottombar-tab-icon { transform: scale(0.92); }
 
@@ -141,12 +121,10 @@ body.has-bottombar {
 
 @media (max-width: 480px) {
   .topbar { padding-left: 10px; padding-right: 10px; gap: 6px; }
-  .topbar-water-pill { padding: 8px 11px; gap: 6px; }
-  .topbar-pill-count { font-size: 12px; }
-  .topbar-water-add { width: 40px; font-size: 18px; }
-  .topbar-finance-btn { width: 40px; height: 38px; }
-  .topbar-finance-icon { font-size: 18px; }
-  .bottombar-tab-icon { font-size: 19px; }
+  .topbar-date { font-size: 11.5px; }
+  .topbar-battery { padding: 5px 8px; gap: 6px; }
+  .topbar-battery-num { font-size: 12px; }
+  .bottombar-tab-icon svg { width: 20px; height: 20px; }
   .bottombar-tab { font-size: 9px; padding-left: 1px; padding-right: 1px; }
 }
 
@@ -196,53 +174,64 @@ body.topbar-modal-open {
 }
 `;
 
+  // -------- Icons (inline SVG, currentColor, so each tab can be tinted) --------
+  const ICON = {
+    today: '<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/>',
+    football: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8.3 15 10.4l-1.1 3.6h-3.8L9 10.4z"/><path d="M12 8.3V4.7M15 10.4l3.3-1M13.9 14l2 3.5M10.1 14l-2 3.5M9 10.4l-3.3-1"/>',
+    study: '<path d="M12 6.5c-2-1.4-5-1.4-8 0v12c3-1.4 6-1.4 8 0"/><path d="M12 6.5c2-1.4 5-1.4 8 0v12c-3-1.4-6-1.4-8 0"/><path d="M12 6.5v12"/>',
+    gym: '<path d="M4 9v6M7 7.5v9M17 7.5v9M20 9v6M7 12h10"/>',
+    nutrition: '<path d="M4.5 12.5a7.5 7.5 0 0 0 15 0z"/><path d="M12 12.5V6c2.5 0 4.5 1.8 4.5 4"/>',
+    finance: '<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h11A1.5 1.5 0 0 1 18 7.5V9h1.5A1.5 1.5 0 0 1 21 10.5v7a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 17.5z"/><circle cx="16.2" cy="14" r="1.3" fill="currentColor" stroke="none"/>'
+  };
+  function svg(name) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICON[name] + '</svg>';
+  }
+
   // -------- HTML --------
   const topbarHtml = `
-<header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
-  <div class="topbar-water-wrap">
-    <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
-      <span class="topbar-pill-dot"></span>
-      <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
-    </a>
-    <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
+<header class="topbar" id="topbar" role="navigation" aria-label="Status">
+  <span class="topbar-date" id="topbarDate">—</span>
+  <div class="topbar-battery" id="topbarBattery" title="Body Battery (today)">
+    <span class="topbar-battery-dot" id="topbarBatteryDot"></span>
+    <span class="topbar-battery-num" id="topbarBatteryNum">—</span>
   </div>
-  <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
-    <span class="topbar-finance-icon">📊</span>
-  </a>
 </header>
 `;
 
   const bottombarHtml = `
 <nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
-  <a href="index.html" class="bottombar-tab" data-page="today">
-    <span class="bottombar-tab-icon">🏠</span>
+  <a href="index.html" class="bottombar-tab tab-today" data-page="today">
+    <span class="bottombar-tab-icon">${svg('today')}</span>
     <span>Today</span>
   </a>
-  <a href="football.html" class="bottombar-tab" data-page="football">
-    <span class="bottombar-tab-icon">⚽</span>
+  <a href="football.html" class="bottombar-tab tab-football" data-page="football">
+    <span class="bottombar-tab-icon">${svg('football')}</span>
     <span>Football</span>
   </a>
-  <a href="study.html" class="bottombar-tab" data-page="study">
-    <span class="bottombar-tab-icon">📚</span>
+  <a href="study.html" class="bottombar-tab tab-study" data-page="study">
+    <span class="bottombar-tab-icon">${svg('study')}</span>
     <span>Study</span>
   </a>
-  <a href="gym.html" class="bottombar-tab" data-page="gym">
-    <span class="bottombar-tab-icon">💪</span>
+  <a href="gym.html" class="bottombar-tab tab-gym" data-page="gym">
+    <span class="bottombar-tab-icon">${svg('gym')}</span>
     <span>Gym</span>
   </a>
-  <a href="nutrition.html" class="bottombar-tab" data-page="nutrition">
-    <span class="bottombar-tab-icon">🥗</span>
+  <a href="nutrition.html" class="bottombar-tab tab-nutrition" data-page="nutrition">
+    <span class="bottombar-tab-icon">${svg('nutrition')}</span>
     <span>Nutrition</span>
   </a>
-  <a href="finance.html" class="bottombar-tab" data-page="finance">
-    <span class="bottombar-tab-icon">📊</span>
+  <a href="finance.html" class="bottombar-tab tab-finance" data-page="finance">
+    <span class="bottombar-tab-icon">${svg('finance')}</span>
     <span>Finance</span>
   </a>
 </nav>
 `;
 
-  // Pages where we suppress the app chrome: finance has its own internal
-  // 4-tab bottom nav and self-contained back button.
+  // Finance has its own internal 4-tab bottom nav (Net Worth/Subs/Orders/
+  // Wishlist/Vinted) plus a hand-rolled copy of this same site nav sitting
+  // at the same screen edge — injecting a second one here would overlap it.
+  // The topbar (date + Body Battery) is useful there too, so only the
+  // bottom bar is suppressed on finance.html.
   function isFinancePage() {
     const p = (window.location.pathname || '').toLowerCase();
     return p.endsWith('/finance.html') || p.endsWith('finance.html');
@@ -252,9 +241,8 @@ body.topbar-modal-open {
   function isEmbedded() {
     try { return window.self !== window.top; } catch (e) { return true; }
   }
-  function shouldShowChrome() {
-    return !isFinancePage() && !isEmbedded();
-  }
+  function shouldShowTopbar() { return !isEmbedded(); }
+  function shouldShowBottombar() { return !isFinancePage() && !isEmbedded(); }
   function currentPageKey() {
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('study.html')) return 'study';
@@ -266,42 +254,38 @@ body.topbar-modal-open {
   }
 
   function injectStyleAndHTML() {
-    if (document.getElementById('topbar') || document.getElementById('bottombar')) return;
-    if (!shouldShowChrome()) return;
+    if (isEmbedded()) return;
+    if (!document.getElementById('topbar-style')) {
+      const style = document.createElement('style');
+      style.id = 'topbar-style';
+      style.textContent = css;
+      document.head.appendChild(style);
+    }
 
-    const style = document.createElement('style');
-    style.id = 'topbar-style';
-    style.textContent = css;
-    document.head.appendChild(style);
+    if (shouldShowTopbar() && !document.getElementById('topbar')) {
+      const topWrap = document.createElement('div');
+      topWrap.innerHTML = topbarHtml.trim();
+      document.body.insertBefore(topWrap.firstChild, document.body.firstChild);
+    }
 
-    const topWrap = document.createElement('div');
-    topWrap.innerHTML = topbarHtml.trim();
-    document.body.insertBefore(topWrap.firstChild, document.body.firstChild);
+    if (shouldShowBottombar() && !document.getElementById('bottombar')) {
+      const bottomWrap = document.createElement('div');
+      bottomWrap.innerHTML = bottombarHtml.trim();
+      document.body.appendChild(bottomWrap.firstChild);
 
-    const bottomWrap = document.createElement('div');
-    bottomWrap.innerHTML = bottombarHtml.trim();
-    document.body.appendChild(bottomWrap.firstChild);
+      // Highlight the active bottom tab.
+      const active = currentPageKey();
+      document.querySelectorAll('.bottombar-tab').forEach((t) => {
+        t.classList.toggle('active', t.getAttribute('data-page') === active);
+      });
 
-    // Highlight the active bottom tab.
-    const active = currentPageKey();
-    document.querySelectorAll('.bottombar-tab').forEach((t) => {
-      t.classList.toggle('active', t.getAttribute('data-page') === active);
-    });
-
-    // Reserve room above the fixed bottom bar so page content can scroll
-    // past it without being hidden.
-    document.body.classList.add('has-bottombar');
+      // Reserve room above the fixed bottom bar so page content can scroll
+      // past it without being hidden.
+      document.body.classList.add('has-bottombar');
+    }
   }
 
-  // -------- Active-date helpers (match the goals page 6 AM rollover) --------
-  function activeDateKey() {
-    const now = new Date();
-    const d = new Date(now);
-    if (now.getHours() < 6) d.setDate(d.getDate() - 1);
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0');
-  }
+  // -------- Date helpers --------
   function calendarDateKey() {
     const d = new Date();
     return d.getFullYear() + '-' +
@@ -309,127 +293,55 @@ body.topbar-modal-open {
       String(d.getDate()).padStart(2, '0');
   }
 
-  // -------- Read progress from localStorage --------
-  function getGoalsProgress() {
-    const key = 'goals:' + activeDateKey();
-    let goals = [];
-    try { goals = JSON.parse(localStorage.getItem(key)) || []; } catch (e) {}
-    const total = Array.isArray(goals) ? goals.length : 0;
-    const done = total ? goals.filter(g => g && g.done).length : 0;
-    return { done, total };
+  function renderDate() {
+    const el = document.getElementById('topbarDate');
+    if (!el) return;
+    el.textContent = new Date().toLocaleDateString('en-IE', { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
-  function getStackProgress() {
-    let items = [];
-    try { items = JSON.parse(localStorage.getItem('stack:items')) || []; } catch (e) {}
-    let taken = {};
-    try { taken = JSON.parse(localStorage.getItem('stack:taken:' + activeDateKey())) || {}; } catch (e) {}
-    const total = Array.isArray(items) ? items.length : 0;
-    const done = total ? items.filter(i => i && taken[i.id]).length : 0;
-    return { done, total };
+  // -------- Body Battery (read-only, from the same key index.html's
+  // Garmin card writes: localStorage 'td:garminLog', synced to Supabase
+  // under app_state.key = 'todayDashboard') --------
+  function renderBattery(value) {
+    const dot = document.getElementById('topbarBatteryDot');
+    const num = document.getElementById('topbarBatteryNum');
+    if (!dot || !num) return;
+    dot.classList.remove('good', 'warn', 'bad');
+    if (value == null || isNaN(value)) {
+      num.textContent = '—';
+      return;
+    }
+    num.textContent = String(value);
+    if (value >= 75) dot.classList.add('good');
+    else if (value >= 40) dot.classList.add('warn');
+    else dot.classList.add('bad');
   }
 
-  function getWaterProgress() {
-    let state = null;
-    try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch (e) {}
-    if (!state) return { done: 0, total: 0 };
+  function readGarminLogLocal() {
+    try { return JSON.parse(localStorage.getItem('td:garminLog')) || {}; } catch (e) { return {}; }
+  }
+
+  async function fetchBodyBattery() {
+    // Local-first (instant, works even offline / before the network call
+    // resolves) — then reconcile with Supabase, which is authoritative
+    // when this isn't the device that logged today's Garmin data.
+    const localLog = readGarminLogLocal();
     const todayKey = calendarDateKey();
-    const done = (state.logs || {})[todayKey] || 0;
-    const p = state.profile || { weightKg: 75 };
-    const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
-    const base = wKg * 35;
-    const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
-    const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
-    const subs = (state.substances || []).reduce((s, x) => {
-      const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
-      return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
-    }, 0);
-    let adjust = 0;
-    if (p.sex === 'm') adjust += 200;
-    if ((p.age || 0) >= 50) adjust += 100;
-    const totalMl = base + exercise + caffeine + subs + adjust;
-    let unitVol;
-    if (state.unit === 'glass') unitVol = state.glassMl || 250;
-    else if (state.unit === 'oz') unitVol = 30;
-    else if (state.unit === 'ml') unitVol = 1;
-    else unitVol = state.bottleMl || 500;
-    const total = Math.max(1, Math.ceil(totalMl / unitVol));
-    return { done, total };
-  }
-
-  function classifyStatus(done, total) {
-    if (total === 0) return 'idle';
-    if (done >= total) return 'good';
-    if (done >= total * 0.5) return 'warn';
-    // Past 6pm and still under half → flag as missed
-    const h = new Date().getHours();
-    if (h >= 18 && done < total * 0.5) return 'miss';
-    return 'warn';
-  }
-
-  function setPillStatus(pillEl, status) {
-    pillEl.classList.remove('good', 'warn', 'miss');
-    if (status === 'warn' || status === 'miss') pillEl.classList.add(status);
-  }
-
-  function render() {
-    const waterEl = document.getElementById('topbarWater');
-    if (!waterEl) return; // not injected yet
-
-    const w = getWaterProgress();
-    const countEl = document.getElementById('topbarWaterCount');
-    if (countEl) countEl.textContent = w.total ? w.done + '/' + w.total : '0/0';
-    setPillStatus(waterEl, classifyStatus(w.done, w.total));
-  }
-
-  // -------- Water +1 (works from any page) --------
-  function defaultWaterState() {
-    return {
-      unit: 'bottle', bottleMl: 500, glassMl: 250, weightUnit: 'kg',
-      profile: { weightKg: 75, age: 25, sex: 'm', activityHrsPerWeek: 5 },
-      caffeineMgPerDay: 200, substances: [], logs: {}
-    };
-  }
-
-  async function pushWaterMergedToSupabase(localWater) {
-    // Only do this when we're NOT on the health page — health page
-    // has its own sync that already detects the localStorage change.
-    if (window.location.pathname.endsWith('/health.html') ||
-        window.location.pathname.endsWith('health.html')) return;
+    const localEntry = localLog[todayKey];
+    if (localEntry && localEntry.bodyBattery != null) renderBattery(localEntry.bodyBattery);
+    else renderBattery(null);
 
     if (!window.supabase || !TOPBAR_SUPABASE_URL || !TOPBAR_SUPABASE_KEY) return;
     if (TOPBAR_SUPABASE_URL.indexOf('PASTE-') === 0) return;
-
     try {
       const supa = window.supabase.createClient(TOPBAR_SUPABASE_URL, TOPBAR_SUPABASE_KEY);
-      const { data } = await supa
-        .from('app_state').select('data').eq('key', 'health').maybeSingle();
-      const current = (data && data.data) || {};
-      const merged = Object.assign({}, current, { po_water_v1: localWater });
-      await supa.from('app_state').upsert(
-        { key: 'health', data: merged, updated_at: new Date().toISOString() },
-        { onConflict: 'key' }
-      );
-    } catch (e) { /* offline — local change will sync next time user visits health */ }
-  }
-
-  function addWater() {
-    let state = null;
-    try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch (e) {}
-    if (!state || typeof state !== 'object') state = defaultWaterState();
-    state.logs = state.logs || {};
-    const k = calendarDateKey();
-    state.logs[k] = (state.logs[k] || 0) + 1;
-    try { localStorage.setItem('po_water_v1', JSON.stringify(state)); } catch (e) {}
-    render();
-
-    const btn = document.getElementById('topbarWaterAdd');
-    if (btn) {
-      btn.classList.add('flash');
-      setTimeout(() => btn.classList.remove('flash'), 220);
-    }
-
-    pushWaterMergedToSupabase(state);
+      const { data, error } = await supa
+        .from('app_state').select('data').eq('key', 'todayDashboard').maybeSingle();
+      if (error || !data || !data.data) return;
+      const garminLog = data.data['td:garminLog'] || {};
+      const entry = garminLog[todayKey];
+      renderBattery(entry && entry.bodyBattery != null ? entry.bodyBattery : null);
+    } catch (e) { /* offline — local value (if any) already rendered */ }
   }
 
   // -------- Mobile lockdown helpers --------
@@ -482,20 +394,20 @@ body.topbar-modal-open {
   // -------- Boot --------
   function boot() {
     injectStyleAndHTML();
-    const btn = document.getElementById('topbarWaterAdd');
-    if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); addWater(); });
-    render();
+    renderDate();
+    fetchBodyBattery();
     lockGestures();
     startModalLock();
 
     // Re-render when localStorage changes from another tab/window OR when
     // the page becomes visible (sync may have pulled in the background).
-    window.addEventListener('storage', render);
-    window.addEventListener('focus', render);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+    window.addEventListener('storage', () => { renderDate(); fetchBodyBattery(); });
+    window.addEventListener('focus', () => { renderDate(); fetchBodyBattery(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderDate(); fetchBodyBattery(); } });
 
-    // Periodic refresh so counts stay current after midnight rollover etc.
-    setInterval(render, 30 * 1000);
+    // Periodic refresh — date rolls over at midnight, Body Battery can be
+    // logged from another device at any time.
+    setInterval(() => { renderDate(); fetchBodyBattery(); }, 2 * 60 * 1000);
   }
 
   if (document.readyState === 'loading') {
