@@ -525,10 +525,22 @@
   }
   function saveDay(d){ try { localStorage.setItem(DAY_KEY, d); } catch(e){} }
   let currentDay = loadDay();
+  // What day actually is it — independent of which tab is selected — so the
+  // label can tell "today's session" apart from "browsing a different day."
+  function actualTodayDay(){
+    const dow = new Date().getDay();
+    if (dow === 3) return 'wed';
+    if (dow === 0) return 'sun';
+    return null; // Mon/Tue/Thu/Fri/Sat — not a gym day at all
+  }
   function renderDaySeg(){
     document.querySelectorAll('.dayPill').forEach(b => b.classList.toggle('active', b.dataset.day === currentDay));
     const lbl = document.getElementById('sessionLabel');
-    if (lbl) lbl.textContent = (currentDay === 'sun' ? 'Sunday' : 'Wednesday') + ' Session';
+    if (lbl) {
+      const dayName = currentDay === 'sun' ? 'Sunday' : 'Wednesday';
+      const prefix = actualTodayDay() === currentDay ? "Today's Session" : 'Next Session';
+      lbl.textContent = prefix + ' — ' + dayName;
+    }
   }
   document.querySelectorAll('.dayPill').forEach(b => b.onclick = () => { currentDay = b.dataset.day; saveDay(currentDay); render(); });
 

@@ -92,13 +92,28 @@
 .tab-nutrition  { --accent: #C8F060; --accent-bg: rgba(200, 240, 96, 0.14); }
 .tab-finance    { --accent: #D4AF37; --accent-bg: rgba(212, 175, 55, 0.14); }
 .bottombar-tab-icon {
-  color: var(--accent);
-  opacity: 0.6;
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  font-size: 20px;
   line-height: 1;
+  opacity: 0.6;
   transition: opacity 0.15s, transform 0.10s;
 }
-.bottombar-tab-icon svg { width: 23px; height: 23px; display: block; }
+/* Emoji glyphs carry their own fixed colours (CSS color can't retint
+   them), so the per-tab accent is expressed as a soft colour halo behind
+   the glyph instead — still reads clearly as "this tab is orange/blue/etc." */
+.bottombar-tab-icon::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.20;
+  z-index: -1;
+  transition: opacity 0.15s;
+}
 .bottombar-tab.active .bottombar-tab-icon { opacity: 1; }
+.bottombar-tab.active .bottombar-tab-icon::before { opacity: 0.38; }
 .bottombar-tab.active {
   color: #FAFAFA;
   background: var(--accent-bg);
@@ -124,7 +139,7 @@ body.has-bottombar {
   .topbar-date { font-size: 11.5px; }
   .topbar-battery { padding: 5px 8px; gap: 6px; }
   .topbar-battery-num { font-size: 12px; }
-  .bottombar-tab-icon svg { width: 20px; height: 20px; }
+  .bottombar-tab-icon { width: 26px; height: 26px; font-size: 18px; }
   .bottombar-tab { font-size: 9px; padding-left: 1px; padding-right: 1px; }
 }
 
@@ -175,18 +190,6 @@ body.topbar-modal-open {
 `;
 
   // -------- Icons (inline SVG, currentColor, so each tab can be tinted) --------
-  const ICON = {
-    today: '<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/>',
-    football: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8.3 15 10.4l-1.1 3.6h-3.8L9 10.4z"/><path d="M12 8.3V4.7M15 10.4l3.3-1M13.9 14l2 3.5M10.1 14l-2 3.5M9 10.4l-3.3-1"/>',
-    study: '<path d="M12 6.5c-2-1.4-5-1.4-8 0v12c3-1.4 6-1.4 8 0"/><path d="M12 6.5c2-1.4 5-1.4 8 0v12c-3-1.4-6-1.4-8 0"/><path d="M12 6.5v12"/>',
-    gym: '<path d="M4 9v6M7 7.5v9M17 7.5v9M20 9v6M7 12h10"/>',
-    nutrition: '<path d="M4.5 12.5a7.5 7.5 0 0 0 15 0z"/><path d="M12 12.5V6c2.5 0 4.5 1.8 4.5 4"/>',
-    finance: '<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h11A1.5 1.5 0 0 1 18 7.5V9h1.5A1.5 1.5 0 0 1 21 10.5v7a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 17.5z"/><circle cx="16.2" cy="14" r="1.3" fill="currentColor" stroke="none"/>'
-  };
-  function svg(name) {
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICON[name] + '</svg>';
-  }
-
   // -------- HTML --------
   const topbarHtml = `
 <header class="topbar" id="topbar" role="navigation" aria-label="Status">
@@ -201,27 +204,27 @@ body.topbar-modal-open {
   const bottombarHtml = `
 <nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
   <a href="index.html" class="bottombar-tab tab-today" data-page="today">
-    <span class="bottombar-tab-icon">${svg('today')}</span>
+    <span class="bottombar-tab-icon">🏠</span>
     <span>Today</span>
   </a>
   <a href="football.html" class="bottombar-tab tab-football" data-page="football">
-    <span class="bottombar-tab-icon">${svg('football')}</span>
+    <span class="bottombar-tab-icon">⚽</span>
     <span>Football</span>
   </a>
   <a href="study.html" class="bottombar-tab tab-study" data-page="study">
-    <span class="bottombar-tab-icon">${svg('study')}</span>
+    <span class="bottombar-tab-icon">📚</span>
     <span>Study</span>
   </a>
   <a href="gym.html" class="bottombar-tab tab-gym" data-page="gym">
-    <span class="bottombar-tab-icon">${svg('gym')}</span>
+    <span class="bottombar-tab-icon">🏋️</span>
     <span>Gym</span>
   </a>
   <a href="nutrition.html" class="bottombar-tab tab-nutrition" data-page="nutrition">
-    <span class="bottombar-tab-icon">${svg('nutrition')}</span>
+    <span class="bottombar-tab-icon">🥗</span>
     <span>Nutrition</span>
   </a>
   <a href="finance.html" class="bottombar-tab tab-finance" data-page="finance">
-    <span class="bottombar-tab-icon">${svg('finance')}</span>
+    <span class="bottombar-tab-icon">💰</span>
     <span>Finance</span>
   </a>
 </nav>

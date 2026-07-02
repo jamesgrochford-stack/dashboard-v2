@@ -179,15 +179,12 @@ body::after {
 .habit-yesterday.show { display: block; }
 .habit-yesterday-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
 
-/* ===== Water ===== */
-.water-num { font-size: 40px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1; }
-.water-num span { font-size: 16px; color: var(--text-tertiary); font-weight: 500; }
-.water-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; margin: 12px 0 16px; }
-.water-bar-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width 0.4s ease; }
-.water-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.water-btn { flex: 1; min-width: 64px; padding: 11px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text-primary); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
-.water-btn:hover { background: rgba(255,255,255,0.09); }
-.water-btn.minus { color: var(--danger); }
+/* ===== Fluids (read-only summary — logging happens on nutrition.html) ===== */
+.fluid-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-decoration: none; cursor: pointer; }
+.fluid-card:hover { background: rgba(255,255,255,0.06); }
+.fluid-card-num { font-size: 26px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+.fluid-card-num span { font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
+.fluid-card-arrow { font-size: 18px; color: var(--text-tertiary); flex: none; }
 
 /* ===== Garmin ===== */
 .garmin-headline { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
@@ -281,18 +278,14 @@ body::after {
     </div>
   </div>
 
-  <!-- Water Tracker -->
-  <div class="card">
-    <div class="card-title">Water</div>
-    <div class="water-num" id="waterNum">0.00<span> / 2.5L</span></div>
-    <div class="water-bar"><div class="water-bar-fill" id="waterBarFill"></div></div>
-    <div class="water-btns">
-      <button type="button" class="water-btn minus" data-amt="-0.25">&minus;0.25L</button>
-      <button type="button" class="water-btn" data-amt="0.25">+0.25L</button>
-      <button type="button" class="water-btn" data-amt="0.5">+0.5L</button>
-      <button type="button" class="water-btn" data-amt="0.75">+0.75L</button>
+  <!-- Fluids — read-only summary; logging happens on nutrition.html -->
+  <a class="card fluid-card" href="nutrition.html" id="fluidCard">
+    <div>
+      <div class="card-title" style="margin-bottom:8px">Fluids</div>
+      <div class="fluid-card-num" id="fluidCardNum">&mdash;<span> today</span></div>
     </div>
-  </div>
+    <span class="fluid-card-arrow">&rarr;</span>
+  </a>
 
   <!-- Garmin -->
   <div class="card">
@@ -437,11 +430,19 @@ body::after {
     if (!sessions.length) return 'No study sessions scheduled today.';
     return '<ul>' + sessions.map(s => '<li><b>' + esc(s.subject) + '</b> — ' + esc(s.type) + '</li>').join('') + '</ul>';
   }
+  // The timeline row itself should name today's actual subjects (e.g.
+  // "Accounting & PE-PAP"), not the generic placeholder — the expanded
+  // detail above already had this, the collapsed row title didn't.
+  function studyBlocksTitle() {
+    const sessions = getTodaySessions();
+    if (!sessions.length) return 'Study blocks';
+    return sessions.map(s => s.subject).join(' & ');
+  }
 
   const SCHEDULE = {
     mon: [
       { time: '07:30', title: 'Wake & morning routine', expand: SKINCARE_AM },
-      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: 'Study', title: 'Study blocks', titleFn: studyBlocksTitle, expandFn: studyBlocksHtml },
       { time: '17:30', title: 'Leave for Limerick' },
       { time: '18:00–19:30', title: 'Club training', expand: ACTION_RULE },
       { time: '20:00', title: 'Home & post-training nutrition', expand: NUTRITION },
@@ -453,14 +454,14 @@ body::after {
       { time: '06:45', title: 'Leave for Limerick' },
       { time: '07:30–09:00', title: 'Club training', expand: ACTION_RULE },
       { time: '09:30', title: 'Home & post-training nutrition', expand: NUTRITION },
-      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: 'Study', title: 'Study blocks', titleFn: studyBlocksTitle, expandFn: studyBlocksHtml },
       { time: '21:30', title: 'Phone down' },
       { time: '22:00', title: 'Bed' },
     ],
     wed: [
       { time: '07:30', title: 'Wake' },
       { time: '08:30–10:00', title: 'Gym — strength session', expand: gymListHtml(GYM_WED), isHtml: true },
-      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: 'Study', title: 'Study blocks', titleFn: studyBlocksTitle, expandFn: studyBlocksHtml },
       { time: '21:30', title: 'Phone down' },
       { time: '22:30', title: 'Bed' },
     ],
@@ -469,13 +470,13 @@ body::after {
       { time: '06:45', title: 'Leave for Limerick' },
       { time: '07:30–09:00', title: 'Club training', expand: ACTION_RULE },
       { time: '09:30', title: 'Home & post-training nutrition', expand: NUTRITION },
-      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: 'Study', title: 'Study blocks', titleFn: studyBlocksTitle, expandFn: studyBlocksHtml },
       { time: '21:30', title: 'Phone down' },
       { time: '22:00', title: 'Bed' },
     ],
     fri: [
       { time: '07:30', title: 'Wake' },
-      { time: 'Study', title: 'Study blocks', expandFn: studyBlocksHtml },
+      { time: 'Study', title: 'Study blocks', titleFn: studyBlocksTitle, expandFn: studyBlocksHtml },
       { time: '21:30', title: 'Phone down' },
       { time: '22:30', title: 'Bed' },
     ],
@@ -502,11 +503,12 @@ body::after {
     (SCHEDULE[cfg.key] || []).forEach(item => {
       const li = document.createElement('li');
       const hasExpand = !!(item.expand || item.expandFn);
+      const title = item.titleFn ? item.titleFn() : item.title;
       li.className = 'sched-item' + (hasExpand ? '' : ' no-expand');
       li.innerHTML =
         '<div class="sched-head">' +
           '<span class="sched-time">' + esc(item.time) + '</span>' +
-          '<span class="sched-title">' + esc(item.title) + '</span>' +
+          '<span class="sched-title">' + esc(title) + '</span>' +
           (hasExpand ? '<span class="sched-caret">▸</span>' : '') +
         '</div>' +
         (hasExpand ? '<div class="sched-body">' + (item.isHtml ? item.expand : esc(item.expandFn ? item.expandFn() : item.expand)) + '</div>' : '');
@@ -874,26 +876,38 @@ body::after {
   });
 
   // ============================================================
-  // WATER TRACKER
+  // FLUIDS — read-only summary. Logging lives entirely on nutrition.html
+  // now (it already tracks water/milk/OJ/protein milk together); this is
+  // just a same-origin localStorage peek plus a Supabase reconcile
+  // against nutrition.html's own row, same pattern as topbar.js's
+  // Body Battery indicator.
   // ============================================================
-  function waterTargetFor(dayKey) {
-    return (dayKey === 'mon' || dayKey === 'tue' || dayKey === 'thu' || dayKey === 'sat') ? 2.5 : 2.0;
+  function readFluidLocal() {
+    try { return JSON.parse(localStorage.getItem('nt:fluid:' + todayKey())) || null; } catch (e) { return null; }
   }
-  function waterKey() { return 'td:water:' + todayKey(); }
-  function renderWater(cfg) {
-    const target = waterTargetFor(cfg.key);
-    const amt = loadJSON(waterKey(), 0);
-    $('waterNum').innerHTML = amt.toFixed(2) + '<span> / ' + target.toFixed(1) + 'L</span>';
-    $('waterBarFill').style.width = Math.max(0, Math.min(100, (amt / target) * 100)) + '%';
+  function sumFluidMl(entry) {
+    return (entry.water || 0) + (entry.milk || 0) + (entry.oj || 0) + (entry.proteinMilk || 0);
   }
-  document.querySelectorAll('.water-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const delta = parseFloat(btn.dataset.amt);
-      const amt = Math.max(0, +(loadJSON(waterKey(), 0) + delta).toFixed(2));
-      saveJSON(waterKey(), amt);
-      renderWater(todayConfig());
-    });
-  });
+  function renderFluidCard(totalMl) {
+    const el = $('fluidCardNum');
+    if (!el) return;
+    el.innerHTML = totalMl == null ? '&mdash;<span> today</span>' : (totalMl / 1000).toFixed(2) + 'L<span> today</span>';
+  }
+  async function fetchFluidSummary() {
+    const local = readFluidLocal();
+    renderFluidCard(local ? sumFluidMl(local) : null);
+    if (!window.supabase) return;
+    try {
+      const supa = window.supabase.createClient(
+        (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co',
+        (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c'
+      );
+      const { data, error } = await supa.from('app_state').select('data').eq('key', 'nutritionPage').maybeSingle();
+      if (error || !data || !data.data) return;
+      const entry = data.data['nt:fluid:' + todayKey()];
+      renderFluidCard(entry ? sumFluidMl(entry) : 0);
+    } catch (e) { /* offline — local value (if any) already rendered */ }
+  }
 
   // ============================================================
   // GARMIN
@@ -992,13 +1006,15 @@ body::after {
     renderSchedule(cfg);
     renderStudy();
     renderHabits();
-    renderWater(cfg);
+    fetchFluidSummary();
     renderGarmin();
     renderJournal();
   }
   renderAll();
   setInterval(renderDayBanner, 60 * 1000);
+  setInterval(fetchFluidSummary, 2 * 60 * 1000);
   window.addEventListener('storage', renderAll);
+  window.addEventListener('focus', fetchFluidSummary);
 })();
 </script>
 

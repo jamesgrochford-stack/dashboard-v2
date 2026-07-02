@@ -416,7 +416,7 @@ body::after {
       const logged = sessions.some(s => s.date === dStr);
       const row = document.createElement('div');
       row.className = 'week-day-row ' + d.cls;
-      row.innerHTML = '<span class="week-day-name">' + d.name + '</span><span class="week-day-desc">' + esc(d.desc) + '</span><span class="week-day-tick' + (logged ? ' show' : '') + '">✓</span>';
+      row.innerHTML = '<span class="week-day-name">' + d.name + '</span><span class="week-day-desc">' + esc(d.desc) + '</span>' + (logged ? '<span class="week-day-tick show">✓</span>' : '');
       grid.appendChild(row);
     });
   }
