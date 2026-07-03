@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>James — Chemistry Plan 2026–27</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green-dark: #0d3a1c; --green-mid: #1a7a3c; --green-bright: #4ecb71;
+    --green-pale: #eaf3de; --green-pale-text: #2c5c12;
+    --amber-mid: #b97012; --amber-pale: #fdf0d9; --amber-pale-text: #7a4a0a;
+    --red-mid: #a32d2d; --red-pale: #faece7; --red-pale-text: #7a2020;
+    --blue-mid: #185fa5; --blue-pale: #e6f1fb; --blue-pale-text: #0c447c;
+    --purple-mid: #534ab7; --purple-pale: #eeedfe; --purple-pale-text: #3c3489;
+    --chem-dark: #1a3a4a; --chem-mid: #2a7a9a; --chem-bright: #5ecbe8;
+    --bg: #f9f9f8; --bg2: #f2f2f0; --bg3: #e8e8e5;
+    --border: rgba(0,0,0,0.09); --border2: rgba(0,0,0,0.05);
+    --text: #111; --text2: #444; --text3: #888;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111; --bg2: #1a1a1a; --bg3: #252525;
+      --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.05);
+      --text: #f0f0ee; --text2: #a0a09c; --text3: #606060;
+      --green-pale: #1c3d0e; --green-pale-text: #8fcf6a;
+      --amber-pale: #3a2500; --amber-pale-text: #e8a84a;
+      --red-pale: #3a1010; --red-pale-text: #e88a7a;
+      --blue-pale: #0a2a50; --blue-pale-text: #7ab4f0;
+      --purple-pale: #1e1a50; --purple-pale-text: #a09af0;
+    }
+  }
+  html { font-size: 15px; }
+  body { background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; line-height: 1.5; }
+
+  .hero { background: var(--chem-dark); padding: 2.5rem 1.75rem 2rem; position: relative; overflow: hidden; }
+  .hero::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, transparent, transparent 40px, rgba(255,255,255,0.013) 40px, rgba(255,255,255,0.013) 41px); pointer-events: none; }
+  .hero-inner { position: relative; z-index: 1; max-width: 700px; }
+  .hero-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.6rem; }
+  .hero-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 900; line-height: 0.95; color: #fff; letter-spacing: -0.01em; margin-bottom: 0.75rem; }
+  .hero-title em { color: var(--chem-bright); font-style: normal; }
+  .hero-sub { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; max-width: 500px; margin-bottom: 1.25rem; }
+  .hero-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hero-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 3px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.1); }
+  .hero-tag.warn { background: rgba(186,117,23,0.25); color: #f5c76a; border-color: rgba(186,117,23,0.4); }
+  .hero-tag.chem { background: rgba(94,203,232,0.15); color: var(--chem-bright); border-color: rgba(94,203,232,0.3); }
+
+  .status-bar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0.85rem 1.75rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .status-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-right: 4px; }
+  .status-pill { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); color: var(--text2); }
+  .status-pill.done { background: var(--green-pale); color: var(--green-pale-text); border-color: var(--green-mid); }
+  .status-pill.summer { background: var(--amber-pale); color: var(--amber-pale-text); border-color: var(--amber-mid); }
+  .status-pill.sixthyr { background: var(--blue-pale); color: var(--blue-pale-text); border-color: var(--blue-mid); }
+
+  .nav { display: flex; overflow-x: auto; scrollbar-width: none; background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn { font-size: 12px; font-weight: 500; font-family: 'Barlow', sans-serif; padding: 13px 16px; color: var(--text3); cursor: pointer; border: none; background: none; white-space: nowrap; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; flex-shrink: 0; letter-spacing: 0.01em; }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--chem-mid); border-bottom-color: var(--chem-mid); }
+
+  .content { padding: 1.5rem 1.75rem 4rem; max-width: 860px; }
+  .section { display: none; }
+  .section.on { display: block; }
+
+  .eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--chem-mid); margin-bottom: 0.25rem; }
+  .sec-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; color: var(--text); line-height: 1.05; margin-bottom: 0.4rem; }
+  .sec-desc { font-size: 13.5px; color: var(--text2); line-height: 1.6; max-width: 580px; margin-bottom: 1.5rem; }
+
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: 1rem; }
+  .card-title { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .alert { border-left: 3px solid; padding: 9px 13px; font-size: 13px; line-height: 1.6; margin-bottom: 1rem; }
+  .alert-red { border-color: var(--red-mid); background: var(--red-pale); color: var(--red-pale-text); }
+  .alert-green { border-color: var(--green-mid); background: var(--green-pale); color: var(--green-pale-text); }
+  .alert-amber { border-color: var(--amber-mid); background: var(--amber-pale); color: var(--amber-pale-text); }
+  .alert-blue { border-color: var(--blue-mid); background: var(--blue-pale); color: var(--blue-pale-text); }
+  .alert-purple { border-color: var(--purple-mid); background: var(--purple-pale); color: var(--purple-pale-text); }
+  .alert-plain { border-color: var(--border); background: var(--bg2); color: var(--text2); }
+
+  .badge { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; }
+  .badge-red { background: var(--red-pale); color: var(--red-pale-text); }
+  .badge-green { background: var(--green-pale); color: var(--green-pale-text); }
+  .badge-amber { background: var(--amber-pale); color: var(--amber-pale-text); }
+  .badge-blue { background: var(--blue-pale); color: var(--blue-pale-text); }
+  .badge-purple { background: var(--purple-pale); color: var(--purple-pale-text); }
+
+  .blabel { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border2); padding-bottom: 5px; margin-bottom: 6px; margin-top: 0.85rem; }
+  .blabel:first-child { margin-top: 0; }
+
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border2); align-items: start; }
+  .row:last-child { border-bottom: none; padding-bottom: 0; }
+  .row-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .row-note { font-size: 12px; color: var(--text2); margin-top: 2px; line-height: 1.45; }
+  .row-val { font-size: 12px; color: var(--text3); text-align: right; white-space: nowrap; padding-top: 2px; }
+
+  .tool-pill { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 1px 7px; border-radius: 3px; background: var(--bg3); color: var(--text2); border: 1px solid var(--border); margin: 1px; white-space: nowrap; }
+  .tool-pill.primary { background: var(--chem-dark); color: var(--chem-bright); border-color: var(--chem-mid); }
+  .tool-pill.alt { background: var(--blue-pale); color: var(--blue-pale-text); border-color: var(--blue-mid); }
+
+  .topic-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 13px; }
+  .topic-table th { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+  .topic-table td { padding: 9px 10px; border-bottom: 1px solid var(--border2); vertical-align: top; color: var(--text2); line-height: 1.4; }
+  .topic-table tr:last-child td { border-bottom: none; }
+  .topic-table td:first-child { font-weight: 600; color: var(--text); }
+  .topic-table tr.priority-high td:first-child { border-left: 3px solid var(--red-mid); padding-left: 7px; }
+  .topic-table tr.priority-med td:first-child { border-left: 3px solid var(--amber-mid); padding-left: 7px; }
+  .topic-table tr.priority-low td:first-child { border-left: 3px solid var(--green-mid); padding-left: 7px; }
+  .topic-table tr.priority-6yr td:first-child { border-left: 3px solid var(--blue-mid); padding-left: 7px; }
+
+  .week-block { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 0.75rem; }
+  .week-header { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 1rem; background: var(--bg2); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 6px; }
+  .week-header-left { }
+  .week-header-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .week-header-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--chem-mid); margin-top: 2px; letter-spacing: 0.04em; }
+  .week-header-meta { font-size: 12px; color: var(--text3); text-align: right; }
+  .week-body { padding: 0.85rem 1rem; }
+  .week-session { display: grid; grid-template-columns: 90px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border2); font-size: 12.5px; align-items: start; }
+  .week-session:last-child { border-bottom: none; padding-bottom: 0; }
+  .week-session-day { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
+  .week-session-content { color: var(--text2); line-height: 1.45; }
+  .week-session-content strong { color: var(--text); font-weight: 600; }
+
+  .phase-header { background: var(--chem-dark); border-radius: var(--radius); padding: 1rem 1.2rem; margin-bottom: 0.75rem; color: rgba(255,255,255,0.85); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+  .phase-title { font-family: 'Barlow Condensed', sans-serif; font-size: 1.3rem; font-weight: 800; }
+  .phase-subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .phase-badge { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 3px 9px; border-radius: 3px; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.2); white-space: nowrap; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .stat-box { background: var(--bg2); border-radius: var(--radius-sm); padding: 1rem 0.75rem; text-align: center; border: 1px solid var(--border); }
+  .stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 2rem; font-weight: 900; color: var(--text); line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--text3); margin-top: 4px; line-height: 1.3; }
+
+  .ni { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border2); align-items: start; }
+  .ni:last-child { border-bottom: none; }
+  .ni-n { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 800; color: var(--chem-mid); padding-top: 1px; }
+  .ni-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .ni-sub { font-size: 12px; color: var(--text2); margin-top: 2px; line-height: 1.45; }
+
+  .exp-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1rem; }
+  .exp-table th { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+  .exp-table td { padding: 9px 10px; border-bottom: 1px solid var(--border2); vertical-align: top; color: var(--text2); line-height: 1.4; font-size: 12.5px; }
+  .exp-table tr:last-child td { border-bottom: none; }
+  .exp-table td:first-child { font-weight: 600; color: var(--text); }
+  .freq-high { color: var(--red-pale-text); background: var(--red-pale); padding: 2px 7px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; white-space: nowrap; }
+  .freq-med { color: var(--amber-pale-text); background: var(--amber-pale); padding: 2px 7px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; white-space: nowrap; }
+  .freq-low { color: var(--green-pale-text); background: var(--green-pale); padding: 2px 7px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; white-space: nowrap; }
+
+  .sixthyr-chapter { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-bottom: 0.6rem; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+  .sixthyr-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .sixthyr-note { font-size: 12px; color: var(--text2); line-height: 1.45; }
+  .sixthyr-meta { text-align: right; }
+
+  @media (max-width: 560px) {
+    .content { padding: 1.25rem 1rem 4rem; }
+    .hero { padding: 1.75rem 1rem 1.5rem; }
+    .status-bar { padding: 0.75rem 1rem; }
+    .week-session { grid-template-columns: 70px 1fr; }
+    .exp-table th:nth-child(3), .exp-table td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Chemistry HL · Leaving Cert 2027 · Full Plan v3</div>
+    <div class="hero-title"><em>Chemistry</em><br>Study Plan</div>
+    <div class="hero-sub">H3 → H1. 10 weeks of free summer study starting 22 June, then adapts to 6th year from 1 September. Every session assigned with exact dates. Every chapter mapped.</div>
+    <div class="hero-tags">
+      <span class="hero-tag">22 Jun – 29 Aug · 10 free weeks</span>
+      <span class="hero-tag chem">School from 1 Sep</span>
+      <span class="hero-tag">Wed theory · Fri application</span>
+      <span class="hero-tag">Examly Wks 1–5 · Studyclix Wks 6–10</span>
+      <span class="hero-tag warn">AAC project — 40% of grade</span>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span class="status-label">Coverage</span>
+  <span class="status-pill done">Ch1–17 ✓</span>
+  <span class="status-pill done">Ch19–20 ✓</span>
+  <span class="status-pill summer">Ch18 — this summer</span>
+  <span class="status-pill sixthyr">Ch21–30 — 6th year</span>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="show('overview')">Overview</button>
+  <button class="nav-btn" onclick="show('gaps')">Gaps & priority</button>
+  <button class="nav-btn" onclick="show('schedule')">Weekly schedule</button>
+  <button class="nav-btn" onclick="show('method')">Method</button>
+  <button class="nav-btn" onclick="show('experiments')">Mandatory exps</button>
+  <button class="nav-btn" onclick="show('sixthyear')">6th year</button>
+  <button class="nav-btn" onclick="show('project')">AAC project</button>
+</nav>
+
+<div class="content">
+
+<!-- ══════ OVERVIEW ══════ -->
+<div class="section on" id="s-overview">
+  <div class="eyebrow">01 · Overview</div>
+  <div class="sec-title">H3 to H1 — the real gap</div>
+  <div class="sec-desc">Strong definitions. Solid theory. Couldn't apply either to LC-format questions, especially when topics were combined. That's an exam technique problem, not a knowledge problem — and it's fixable in 10 weeks.</div>
+
+  <div class="alert alert-amber">Before week 1 (any day before 22 Jun) — two prerequisite tasks. First: 45 minutes on examinations.ie mapping Chemistry command words to what the marking scheme rewards. State, explain, describe, calculate — each requires a structurally different answer. Second: 20 minutes on Pointsgame.ie checking LC Chemistry topic frequency — this validates the priority order in the Gaps tab. Both done before 22 June, neither counts as a study session. <span class="tool-pill primary">examinations.ie</span> <span class="tool-pill primary">Pointsgame.ie</span></div>
+
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-val">10</div><div class="stat-label">Free weeks of summer study (22 Jun – 29 Aug)</div></div>
+    <div class="stat-box"><div class="stat-val">1</div><div class="stat-label">New chapter this summer — Ch18 (pH & Titration Curves)</div></div>
+    <div class="stat-box"><div class="stat-val">40<span style="font-size:1rem">%</span></div><div class="stat-label">of LC grade is the AAC project</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Why H3, and what fixes each gap</div>
+    <div class="ni"><div class="ni-n">1</div><div><div class="ni-title">Cross-chapter application — topics combined in a single question</div><div class="ni-sub">LC Chemistry questions routinely combine stoichiometry + titration + acids in one multi-part question. You understood each in isolation. The fix: Weeks 1–5 build single-topic foundations with Examly. From Week 6, Studyclix cross-chapter and mock questions are introduced. The transition is deliberate — foundations first, then combination.</div></div></div>
+    <div class="ni"><div class="ni-n">2</div><div><div class="ni-title">Calculation parsing — not the maths, the setup</div><div class="ni-sub">The three-step read (given / finding / formula) is written explicitly at the top of every calculation from Week 1. It becomes automatic by Week 4. It's a habit, not a skill.</div></div></div>
+    <div class="ni"><div class="ni-n">3</div><div><div class="ni-title">Zero calculation practice before the summer exam</div><div class="ni-sub">Every Friday session includes the calculation component of that week's topic. No exceptions — theory without calculation practice is what produced the H3.</div></div></div>
+    <div class="ni"><div class="ni-n">4</div><div><div class="ni-title">Command word format gaps</div><div class="ni-sub">Fixed by the prerequisite session before Week 1. Once mapped, applied automatically throughout the plan.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">The core mechanism — Wednesday + Friday pairing</div>
+    <div class="alert alert-green" style="margin-bottom:0.85rem">One chapter per week. Theory Wednesday, application Friday. The gap between learning and retrieval is deliberate — it's what builds retention rather than false familiarity.</div>
+    <div class="row"><div><div class="row-name">Wednesday Block 2 — 50 min — Grinds360 theory</div><div class="row-note">One chapter. Work through Grinds360 notes — definitions, mechanisms, key reactions. Attempt every worked example before reading the solution. Brief notes on the 3–4 most testable points. In the last 5 minutes only: add 2–3 Anki cards from the Grinds360 definitions section (not an additional burden — tagged onto the end of the session). <span class="tool-pill primary">Grinds360</span> <span class="tool-pill primary">Anki</span></div></div></div>
+    <div class="row"><div><div class="row-name">Friday — first 30 min — past paper question</div><div class="row-note">If Wednesday felt solid: go straight to the past paper question. If Wednesday felt shaky: spend the first 10 minutes re-reading the key points from Grinds360 before attempting the question — don't skip straight to the paper if the foundation isn't there. Weeks 1–5: Examly single-topic. Weeks 6–10: Studyclix cross-chapter or mock section. <span class="tool-pill primary">Examly</span> <span class="tool-pill alt">Studyclix from Wk 6</span></div></div></div>
+    <div class="row"><div><div class="row-name">Friday — last 20 min — AAC project or Anki</div><div class="row-note">Alternating weeks: Chemistry AAC background reading one Friday, Physics AAC the next. Or 10 min Anki if no project task due. Study stops at 12:30 on Fridays — no exceptions.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Tool transition — Examly to Studyclix</div>
+    <div class="row"><div><div class="row-name">Weeks 1–5 (22 Jun – 24 Jul): Examly — single-topic questions</div><div class="row-note">Filter by chapter, one question per session. Examly is better here because you can isolate exactly the topic just covered on Wednesday. The goal is building the method on each topic independently before combining them. <span class="tool-pill primary">Examly</span></div></div></div>
+    <div class="row"><div><div class="row-name">Weeks 6–10 (27 Jul – 28 Aug): Studyclix — cross-chapter and mock sections</div><div class="row-note">Use Studyclix topic practice first (combining two chapters at once), then mock paper sections from Week 8 onwards. The marking scheme breakdowns in Studyclix are more detailed than Examly — use them actively. Specifically: "Topic Practice" for Weeks 6–7, "Mock Papers" → Section B for Weeks 8–10. <span class="tool-pill alt">Studyclix Plus</span></div></div></div>
+    <div class="row"><div><div class="row-name">Pointsgame.ie — once only, before Week 1</div><div class="row-note">20 minutes. Check LC Chemistry topic frequency. Confirms or adjusts the priority order in the Gaps tab. Not used again after this. <span class="tool-pill primary">Pointsgame.ie</span></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">When the summer paper comes back — what to do</div>
+    <div class="alert alert-plain" style="margin-bottom:0.75rem">The summer exam paper will be returned at some point during the plan. When it is, run this process immediately — it takes 20 minutes and is more valuable than any single study session.</div>
+    <div class="ni"><div class="ni-n">1</div><div><div class="ni-title">Map every dropped mark to a chapter</div><div class="ni-sub">Go through every question. For each mark lost, write the chapter number next to it. Don't analyse yet — just map.</div></div></div>
+    <div class="ni"><div class="ni-n">2</div><div><div class="ni-title">Compare against the priority table in the Gaps tab</div><div class="ni-sub">If a chapter ranked medium or low has significant marks dropped, it moves to high priority. If a chapter ranked high was actually fine, it stays where it is — don't move it down.</div></div></div>
+    <div class="ni"><div class="ni-n">3</div><div><div class="ni-title">Identify whether each loss was theory, calculation, or procedural language</div><div class="ni-sub">Theory loss = the Grinds360 session for that chapter needs more depth. Calculation loss = apply the three-step read more strictly. Procedural language loss = add that experiment to the write-from-memory practice list in the Mandatory Experiments tab.</div></div></div>
+    <div class="ni"><div class="ni-n">4</div><div><div class="ni-title">Adjust the week order if needed — it's not fixed</div><div class="ni-sub">If the paper reveals Ch12 (Gas Laws) was a bigger problem than Ch16 (Acids & Bases), swap their weeks. The priority order in this plan is based on LC frequency data — the paper gives you personal data that overrides it where they conflict.</div></div></div>
+  </div>
+</div>
+
+<!-- ══════ GAPS ══════ -->
+<div class="section" id="s-gaps">
+  <div class="eyebrow">02 · Gaps & priority</div>
+  <div class="sec-title">What to tackle and when</div>
+  <div class="sec-desc">Every covered chapter ranked by likely exam impact. Priority is based on LC question frequency, calculation demand, and cross-chapter application risk. Update this order when the summer paper comes back.</div>
+
+  <div class="card">
+    <div class="card-title">Priority table — summer chapters</div>
+
+    <div class="blabel">High priority — Weeks 1–4 · single-topic Examly · highest LC impact</div>
+    <table class="topic-table">
+      <thead><tr><th>Chapter</th><th>Why high priority</th><th>Week</th></tr></thead>
+      <tbody>
+        <tr class="priority-high"><td>Ch17 — Volumetric Analysis</td><td>Highest-frequency topic. Procedure questions require exact language. Multi-step calculation. Direct AAC project foundation. Most marks lost by H3 students are here.</td><td><span class="badge badge-red">Wk 1 · 25 Jun</span></td></tr>
+        <tr class="priority-high"><td>Ch13 — Stoichiometry</td><td>Pure calculation parsing problem — limiting reagent and % yield. Fixing this makes every other calculation chapter easier. Gateway to cross-chapter questions.</td><td><span class="badge badge-red">Wk 2 · 1 Jul</span></td></tr>
+        <tr class="priority-high"><td>Ch19 — Oxidation & Reduction</td><td>Balancing redox equations is 6–8 marks that most students lose entirely. Method-based — once the 5-step process clicks it's bankable every year.</td><td><span class="badge badge-red">Wk 3 · 8 Jul</span></td></tr>
+        <tr class="priority-high"><td>Ch15 — Rates of Reaction</td><td>Graph reading + collision theory written explanation combined. Classic cross-chapter application. High LC frequency. Energy profile diagrams appear almost every year.</td><td><span class="badge badge-red">Wk 4 · 15 Jul</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="blabel">Medium priority — Weeks 5–9 · Studyclix from Wk 6 · cross-chapter begins</div>
+    <table class="topic-table">
+      <thead><tr><th>Chapter</th><th>Why medium priority</th><th>Week</th></tr></thead>
+      <tbody>
+        <tr class="priority-med"><td>Ch16 — Acids & Bases</td><td>Theory understood. Conjugate pairs and written explanation questions are the gap. Must be done before Ch18 — it's the foundation.</td><td><span class="badge badge-amber">Wk 5 · 22 Jul</span></td></tr>
+        <tr class="priority-med"><td>Ch11 — Moles (consolidation)</td><td>Gateway chapter — any shakiness cascades into Ch13, Ch14, Ch17. One consolidation session with full calculation run-through.</td><td><span class="badge badge-amber">Wk 6 · 29 Jul</span></td></tr>
+        <tr class="priority-med"><td>Ch14 — Solutions & Concentration</td><td>Standard solution preparation is a mandatory experiment appearing every year. Calculation types + direct AAC project skill.</td><td><span class="badge badge-amber">Wk 7 · 5 Aug</span></td></tr>
+        <tr class="priority-med"><td>Ch12 — Gas Laws</td><td>Unit consistency is where marks are lost. Ideal gas equation multi-step. Which law applies — a parsing problem.</td><td><span class="badge badge-amber">Wk 8 · 12 Aug</span></td></tr>
+        <tr class="priority-med"><td>Ch18 — pH & Titration Curves</td><td>Not yet covered in school. Must be done this summer — directly links to Ch16, Ch17, and AAC project buffer chemistry. Cannot wait for 6th year.</td><td><span class="badge badge-amber">Wk 9 · 19 Aug</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="blabel">Week 10 — Cross-chapter consolidation · full mock section</div>
+    <table class="topic-table">
+      <thead><tr><th></th><th>What happens</th><th>Week</th></tr></thead>
+      <tbody>
+        <tr class="priority-med"><td>Cross-chapter consolidation</td><td>No new chapter. Wednesday: Studyclix mock Section B under timed conditions — combines all summer topics. Friday: full mark and review, build the September handoff list. This is the most important week of the plan.</td><td><span class="badge badge-amber">Wk 10 · 26 Aug</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="blabel">Lower priority — maintained by Anki · no dedicated summer session</div>
+    <table class="topic-table">
+      <thead><tr><th>Chapter</th><th>Notes</th><th></th></tr></thead>
+      <tbody>
+        <tr class="priority-low"><td>Ch10 — Periodic Table</td><td>Strong definition territory. Trend explanations will be revisited in 6th year. Anki maintains retention. If a past paper question reveals a gap, address it in the learning log for 6th year.</td><td><span class="badge badge-green">Anki + 6th yr</span></td></tr>
+        <tr class="priority-low"><td>Ch20 — Electrochemistry</td><td>Covered recently. Lower mark allocation. Teacher will revisit in 6th year. Anki maintains definitions. No dedicated summer session needed.</td><td><span class="badge badge-green">Anki + 6th yr</span></td></tr>
+        <tr class="priority-low"><td>Ch1–9 — Early chapters</td><td>Anki maintains definitions. No dedicated session — appears in cross-chapter questions naturally from Week 6 onwards.</td><td><span class="badge badge-green">Anki only</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="blabel">6th year only — not yet covered</div>
+    <table class="topic-table">
+      <thead><tr><th>Chapters</th><th>Notes</th><th></th></tr></thead>
+      <tbody>
+        <tr class="priority-6yr"><td>Ch21 — Chemical Equilibrium</td><td>Not yet covered. Very high LC frequency in recent years. Le Chatelier + Kc calculations. Introduced in September — see 6th year tab.</td><td><span class="badge badge-blue">Sep priority</span></td></tr>
+        <tr class="priority-6yr"><td>Ch22–27 — Organic Chemistry</td><td>Largest 6th year block. ~30–35% of LC written exam. Start September — full detail in 6th year tab.</td><td><span class="badge badge-blue">6th year</span></td></tr>
+        <tr class="priority-6yr"><td>Ch25 — Thermochemistry</td><td>Enthalpy + Hess's law. Calculation-heavy. High frequency. 6th year.</td><td><span class="badge badge-blue">6th year</span></td></tr>
+        <tr class="priority-6yr"><td>Ch28–30 — Context chapters</td><td>Greenhouse, water, modern materials. Shorter treatment. 6th year.</td><td><span class="badge badge-blue">6th year</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ SCHEDULE ══════ -->
+<div class="section" id="s-schedule">
+  <div class="eyebrow">03 · Weekly schedule</div>
+  <div class="sec-title">22 June — 29 August</div>
+  <div class="sec-desc">10 free weeks before school starts 1 September. Every Wednesday and Friday session is assigned with exact dates. Examly for Weeks 1–5, Studyclix from Week 6. No new chapter in Week 10 — cross-chapter consolidation and full timed section only.</div>
+
+  <div class="alert alert-purple">Pre-week tasks (any day before 22 Jun): (1) Command word analysis — 45 min on examinations.ie, map Chemistry command words to marking scheme requirements. (2) Pointsgame.ie — 20 min, check LC Chemistry topic frequency to validate the priority order. Neither counts as a study session. Both must be done before Wednesday 25 June. <span class="tool-pill primary">examinations.ie</span> <span class="tool-pill primary">Pointsgame.ie</span></div>
+
+  <div class="alert alert-blue">Mandatory experiment write-from-memory schedule: Acid-base titration procedure — write from memory on Wed 25 Jun (Wk 1), Wed 29 Jul (Wk 6), Wed 26 Aug (Wk 10). Standard solution procedure — write from memory on Wed 5 Aug (Wk 7), Wed 19 Aug (Wk 9). Three repetitions across the summer locks the procedural language permanently. See Mandatory Experiments tab for the full text to learn.</div>
+
+  <div class="phase-header">
+    <div><div class="phase-title">Phase 1 — High priority chapters</div><div class="phase-subtitle">Examly single-topic · routine locked · Anki deck complete by end of phase</div></div>
+    <span class="phase-badge">22 Jun – 18 Jul · Wks 1–4</span>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 1 — Ch17: Volumetric Analysis (Acid-Base)</div>
+        <div class="week-header-date">Wed 25 Jun · Fri 27 Jun</div>
+      </div>
+      <div class="week-header-meta">Highest priority · Examly · write titration procedure from memory</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 25 Jun</div><div class="week-session-content"><strong>Grinds360 Ch10</strong> — titration procedure step by step (learn the exact language), standard solution preparation, the 4-step titration calculation method. Write the calculation method in your own words — keep it. After reading the titration procedure: close the book and write it from memory. Check it. This is the first of three write-from-memory repetitions for this procedure. Last 5 min: add 2–3 Anki cards from the Grinds360 definitions section.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 27 Jun</div><div class="week-session-content"><strong>Examly — acid-base titration question.</strong> If Wednesday felt solid: straight to the question. If Wednesday felt shaky: 10 min re-reading key points first, then the question. Three-step read on the calculation. Mark immediately. Write one sentence: what did the scheme reward that you missed? Keep this in a dedicated notebook — it's your learning log. <span class="tool-pill primary">Examly</span></div></div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 2 — Ch13: Stoichiometry</div>
+        <div class="week-header-date">Wed 1 Jul · Fri 3 Jul</div>
+      </div>
+      <div class="week-header-meta">Calculation parsing focus · three-step read · Examly</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 1 Jul</div><div class="week-session-content"><strong>Grinds360 Ch5</strong> (stoichiometry section from p.237) — mole ratios from balanced equations, limiting reagent identification method, percentage yield. Attempt every worked example before reading the solution. Write the limiting reagent method in a box — it's the same process every time. Last 5 min: 2–3 Anki cards.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 3 Jul</div><div class="week-session-content"><strong>Examly — stoichiometry question</strong> including limiting reagent or % yield. Write "Given:", "Finding:", "Formula:" explicitly before starting anything. Show every step with units. Mark immediately. One sentence in the learning log. <span class="tool-pill primary">Examly</span></div></div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 3 — Ch19: Oxidation & Reduction</div>
+        <div class="week-header-date">Wed 8 Jul · Fri 10 Jul</div>
+      </div>
+      <div class="week-header-meta">Method-based · 5-step redox balancing · Examly</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 8 Jul</div><div class="week-session-content"><strong>Grinds360 Ch11</strong> — oxidation number rules (memorise in order: elements=0, monatomic ions=charge, O=−2, H=+1, sum=0), the 5-step half-equation method. Write out the 5 steps and keep them. Practise assigning oxidation numbers to 5 different compounds before Friday. Last 5 min: 2–3 Anki cards.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 10 Jul</div><div class="week-session-content"><strong>Examly — redox balancing question.</strong> Use the 5-step method step by step — don't shortcut. Partial marks for correct method shown are significant here. Mark immediately. One sentence in the learning log. <span class="tool-pill primary">Examly</span></div></div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 4 — Ch15: Rates of Reaction</div>
+        <div class="week-header-date">Wed 15 Jul · Fri 17 Jul</div>
+      </div>
+      <div class="week-header-meta">Graph + written explanation · collision theory language · Examly · Anki deck complete</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 15 Jul</div><div class="week-session-content"><strong>Grinds360 Ch13</strong> — collision theory template explanations, energy profile diagram (draw correctly with all labels), factors affecting rate. Write the full template sentence for temperature effect — it appears almost verbatim in LC marking schemes. Last 5 min: final Anki cards — deck should be complete by end of this session. Maintenance only from Week 5.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 17 Jul</div><div class="week-session-content"><strong>Examly — rates of reaction question</strong> including a graph component. Read the graph first. Then write the collision theory explanation — check it includes particle speed, collision frequency, and activation energy. The scheme typically requires all three explicitly. Mark immediately. One sentence in the learning log. <span class="tool-pill primary">Examly</span></div></div>
+    </div>
+  </div>
+
+  <div class="phase-header">
+    <div><div class="phase-title">Phase 2 — Medium priority + new content</div><div class="phase-subtitle">Studyclix from Wk 6 · Ch18 introduced · cross-chapter application begins</div></div>
+    <span class="phase-badge">20 Jul – 22 Aug · Wks 5–9</span>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 5 — Ch16: Acids & Bases</div>
+        <div class="week-header-date">Wed 22 Jul · Fri 24 Jul</div>
+      </div>
+      <div class="week-header-meta">Foundation for Ch18 · last Examly week</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 22 Jul</div><div class="week-session-content"><strong>Grinds360 Ch8</strong> — Brønsted-Lowry definition, identifying conjugate pairs, reactions of acids (product for each type). Practise: given 5 equations, identify acid, base, conjugate acid, conjugate base in each. This is the exact LC format. Last 5 min: Anki maintenance.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 24 Jul</div><div class="week-session-content"><strong>Examly — acids and bases question.</strong> Some LC questions combine Ch16 + Ch17 already — this cross-chapter combination is intentional. Note: Studyclix replaces Examly from next week. <span class="tool-pill primary">Examly</span></div></div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 6 — Ch11: Moles (consolidation)</div>
+        <div class="week-header-date">Wed 29 Jul · Fri 31 Jul</div>
+      </div>
+      <div class="week-header-meta">Studyclix begins · write titration procedure from memory (2nd time)</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 29 Jul</div><div class="week-session-content"><strong>Grinds360 Ch5</strong> (moles section up to p.237) — all conversion types. Do 5 calculations without notes: moles from mass, mass from moles, particles from moles, volume from moles. Anything slow is the gap. Also: write the acid-base titration procedure from memory — second repetition. Check it against Grinds360 Ch10. Last 5 min: Anki maintenance.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 31 Jul</div><div class="week-session-content"><strong>Studyclix Topic Practice — Ch11 combined with another chapter</strong> (typically stoichiometry or titration). In Studyclix: go to Topic Practice → Chemistry → select the relevant topic combination. The marking scheme breakdowns are more detailed than Examly — read them actively, not just to check the final answer. One sentence in learning log. <span class="tool-pill alt">Studyclix Plus</span></div></div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 7 — Ch14: Solutions & Concentration</div>
+        <div class="week-header-date">Wed 5 Aug · Fri 7 Aug</div>
+      </div>
+      <div class="week-header-meta">Standard solution procedure · direct AAC skill · write from memory</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 5 Aug</div><div class="week-session-content"><strong>Grinds360 Ch7</strong> — all four concentration types, serial dilution (C₁V₁ = C₂V₂), standard solution preparation procedure. After reading: close the book and write the standard solution procedure from memory — first repetition. This is a mandatory experiment appearing almost every year. Last 5 min: Anki maintenance.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 7 Aug</div><div class="week-session-content"><strong>Studyclix Topic Practice — solutions question</strong> including both a concentration calculation and a procedure description. Both parts must be answered — the procedure description is where most marks are dropped. Check your procedural language against the Studyclix marking scheme breakdown. One sentence in learning log. <span class="tool-pill alt">Studyclix Plus</span></div></div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 8 — Ch12: Behaviour of Gases</div>
+        <div class="week-header-date">Wed 12 Aug · Fri 14 Aug</div>
+      </div>
+      <div class="week-header-meta">Unit consistency · ideal gas equation · Studyclix mock begins</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 12 Aug</div><div class="week-session-content"><strong>Grinds360 Ch6</strong> — which law applies to which scenario (what's constant = which law), ideal gas equation with unit conversion (P in Pa, V in m³, T in Kelvin), kinetic theory explanation of gas behaviour. Focus: write unit conversion steps explicitly — this is where marks are lost in gas law questions. Last 5 min: Anki maintenance.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 14 Aug</div><div class="week-session-content"><strong>Studyclix Mock Paper — Section B question</strong> that includes a gas laws component. First mock-style attempt — the format will feel different from single-topic questions. That's the point. Mark against the scheme. Note any cross-chapter combination that surprised you — these go in the learning log. <span class="tool-pill alt">Studyclix Plus</span></div></div>
+    </div>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 9 — Ch18: pH & Titration Curves (new content)</div>
+        <div class="week-header-date">Wed 19 Aug · Fri 21 Aug</div>
+      </div>
+      <div class="week-header-meta">New chapter · not taught yet · write standard solution procedure from memory (2nd time)</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 19 Aug</div><div class="week-session-content"><strong>Grinds360 Ch9</strong> — work through in full: Kw, pH scale, pH calculations for strong acids and bases, Ka for weak acids, titration curve shapes (strong acid–strong base vs weak acid–strong base). New material — take it slowly. Notes on key formulas. Also: write the standard solution procedure from memory — second repetition. Check against Grinds360 Ch10. Last 5 min: Anki maintenance.</div></div>
+      <div class="week-session"><div class="week-session-day">Fri 21 Aug</div><div class="week-session-content"><strong>Studyclix — pH question.</strong> Start with strong acid/base calculation only — don't attempt Ka on the first session of new content. Note what you had to look up vs what you recalled — that gap is your Anki list for Ch18. One sentence in learning log. <span class="tool-pill alt">Studyclix Plus</span></div></div>
+    </div>
+  </div>
+
+  <div class="phase-header">
+    <div><div class="phase-title">Phase 3 — Cross-chapter consolidation</div><div class="phase-subtitle">No new chapter · full timed mock · September handoff built · last free week</div></div>
+    <span class="phase-badge">24–29 Aug · Wk 10</span>
+  </div>
+
+  <div class="week-block">
+    <div class="week-header">
+      <div class="week-header-left">
+        <div class="week-header-title">Week 10 — Full cross-chapter consolidation</div>
+        <div class="week-header-date">Wed 26 Aug · Fri 28 Aug</div>
+      </div>
+      <div class="week-header-meta">Most important week · write titration procedure from memory (3rd and final time)</div>
+    </div>
+    <div class="week-body">
+      <div class="week-session"><div class="week-session-day">Wed 26 Aug</div><div class="week-session-content"><strong>Studyclix Mock Paper — full Section B</strong> under timed exam conditions. No notes. This is the first time you sit a full cross-chapter section — it will reveal exactly what remains. Also: write the acid-base titration procedure from memory one final time — third repetition. After this it's automatic. <span class="tool-pill alt">Studyclix Plus</span></div></div>
+      <div class="week-session"><div class="week-session-day">Fri 28 Aug</div><div class="week-session-content"><strong>Mark and build the September handoff.</strong> Go through every mark dropped. For each: write the chapter, the question type (theory / calculation / procedure), and the reason. Review the full learning log from all 10 weeks. This compiled list is your Chemistry priority document for 6th year — bring it to your teacher in September week 1. It tells them exactly which question types you need to target.</div></div>
+    </div>
+  </div>
+
+  <div class="alert alert-green">School starts 1 September. From this point the Wednesday/Friday pairing adapts to school content — Wednesday becomes whatever chapter school is covering that week, Friday becomes the Studyclix question on it. The habit is already built. It just continues.</div>
+</div>
+
+<!-- ══════ METHOD ══════ -->
+<div class="section" id="s-method">
+  <div class="eyebrow">04 · Method</div>
+  <div class="sec-title">How H1 answers are built</div>
+  <div class="sec-desc">Specific habits derived from what the LC Chemistry marking scheme rewards. Each one is used from Week 1 — not introduced gradually.</div>
+
+  <div class="card">
+    <div class="card-title">The three-step read — every calculation, every time</div>
+    <div class="alert alert-green" style="margin-bottom:0.75rem">Write these three lines at the top of every calculation before writing a single number. 30 seconds. Prevents the most common error: wrong starting value.</div>
+    <div class="row"><div><div class="row-name">Given:</div><div class="row-note">Everything the question provides, with units already converted. "V(HCl) = 25 cm³ = 0.025 L, c(HCl) = 0.1 mol/L"</div></div></div>
+    <div class="row"><div><div class="row-name">Finding:</div><div class="row-note">What you're being asked for. "Finding: concentration of NaOH in mol/L." Forces correct question reading before starting.</div></div></div>
+    <div class="row"><div><div class="row-name">Formula:</div><div class="row-note">Write the formula before substituting. "n = c × v." Then substitute. Then calculate. The scheme awards marks for correct formula selection — showing it explicitly never loses marks and often gains them.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Show every step — show every unit</div>
+    <div class="row"><div><div class="row-name">Marks are awarded at each step, not just the final answer</div><div class="row-note">A 6-mark calculation has ~3 steps worth 2 marks each. Wrong final answer + correct method shown = 4/6. Correct final answer + no working = 0–2/6. Always show working — this is the single highest-yield habit in LC Chemistry.</div></div></div>
+    <div class="row"><div><div class="row-name">Units at every line — always</div><div class="row-note">"n = 0.1 × 0.025 = 0.0025" risks losing marks. "n = 0.1 mol/L × 0.025 L = 0.0025 mol" never does. Write units through every step without exception.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">The learning log — one sentence after every question</div>
+    <div class="row"><div><div class="row-name">Format: "The scheme rewarded [X] which I missed because [Y]"</div><div class="row-note">Example: "The scheme rewarded stating the colour change 'persists for 30 seconds' — I wrote 'permanent colour change' without the time condition." Keep every sentence in one dedicated notebook page or Todoist note. By Week 10 this is your September handoff document.</div></div></div>
+    <div class="row"><div><div class="row-name">Categorise each entry: theory / calculation / procedural language</div><div class="row-note">Theory loss → the Grinds360 session needed more depth. Calculation loss → three-step read not applied strictly enough. Procedural language loss → add that experiment to write-from-memory practice. The category tells you exactly what to fix.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">If Wednesday feels shaky — the Friday rule</div>
+    <div class="row"><div><div class="row-name">Don't go straight to the past paper if the theory isn't solid</div><div class="row-note">If Wednesday's Grinds360 session left you uncertain on the chapter — spend the first 10 minutes of Friday re-reading the key points before attempting the question. A past paper attempt on shaky foundations produces bad habits, not learning. The 10-minute re-read is not optional on those weeks.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Anki — what to add and when</div>
+    <div class="row"><div><div class="row-name">25 remaining cards — complete by end of Week 4 (18 Jul)</div><div class="row-note">Add 2–3 in the last 5 minutes of each Wednesday session. Source directly from the Grinds360 definitions section — these are the exact definitions the LC marking scheme uses. Not procedure steps — those are learned by writing.</div></div></div>
+    <div class="row"><div><div class="row-name">From Week 5: maintenance only — 10 min per Chemistry rotation day</div><div class="row-note">Mon + Thu Anki rotation. No new cards from Week 5. The learning is happening in the Wednesday/Friday pairing. Anki just keeps the deck current. <span class="tool-pill primary">Anki</span></div></div></div>
+  </div>
+</div>
+
+<!-- ══════ EXPERIMENTS ══════ -->
+<div class="section" id="s-experiments">
+  <div class="eyebrow">05 · Mandatory experiments</div>
+  <div class="sec-title">Fixed-mark questions — bank them</div>
+  <div class="sec-desc">Mandatory experiments appear on almost every LC Chemistry paper. Procedure questions are worth 6–8 marks each and reward exact procedural language. Learn once, bank permanently. The write-from-memory schedule is built into the weekly schedule — see the blue alert in the Schedule tab for exact dates.</div>
+
+  <div class="alert alert-red">The write-from-memory method: read the procedure once in Grinds360. Close the book. Write it out from memory. Check and correct. Repeat on the dates in the Schedule tab. Three repetitions across the summer locks it. Do not try to learn procedures from Anki — writing the full sequence is the mechanism.</div>
+
+  <div class="card">
+    <div class="card-title">This summer — experiments in the plan chapters</div>
+    <table class="exp-table">
+      <thead><tr><th>Experiment</th><th>Chapter · Grinds360 ref</th><th>Frequency</th><th>The exact language to learn</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Acid-base titration</td>
+          <td>Ch17 · G360 Ch10</td>
+          <td><span class="freq-high">Every year</span></td>
+          <td>Rinse burette with the acid solution. Fill burette, remove air bubble from tip, record initial reading. Using a pipette, transfer the known volume of base to the conical flask. Add 2–3 drops of indicator. Run acid from burette slowly — dropwise near endpoint — until the indicator colour change persists for 30 seconds. Record final burette reading. Repeat until two concordant results obtained (within 0.1 cm³).</td>
+        </tr>
+        <tr>
+          <td>Preparation of a standard solution</td>
+          <td>Ch14 · G360 Ch7</td>
+          <td><span class="freq-high">Every year</span></td>
+          <td>Accurately weigh the required mass of solid on a balance. Dissolve in a small volume of distilled water in a beaker with stirring. Transfer quantitatively to a volumetric flask. Rinse the beaker three times with distilled water, adding each rinsing to the flask. Make up to the graduation mark with distilled water. Stopper and invert several times to mix.</td>
+        </tr>
+        <tr>
+          <td>Rate of reaction (sodium thiosulphate + HCl)</td>
+          <td>Ch15 · G360 Ch13</td>
+          <td><span class="freq-med">Most years</span></td>
+          <td>Measure time from mixing reactants until the cross drawn on paper beneath the flask is no longer visible through the solution. Change one variable only (temperature / concentration). Plot rate (1/time) on y-axis vs the independent variable on x-axis. State conclusion from the graph trend.</td>
+        </tr>
+        <tr>
+          <td>Redox titration (iron(II) vs KMnO₄)</td>
+          <td>Ch19 · G360 Ch12</td>
+          <td><span class="freq-med">Most years</span></td>
+          <td>Same procedure as acid-base titration but: KMnO₄ is self-indicating — no external indicator needed. Endpoint = first permanent pink/purple colour that persists for 30 seconds. KMnO₄ goes in the burette. Acidify the iron(II) solution with dilute H₂SO₄ before titrating.</td>
+        </tr>
+        <tr>
+          <td>Electroplating</td>
+          <td>Ch20 · school textbook</td>
+          <td><span class="freq-med">Most years</span></td>
+          <td>Cathode = object to be plated (clean before use). Anode = the plating metal. Electrolyte = solution of the plating metal's salt. Connect to DC power supply. Current flows: metal dissolves at anode, deposits at cathode. Mass increase at cathode = mass of metal deposited.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">6th year — high-priority experiments not yet covered</div>
+    <table class="exp-table">
+      <thead><tr><th>Experiment</th><th>Chapter</th><th>Frequency</th><th>Notes for 6th year</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Preparation of soap by saponification</td>
+          <td>Ch26</td>
+          <td><span class="freq-high">Every year</span></td>
+          <td>One of the most frequently tested mandatory experiments. Fat/oil + NaOH → soap + glycerol. Salting out with NaCl. Learn the exact procedure from Grinds360 in September — treat it with the same urgency as titration.</td>
+        </tr>
+        <tr>
+          <td>Heat of neutralisation / combustion (calorimetry)</td>
+          <td>Ch25</td>
+          <td><span class="freq-high">Every year</span></td>
+          <td>ΔH = mcΔT. Sources of error (heat loss to surroundings). Learn the calculation format — it's fixed. High frequency.</td>
+        </tr>
+        <tr>
+          <td>Preparation of an ester (e.g. ethyl ethanoate)</td>
+          <td>Ch26</td>
+          <td><span class="freq-med">Most years</span></td>
+          <td>Alcohol + carboxylic acid + H₂SO₄ catalyst, heat under reflux. Separate and purify. Know the reflux apparatus setup and why reflux is used.</td>
+        </tr>
+        <tr>
+          <td>Chromatography (paper or TLC)</td>
+          <td>Ch27</td>
+          <td><span class="freq-med">Most years</span></td>
+          <td>Rf = distance moved by spot ÷ distance moved by solvent front. Identify unknown by comparing Rf to reference standards.</td>
+        </tr>
+        <tr>
+          <td>Testing for aldehydes (Fehling's / Tollens')</td>
+          <td>Ch24</td>
+          <td><span class="freq-low">Some years</span></td>
+          <td>Aldehydes reduce Fehling's (blue → brick red precipitate) and give the silver mirror with Tollens'. Ketones do not. Know the chemical explanation, not just the observation.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════ 6TH YEAR ══════ -->
+<div class="section" id="s-sixthyear">
+  <div class="eyebrow">06 · 6th year framework</div>
+  <div class="sec-title">September onwards</div>
+  <div class="sec-desc">Not a full 6th year plan — that gets built in September once you have the timetable and mock schedule. This is enough structure to walk into September with a clear head and a clear list, rather than starting from scratch.</div>
+
+  <div class="alert alert-green">If the summer plan is followed, you arrive in September having covered Chapters 1–20 and Ch18, with 10 completed past paper pairings, a full learning log, and both AAC project summer milestones done. Ch10 and Ch20 are maintained by Anki. You start 6th year ahead, not catching up.</div>
+
+  <div class="card">
+    <div class="card-title">September week 1 — four things to do</div>
+    <div class="ni"><div class="ni-n">1</div><div><div class="ni-title">Bring the learning log to your Chemistry teacher</div><div class="ni-sub">The compiled "one sentence after every question" list from 10 weeks of summer is your gap map. Show your teacher. It tells them exactly which question types to target with you. You walk in knowing what you need — that's immediately useful.</div></div></div>
+    <div class="ni"><div class="ni-n">2</div><div><div class="ni-title">Confirm the 6th year chapter sequence</div><div class="ni-sub">Schools don't always follow textbook order in 6th year. Know which chapter they're starting with so you can adapt the Wednesday/Friday pairing accordingly from day one.</div></div></div>
+    <div class="ni"><div class="ni-n">3</div><div><div class="ni-title">Continue the Wednesday/Friday pairing — just adapt it to school content</div><div class="ni-sub">Same mechanism, school chapter. Wednesday = whatever is being covered in school that week. Friday = Studyclix question on it. The habit is already built after 10 weeks. It just continues.</div></div></div>
+    <div class="ni"><div class="ni-n">4</div><div><div class="ni-title">Finalise the AAC project methodology with your teacher</div><div class="ni-sub">You arrive with the research question confirmed and background reading done. The first Chemistry conversation in September is: "Here is my research question, here is my proposed methodology — what equipment do I need to source and when can we start lab work?" Lab work starts in October at the latest.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Chapters 21–30 — 6th year sequence and priority</div>
+    <div class="alert alert-amber" style="margin-bottom:0.85rem">Ch21 (Chemical Equilibrium) and Organic Chemistry (Ch22–27) are the two highest-priority 6th year blocks. Organic alone is worth ~30–35% of the LC written exam. Both must be started in September.</div>
+
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch21 — Chemical Equilibrium</div><div class="sixthyr-note">Le Chatelier's principle + Kc calculations. Very high LC frequency in recent years. Application questions (predict the effect of changing conditions) are the most common format. Start September — treat with the same urgency as Ch17 was in summer.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-red">Sep — highest priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch22 — Alkanes</div><div class="sixthyr-note">IUPAC naming, isomers, combustion, properties. Foundation for all of Ch23–27. Get the naming right from the start — errors here cascade through every organic chapter.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-red">Sep — start here</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch23 — Alkenes & Alkynes</div><div class="sixthyr-note">Addition reactions (hydrogenation, halogenation, hydration), Markovnikov's rule, test for unsaturation. Very high LC frequency — addition reactions appear almost every year.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-red">High priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch24 — More Organic Families</div><div class="sixthyr-note">Alcohols, aldehydes, ketones, carboxylic acids, esters. Oxidation states, reactions between families. Know which functional groups oxidise to which — alcohol → aldehyde → carboxylic acid. Fehling's/Tollens' mandatory experiment lives here.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-red">High priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch25 — Thermochemistry</div><div class="sixthyr-note">Enthalpy changes, bond enthalpy, Hess's law. Calculation-heavy. Calorimetry mandatory experiment. High LC frequency. The maths is straightforward — identifying which bonds break and form is where errors happen.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-amber">High priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch26 — Organic Reactions</div><div class="sixthyr-note">Addition, substitution, esterification, elimination, redox. Reaction scheme questions — given a starting material, predict the product through multiple steps. Very high LC frequency. Saponification mandatory experiment lives here — treat it like the titration procedure.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-red">Highest 6th yr priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch27 — Organic Products</div><div class="sixthyr-note">Surfactants, pharmaceuticals, polymers. Applied chapter. Chromatography mandatory experiment. Shorter treatment than Ch26.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-green">Medium priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch28 — Greenhouse Effects</div><div class="sixthyr-note">Carbon cycle, greenhouse gases, enhanced greenhouse effect, solutions. Written theory questions. 1–2 sessions.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-green">Lower priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch29 — Water</div><div class="sixthyr-note">Contamination, eutrophication, BOD, water treatment. Written definitions and process descriptions. Shorter chapter.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-green">Lower priority</span></div>
+    </div>
+    <div class="sixthyr-chapter">
+      <div><div class="sixthyr-title">Ch30 — Modern Materials</div><div class="sixthyr-note">Lithium-ion cells, allotropes of carbon. Short chapter. Context and application. 1 session.</div></div>
+      <div class="sixthyr-meta"><span class="badge badge-green">Lower priority</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">AAC project — hard deadlines for 6th year</div>
+    <div class="alert alert-red" style="margin-bottom:0.85rem">The AAC project must be substantially complete by Christmas. Students who leave it to January are writing a major project while sitting mock exams. The project is 40% of the grade — protect the timeline.</div>
+    <div class="row"><div><div class="row-name">September — methodology signed off, lab work starts</div><div class="row-note">Research question confirmed with teacher, experimental design approved, materials sourced. First titrations run in school lab by end of September.</div></div><div class="row-val"><span class="badge badge-red">Hard</span></div></div>
+    <div class="row"><div><div class="row-name">October–November — data collection complete</div><div class="row-note">Repeat titrations, data recorded, anomalies addressed. Results section taking shape.</div></div><div class="row-val"><span class="badge badge-red">Hard</span></div></div>
+    <div class="row"><div><div class="row-name">December — first full draft written</div><div class="row-note">All sections: introduction, background, methodology, results, analysis, conclusion. Teacher feedback before Christmas break.</div></div><div class="row-val"><span class="badge badge-amber">Target</span></div></div>
+    <div class="row"><div><div class="row-name">January–February — revisions and final submission</div><div class="row-note">Incorporate feedback, final polish, submit by the deadline. Check the exact submission date on examinations.ie — confirm this date now and put it somewhere visible.</div></div><div class="row-val"><span class="badge badge-amber">Confirm date</span></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Mock exams — Chemistry priority</div>
+    <div class="alert alert-plain" style="margin-bottom:0">By the time mocks arrive you will have: all summer chapters solid with 10 weeks of past paper evidence, organic chemistry covered in school, your learning log from summer, and the Wednesday/Friday pairing running continuously. The mock is a calibration, not a surprise. Whichever topics are below H1 standard in the mock get the majority of February–June time. Past papers only from April onwards — no new content after April.</div>
+  </div>
+</div>
+
+<!-- ══════ PROJECT ══════ -->
+<div class="section" id="s-project">
+  <div class="eyebrow">07 · AAC project</div>
+  <div class="sec-title">Scheduling — not planning</div>
+  <div class="sec-desc">Full project planning is in the dedicated Chemistry project chat. This section covers only where project time fits in the summer schedule and which study chapters are simultaneously building project skills.</div>
+
+  <div class="alert alert-red">The Chemistry AAC project is 40% of your LC Chemistry grade. A perfect written exam gives you 60% maximum without it. It is not supplementary — it is half the subject.</div>
+
+  <div class="card">
+    <div class="card-title">Where project time sits in the summer schedule</div>
+    <div class="row"><div><div class="row-name">Friday — last 20 min — alternating weeks</div><div class="row-note">Chemistry AAC one Friday, Physics AAC the next. Brief and consistent — background reading, research question refinement, equipment thinking. Across 10 weeks this is ~2 hours of focused project work. Enough to arrive in September with real foundations.</div></div><div class="row-val">20 min / fortnight</div></div>
+    <div class="row"><div><div class="row-name">Sunday — optional, 30 min max</div><div class="row-note">If a project task needs more time (reading guidelines in full, drafting the research question), Sunday after Anki is the slot. Keep it to 30 minutes — Sunday is a recovery day.</div></div><div class="row-val">30 min optional</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Study chapters doing double duty as project preparation</div>
+    <div class="row"><div><div class="row-name">Week 1 — Ch17 Titration technique</div><div class="row-note">Your project is a titration investigation. Understanding the procedure, equipment, and calculation method at exam level means your project methodology is grounded in correct chemistry from day one.</div></div></div>
+    <div class="row"><div><div class="row-name">Week 7 — Ch14 Solutions & Concentration</div><div class="row-note">Preparing solutions of known concentration is a core project skill. The standard solution preparation you learn for the exam is exactly what you need to set up your project titrations.</div></div></div>
+    <div class="row"><div><div class="row-name">Week 9 — Ch18 pH & Buffer chemistry</div><div class="row-note">Sodium bicarbonate is a buffer. Ka, Kw, and acid-base equilibria are the theoretical foundation of your investigation. This chapter is simultaneously your project's background chemistry section.</div></div></div>
+    <div class="row"><div><div class="row-name">Week 5 — Ch16 Acids & Bases theory</div><div class="row-note">The chemistry of neutralisation and acid strength underpins the written rationale for why your experimental design works. Conjugate pairs are directly relevant to buffer action.</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Three summer deliverables — minimum before September</div>
+    <div class="ni"><div class="ni-n">1</div><div><div class="ni-title">AAC guidelines confirmed — done</div><div class="ni-sub">You've read them. Confirm you're clear on what the marking scheme rewards across all five assessment areas: research question quality, methodology rigour, data presentation, analysis depth, and written communication. Every project decision maps to one of these five.</div></div></div>
+    <div class="ni"><div class="ni-n">2</div><div><div class="ni-title">Research question finalised — by end of July</div><div class="ni-sub">Working direction: "How does the concentration of sodium bicarbonate solution affect the neutralisation of lactic acid, as measured by pH change?" Specific, testable, measurable. Open the dedicated project chat in July to finalise with full methodology.</div></div></div>
+    <div class="ni"><div class="ni-n">3</div><div><div class="ni-title">Background reading complete — by end of August</div><div class="ni-sub">Two areas: (a) lactic acid in exercise physiology — production, anaerobic threshold, why buffering matters athletically. (b) Buffer chemistry and acid-base equilibria — the theoretical chemistry your project is built on. Brief notes only — full write-up is 6th year.</div></div></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('on');
+  const map = { overview:0, gaps:1, schedule:2, method:3, experiments:4, sixthyear:5, project:6 };
+  document.querySelectorAll('.nav-btn')[map[id]].classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

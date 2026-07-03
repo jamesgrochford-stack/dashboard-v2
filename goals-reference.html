@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Goals — James</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050506;--bg2:#0d0d0f;--s:rgba(255,255,255,.04);--s2:rgba(255,255,255,.07);
+  --b:rgba(255,255,255,.08);--b2:rgba(255,255,255,.14);
+  --t1:#FAFAFA;--t2:rgba(255,255,255,.65);--t3:rgba(255,255,255,.4);--t4:rgba(255,255,255,.2);
+  --green:#6ee7b7;--blue:#7DD3FC;--red:#ff8a8a;--yellow:#fbbf24;--orange:#fb923c;--purple:#a78bfa;
+  --r:16px;--rs:10px;
+  --font:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+html,body{background:var(--bg);color:var(--t1);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+body{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(80px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.bento{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--s);border:1px solid var(--b);border-radius:var(--r);padding:16px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--t2)}
+.badge-red{background:rgba(255,138,138,.15);color:var(--red)}
+.badge-yellow{background:rgba(251,191,36,.15);color:var(--yellow)}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:var(--rs);border:1px solid var(--b);background:var(--s);color:var(--t1);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s}
+.btn:hover{background:var(--s2)}
+.btn-full{width:100%;margin-top:8px}
+.prog-bar{height:6px;background:var(--b);border-radius:999px;overflow:hidden;margin-top:8px}
+.prog-fill{height:100%;border-radius:999px;transition:width .4s ease}
+
+/* Goal cards */
+.goal-card{padding:16px;background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);position:relative;overflow:hidden}
+.goal-card::before{content:'';position:absolute;inset:0;opacity:.04;background:var(--accent);pointer-events:none}
+.goal-num{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--t3);margin-bottom:6px}
+.goal-emoji{font-size:28px;margin-bottom:8px;display:block}
+.goal-title{font-size:17px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.goal-desc{font-size:13px;color:var(--t2);line-height:1.4;margin-bottom:10px}
+.goal-horizon{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;display:inline-block;margin-bottom:10px}
+.goal-milestones{display:flex;flex-direction:column;gap:5px}
+.milestone{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.mcheck{width:16px;height:16px;border-radius:4px;border:2px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all .15s}
+.milestone.done .mcheck{background:var(--green);border-color:var(--green);color:#000}
+.milestone.done span{text-decoration:line-through;color:var(--t3)}
+
+/* Summer projects */
+.project{padding:12px;background:var(--bg2);border:1px solid var(--b);border-radius:var(--rs);display:flex;align-items:center;gap:12px;margin-bottom:6px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.project.done{background:rgba(110,231,183,.04);border-color:rgba(110,231,183,.15)}
+.project.critical{border-color:rgba(255,138,138,.25);background:rgba(255,138,138,.04)}
+.proj-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;transition:all .15s}
+.project.done .proj-check{background:var(--green);border-color:var(--green);color:#000}
+.project.critical .proj-check{border-color:var(--red)}
+.proj-body{flex:1}
+.proj-name{font-size:14px;font-weight:600;color:var(--t1)}
+.project.done .proj-name{text-decoration:line-through;color:var(--t3)}
+.proj-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:999px;margin-top:3px;display:inline-block}
+.proj-tag.crit{background:rgba(255,138,138,.15);color:var(--red)}
+.proj-tag.summer{background:rgba(251,191,36,.15);color:var(--yellow)}
+.proj-tag.school{background:rgba(125,211,252,.15);color:var(--blue)}
+
+/* Points big display */
+.pts-big{text-align:center;padding:16px 0 12px}
+.pts-now{font-size:56px;font-weight:700;font-family:var(--mono);color:var(--yellow);line-height:1}
+.pts-arrow{font-size:24px;color:var(--t3);margin:4px 0}
+.pts-target{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--green)}
+.pts-gap{font-size:13px;color:var(--red);margin-top:8px;font-weight:600}
+.pts-bar{height:10px;background:var(--b);border-radius:999px;overflow:hidden;margin:14px 0}
+.pts-fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--green));border-radius:999px;transition:width .4s}
+
+.bnav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(5,5,6,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--b);padding:6px max(0px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(0px,env(safe-area-inset-left));z-index:100}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px;text-decoration:none;color:var(--t4);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;transition:color .15s}
+.ntab .ni{font-size:20px;line-height:1}
+.ntab.active{color:var(--t1)}
+</style>
+</head>
+<body>
+<div class="bento">
+
+  <!-- Life Goals -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-title">🎯 Life Goals</span>
+      <span class="badge">5 targets</span>
+    </div>
+
+    <!-- Goal 1: Pro footballer -->
+    <div class="goal-card" style="--accent:var(--green);border-color:rgba(110,231,183,.2);margin-bottom:10px">
+      <div class="goal-num">Goal 01</div>
+      <span class="goal-emoji">⚽</span>
+      <div class="goal-title">Professional Footballer</div>
+      <div class="goal-desc">Play at professional or semi-professional level as a CDM. Treaty United U20s is the current platform — perform, progress, get noticed.</div>
+      <span class="goal-horizon" style="background:rgba(110,231,183,.12);color:var(--green)">Long-term · ongoing</span>
+      <div class="goal-milestones" id="gm1"></div>
+    </div>
+
+    <!-- Goal 2: 625 LC -->
+    <div class="goal-card" style="--accent:var(--yellow);border-color:rgba(251,191,36,.2);margin-bottom:10px">
+      <div class="goal-num">Goal 02</div>
+      <span class="goal-emoji">📚</span>
+      <div class="goal-title">625 Leaving Cert Points</div>
+      <div class="goal-desc">Points tracked live below — syncs automatically from Study page estimator. Focus areas: Chemistry AAC, Accounting H1, Applied Maths H1. LC sits June 2027.</div>
+      <span class="goal-horizon" style="background:rgba(251,191,36,.12);color:var(--yellow)">June 2027</span>
+      <div style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t3);margin-bottom:4px">
+          <span>577 current</span><span>625 target</span>
+        </div>
+        <div class="pts-bar" style="margin:0"><div class="pts-fill" style="width:92.3%"></div></div>
+      </div>
+    </div>
+
+    <!-- Goal 3: Engineering -->
+    <div class="goal-card" style="--accent:var(--blue);border-color:rgba(125,211,252,.18);margin-bottom:10px">
+      <div class="goal-num">Goal 03</div>
+      <span class="goal-emoji">⚙️</span>
+      <div class="goal-title">Engineering at UCD / Trinity</div>
+      <div class="goal-desc">CAO first preference: Engineering Science at UCD or Civil/Structural at Trinity. Points required: 580–620. Close — need consistent H1s in sciences.</div>
+      <span class="goal-horizon" style="background:rgba(125,211,252,.1);color:var(--blue)">Sept 2027</span>
+    </div>
+
+    <!-- Goal 4: Financial freedom -->
+    <div class="goal-card" style="--accent:var(--orange);border-color:rgba(251,146,60,.18);margin-bottom:10px">
+      <div class="goal-num">Goal 04</div>
+      <span class="goal-emoji">🌍</span>
+      <div class="goal-title">Financial & Travel Freedom</div>
+      <div class="goal-desc">Build income through sport, Vinted, and eventually engineering career. Travel freely, live without financial stress. No dependency.</div>
+      <span class="goal-horizon" style="background:rgba(251,146,60,.1);color:var(--orange)">5–10 years</span>
+    </div>
+
+    <!-- Goal 5: Physical & Personal Image -->
+    <div class="goal-card" style="--accent:var(--purple);border-color:rgba(167,139,250,.18)">
+      <div class="goal-num">Goal 05</div>
+      <span class="goal-emoji">💆</span>
+      <div class="goal-title">Physical & Personal Image</div>
+      <div class="goal-desc">Consistent skincare, SPF, retainer, grooming and physique. Daily habits compounding over time. Discipline is the output.</div>
+      <span class="goal-horizon" style="background:rgba(167,139,250,.1);color:var(--purple)">Daily · ongoing</span>
+      <div class="goal-milestones" style="margin-top:10px" id="gm5"></div>
+    </div>
+  </div>
+
+  <!-- Summer Priority Projects -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-title">☀️ Summer Priorities</span>
+      <span class="badge badge-yellow" id="projBadge">0 done</span>
+    </div>
+    <div id="projList"></div>
+  </div>
+
+  <!-- Points Estimator big -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-title">🎯 LC Points Tracker</span>
+      <a href="study.html" class="btn" style="font-size:11px;padding:5px 10px">Edit subjects →</a>
+    </div>
+    <div class="pts-big">
+      <div class="pts-now" id="gptsNow">—</div>
+      <div class="pts-arrow">↑</div>
+      <div class="pts-target">625</div>
+      <div class="pts-gap" id="gptsGap">48 points to target</div>
+    </div>
+    <div class="pts-bar"><div class="pts-fill" id="gptsFill" style="width:0%"></div></div>
+  </div>
+
+</div>
+
+<nav class="bnav">
+  <a href="index.html" class="ntab"><span class="ni">🏠</span><span>Today</span></a>
+  <a href="football.html" class="ntab"><span class="ni">⚽</span><span>Football</span></a>
+  <a href="study.html" class="ntab"><span class="ni">📚</span><span>Study</span></a>
+  <a href="gym.html" class="ntab"><span class="ni">🏋️</span><span>Gym</span></a>
+  <a href="nutrition.html" class="ntab"><span class="ni">🥗</span><span>Nutrition</span></a>
+  <a href="finance.html" class="ntab"><span class="ni">💰</span><span>Finance</span></a>
+</nav>
+
+<script>
+const $ = id => document.getElementById(id);
+function ls(k,d){try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d}catch{return d}}
+function lss(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+
+// Goal milestones
+const MILESTONES={
+  gm1:[
+    'Start consistently in Treaty U20s XI',
+    'Get scouted / trial at senior level',
+    'Earn first professional contract',
+    'Play in League of Ireland',
+  ],
+  gm5:[
+    'Daily morning + evening skincare routine',
+    'SPF every single day',
+    'Retainer worn every night',
+    'Body recomp: 75kg lean at 12% BF',
+  ]
+};
+function renderMilestones(id){
+  const done=ls('jm_mile_'+id,{});
+  const items=MILESTONES[id]||[];
+  $(id).innerHTML=items.map((m,i)=>`
+    <div class="milestone${done[i]?' done':''}" onclick="toggleMile('${id}',${i})">
+      <div class="mcheck">${done[i]?'✓':''}</div>
+      <span>${m}</span>
+    </div>`).join('');
+}
+function toggleMile(id,i){const d=ls('jm_mile_'+id,{});d[i]=!d[i];lss('jm_mile_'+id,d);renderMilestones(id);}
+renderMilestones('gm1');renderMilestones('gm5');
+
+// Summer projects
+const PROJECTS=[
+  {name:'Chemistry AAC topic selected',tag:'crit',critical:true},
+  {name:'Physics AAC topic selected',tag:'crit',critical:true},
+  {name:'PE project 1 started',tag:'school',critical:false},
+  {name:'PE project 2 started',tag:'school',critical:false},
+  {name:'Applied Maths summer lessons complete',tag:'school',critical:false},
+  {name:'Vinted listings live',tag:'summer',critical:false},
+];
+const PK='jm_projects';
+function renderProjects(){
+  const done=ls(PK,{});
+  const doneCount=PROJECTS.filter((_,i)=>done[i]).length;
+  $('projBadge').textContent=doneCount+' / '+PROJECTS.length+' done';
+  $('projList').innerHTML=PROJECTS.map((p,i)=>`
+    <div class="project${done[i]?' done':''}${p.critical?' critical':''}" onclick="toggleProj(${i})">
+      <div class="proj-check">${done[i]?'✓':''}</div>
+      <div class="proj-body">
+        <div class="proj-name">${p.name}</div>
+        <span class="proj-tag ${p.tag}">${p.critical?'🚨 Critical':p.tag==='summer'?'☀️ Summer':'📚 School'}</span>
+      </div>
+    </div>`).join('');
+}
+function toggleProj(i){const d=ls(PK,{});d[i]=!d[i];lss(PK,d);renderProjects();}
+renderProjects();
+
+// Points tracker — same top-6 + Maths bonus calc as study page
+(function renderGoalPts(){
+  const GRADE_PTS={H1:100,H2:88,H3:77,H4:66,H5:56,H6:46,H7:37,H8:0};
+  const DEFAULT_GRADES=['H1','H1','H1','H2','H1','H3','H1','H7','H7'];
+  const MATHS_BONUS_IDX=0;
+  const grades=ls('jm_pts_grades',DEFAULT_GRADES);
+  const effective=grades.map((g,i)=>{
+    const pts=GRADE_PTS[g]||0;
+    const bonus=(i===MATHS_BONUS_IDX&&pts===100)?25:0;
+    return pts+bonus;
+  });
+  const sorted=[...effective].sort((a,b)=>b-a);
+  const total=sorted.slice(0,6).reduce((a,v)=>a+v,0);
+  const gap=625-total;
+  $('gptsNow').textContent=total;
+  $('gptsGap').textContent=gap>0?gap+' points to target':'🎉 Target reached!';
+  $('gptsGap').style.color=gap<=0?'var(--green)':'var(--red)';
+  $('gptsFill').style.width=Math.min(100,total/625*100)+'%';
+})();
+</script>
+</body>
+</html>
