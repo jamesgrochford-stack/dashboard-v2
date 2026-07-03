@@ -155,8 +155,31 @@ body::after {
 .pts-summary { margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pts-total { font-size: 26px; font-weight: 800; color: var(--text-primary); }
 .pts-total span { font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
-.pts-gap { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); text-align: right; }
+.pts-gap { font-family: var(--font-mono); font-size: 15px; font-weight: 800; color: var(--warning); text-align: right; }
 .pts-gap.met { color: var(--success); }
+.pts-section-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin: 18px 0 10px; }
+.pts-locked-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pts-locked-item { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; background: rgba(107,227,164,0.08); font-size: 11px; }
+.pts-locked-check { color: var(--success); font-size: 11px; }
+.pts-locked-name { color: var(--text-secondary); font-weight: 600; }
+.pts-locked-grade { font-family: var(--font-mono); color: var(--success); font-weight: 700; }
+.pts-marg-row { padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.03); margin-bottom: 10px; border-left: 3px solid var(--warning); }
+.pts-marg-row:last-child { margin-bottom: 0; }
+.pts-marg-row.deprioritised { border-left-color: var(--text-tertiary); opacity: 0.6; background: rgba(255,255,255,0.02); }
+.pts-marg-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.pts-marg-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.pts-marg-badge { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; flex: none; }
+.pts-marg-badge.counting { background: rgba(107,227,164,0.15); color: var(--success); }
+.pts-marg-badge.bench { background: rgba(255,255,255,0.08); color: var(--text-tertiary); }
+.pts-marg-tag { font-size: 11.5px; color: var(--text-tertiary); font-style: italic; margin-bottom: 10px; }
+.pts-marg-grades { display: flex; align-items: center; gap: 10px; }
+.pts-marg-g { display: flex; flex-direction: column; gap: 3px; }
+.pts-marg-g label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+.pts-marg-g select { padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 12.5px; }
+.pts-marg-pts { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); margin-top: 2px; display: block; }
+.pts-marg-arrow { color: var(--text-tertiary); font-size: 14px; margin-top: 14px; }
+.pts-marg-ontable { margin-top: 10px; font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: var(--warning); }
+.pts-marg-note { margin-top: 10px; font-size: 11.5px; color: var(--text-tertiary); font-style: italic; }
 
 /* ===== subject OS ===== */
 .subj-card { border-radius: 12px; background: rgba(255,255,255,0.03); margin-bottom: 8px; overflow: hidden; }
@@ -285,11 +308,19 @@ body::after {
     <div class="card-title"><span class="card-title-label">Points Estimator</span></div>
     <button type="button" class="pts-toggle" id="ptsToggle">Tap to expand</button>
     <div class="pts-body" id="ptsBody">
-      <div id="ptsRows"></div>
-      <div class="pts-summary">
+      <div class="pts-summary" style="margin-top:0">
         <div class="pts-total"><span id="ptsTotal">0</span><span> / 625</span></div>
         <div class="pts-gap" id="ptsGap">—</div>
       </div>
+
+      <div class="pts-section-label">Locked in &mdash; top 6, secure</div>
+      <div class="pts-locked-row" id="ptsLockedRow"></div>
+
+      <div class="pts-section-label">Marginal opportunity &mdash; last 2 scoring slots</div>
+      <div id="ptsMarginal"></div>
+
+      <div class="pts-section-label">Edit any subject's current grade</div>
+      <div id="ptsRows"></div>
     </div>
   </div>
 
@@ -777,21 +808,49 @@ body::after {
     { id: 'french', name: 'French', color: '#a7f3d0', topics: [] },
   ];
   const GRADE_POINTS = { H1: 100, H2: 88, H3: 77, H4: 66, H5: 56, H6: 46, H7: 37, H8: 0 };
-  const DEFAULT_GRADES = { maths: 'H1', irish: 'H1', physics: 'H1', chemistry: 'H2', pe: 'H1', accounting: 'H3', appliedMaths: 'H1', english: 'H7', french: 'H7' };
+  // Confirmed 2026-07 — Chemistry/Accounting/English updated from stale
+  // placeholders; Applied Maths and French left as-is (no live current
+  // grade to project from — see build notes).
+  const DEFAULT_GRADES = { maths: 'H1', irish: 'H1', physics: 'H1', chemistry: 'H3', pe: 'H1', accounting: 'H4', appliedMaths: 'H1', english: 'H3', french: 'H7' };
   function getGrades() { return loadJSON('sd:points', DEFAULT_GRADES); }
 
   // ============================================================
-  // POINTS ESTIMATOR
+  // POINTS ESTIMATOR — marginal opportunity view
+  // Maths/Irish/Physics/PE are the secure/locked top-6 contributors.
+  // Chemistry/Accounting/Applied Maths/French/English compete for the
+  // remaining 2 scoring slots; target grades live alongside current
+  // grades in the same sd:points object (grades.targets), so this is
+  // still one Supabase row — no new key introduced.
   // ============================================================
-  function computePoints() {
+  const LOCKED_SUBJECTS = ['maths', 'irish', 'physics', 'pe'];
+  const DEFAULT_TARGETS = { chemistry: 'H1', accounting: 'H1', english: 'H7', appliedMaths: 'H1', french: 'H5' };
+  const GAP_TAGS = {
+    chemistry: 'Application gap, not content',
+    accounting: 'Execution under time pressure, not knowledge',
+    english: 'Deliberately unstudied — H7 floor is the target, not H1',
+    appliedMaths: 'Coverage/volume — course completion, not difficulty',
+    french: 'Coverage/volume — rebuilding from Junior Cert baseline',
+  };
+  function getTargets() { return Object.assign({}, DEFAULT_TARGETS, getGrades().targets || {}); }
+  function saveTarget(id, grade) {
+    const g = getGrades();
+    g.targets = Object.assign({}, getTargets(), { [id]: grade });
+    saveJSON('sd:points', g);
+  }
+  function sortedScores() {
     const grades = getGrades();
     const scores = SUBJECTS.map(s => ({ id: s.id, points: GRADE_POINTS[grades[s.id]] || 0 }));
     scores.sort((a, b) => b.points - a.points);
-    const top6 = scores.slice(0, 6);
+    return scores;
+  }
+  function computePoints() {
+    const grades = getGrades();
+    const top6 = sortedScores().slice(0, 6);
     let total = top6.reduce((sum, s) => sum + s.points, 0);
     if (grades.maths === 'H1') total += 25;
     return total;
   }
+  function computeCountingIds() { return sortedScores().slice(0, 6).map(s => s.id); }
   function renderPointsRows() {
     const grades = getGrades();
     const wrap = $('ptsRows');
@@ -803,11 +862,13 @@ body::after {
       row.innerHTML = '<span class="pts-row-name">' + esc(s.name) + '</span><select>' + opts + '</select>';
       row.querySelector('select').addEventListener('change', (e) => {
         const g = getGrades(); g[s.id] = e.target.value; saveJSON('sd:points', g);
-        renderPointsSummary(); renderSubjectCards();
+        renderPointsSummary(); renderLocked(); renderMarginal(); renderSubjectCards();
       });
       wrap.appendChild(row);
     });
     renderPointsSummary();
+    renderLocked();
+    renderMarginal();
   }
   function renderPointsSummary() {
     const total = computePoints();
@@ -816,6 +877,59 @@ body::after {
     const gapEl = $('ptsGap');
     if (gap <= 0) { gapEl.textContent = '625 reached — +' + (-gap) + ' over'; gapEl.classList.add('met'); }
     else { gapEl.textContent = gap + ' points short of 625'; gapEl.classList.remove('met'); }
+  }
+  function renderLocked() {
+    const grades = getGrades();
+    $('ptsLockedRow').innerHTML = LOCKED_SUBJECTS.map(id => {
+      const subj = SUBJECTS.find(s => s.id === id);
+      const grade = grades[id] || 'H8';
+      return '<div class="pts-locked-item"><span class="pts-locked-check">&check;</span><span class="pts-locked-name">' + esc(subj.name) + '</span><span class="pts-locked-grade">' + esc(grade) + '</span></div>';
+    }).join('');
+  }
+  function renderMarginal() {
+    const grades = getGrades();
+    const targets = getTargets();
+    const countingIds = computeCountingIds();
+    const marginalIds = ['chemistry', 'accounting', 'appliedMaths', 'french', 'english'];
+    const gradeOpts = Object.keys(GRADE_POINTS);
+    const rows = marginalIds.map(id => {
+      const subj = SUBJECTS.find(s => s.id === id);
+      const curGrade = grades[id] || 'H8';
+      const tgtGrade = targets[id] || curGrade;
+      const curPts = GRADE_POINTS[curGrade] || 0;
+      const tgtPts = GRADE_POINTS[tgtGrade] || 0;
+      return { id, name: subj.name, curGrade, tgtGrade, curPts, tgtPts, onTable: Math.max(0, tgtPts - curPts), tag: GAP_TAGS[id] };
+    });
+    const english = rows.find(r => r.id === 'english');
+    const rest = rows.filter(r => r.id !== 'english').sort((a, b) => b.onTable - a.onTable);
+    function rowHtml(r) {
+      const counting = countingIds.indexOf(r.id) !== -1;
+      const isEnglish = r.id === 'english';
+      const optsHtml = (selected) => gradeOpts.map(g => '<option value="' + g + '"' + (g === selected ? ' selected' : '') + '>' + g + '</option>').join('');
+      return '<div class="pts-marg-row' + (isEnglish ? ' deprioritised' : '') + '">' +
+        '<div class="pts-marg-top"><span class="pts-marg-name">' + esc(r.name) + '</span>' +
+        '<span class="pts-marg-badge ' + (counting ? 'counting' : 'bench') + '">' + (counting ? 'Counting' : 'Bench') + '</span></div>' +
+        '<div class="pts-marg-tag">' + esc(r.tag) + '</div>' +
+        '<div class="pts-marg-grades">' +
+          '<div class="pts-marg-g"><label>Current</label><select data-role="current" data-id="' + r.id + '">' + optsHtml(r.curGrade) + '</select><span class="pts-marg-pts">' + r.curPts + ' pts</span></div>' +
+          '<div class="pts-marg-arrow">&rarr;</div>' +
+          '<div class="pts-marg-g"><label>Target</label><select data-role="target" data-id="' + r.id + '">' + optsHtml(r.tgtGrade) + '</select><span class="pts-marg-pts">' + r.tgtPts + ' pts</span></div>' +
+        '</div>' +
+        (isEnglish
+          ? '<div class="pts-marg-note">Deliberately not prioritised — H7 is a floor, not a target. No push planned above the current grade.</div>'
+          : '<div class="pts-marg-ontable">+' + r.onTable + ' points on the table</div>') +
+      '</div>';
+    }
+    $('ptsMarginal').innerHTML = rest.map(rowHtml).join('') + (english ? rowHtml(english) : '');
+    $('ptsMarginal').querySelectorAll('select[data-role="current"]').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const g = getGrades(); g[sel.dataset.id] = e.target.value; saveJSON('sd:points', g);
+        renderPointsSummary(); renderLocked(); renderMarginal(); renderPointsRows(); renderSubjectCards();
+      });
+    });
+    $('ptsMarginal').querySelectorAll('select[data-role="target"]').forEach(sel => {
+      sel.addEventListener('change', (e) => { saveTarget(sel.dataset.id, e.target.value); renderMarginal(); });
+    });
   }
   $('ptsToggle').addEventListener('click', () => {
     const showing = $('ptsBody').classList.toggle('show');
