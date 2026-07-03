@@ -169,6 +169,33 @@ body::after {
 .ind-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .ind-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
 
+/* ===== post-match check ===== */
+.pmc-card { border-left: 4px solid var(--text-tertiary); transition: border-color 0.3s; }
+.pmc-card.complete { border-left-color: var(--success); }
+.pmc-badge { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 999px; }
+.pmc-badge.complete { background: rgba(107,227,164,0.15); color: var(--success); }
+.pmc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.pmc-row:last-child { border-bottom: none; }
+.pmc-row-label { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.pmc-seg { display: flex; gap: 6px; flex: none; }
+.pmc-seg-btn { padding: 7px 13px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(0,0,0,0.28); color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.pmc-seg-btn.active { background: var(--success); border-color: var(--success); color: #0A0A0B; }
+.pmc-seg-btn.active.no { background: var(--danger); border-color: var(--danger); color: #0A0A0B; }
+.pmc-seg-btn.active.na { background: var(--text-tertiary); border-color: var(--text-tertiary); color: #0A0A0B; }
+.pmc-num { flex: none; width: 76px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: var(--font-mono); font-size: 14px; text-align: center; outline: none; }
+.pmc-num:focus { border-color: rgba(255,255,255,0.3); }
+
+/* ===== activation -> outcome trend ===== */
+.trend-row-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.trend-row-label svg,
+.trend-wrap svg { width: 100%; height: 60px; display: block; }
+.trend-legend { display: inline-flex; align-items: center; gap: 5px; text-transform: none; letter-spacing: 0; font-size: 10px; }
+.trend-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 8px; }
+.trend-legend .dot:first-child { margin-left: 0; }
+.trend-legend .dot.start { background: var(--success); }
+.trend-legend .dot.sub { background: var(--text-tertiary); }
+.trend-dates { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; color: var(--text-tertiary); margin-top: 4px; }
+
 @media (max-width: 480px) {
   .card { padding: 16px; }
   .form-grid { grid-template-columns: 1fr; }
@@ -216,6 +243,33 @@ body::after {
       <div id="sparkSvg"></div>
     </div>
     <div id="sessionList" style="margin-top:14px"></div>
+  </div>
+
+  <!-- POST-MATCH CHECK (conditional, match days) -->
+  <div class="card pmc-card" id="pmcCard" style="display:none">
+    <div class="card-title"><span class="card-title-label">Post-Match Check</span><span class="pmc-badge" id="pmcBadge">Incomplete</span></div>
+    <div id="pmcActionRows"></div>
+    <div class="pmc-row">
+      <span class="pmc-row-label">Confidence</span>
+      <div class="star-row" id="pmcStars"></div>
+    </div>
+    <div class="pmc-row">
+      <span class="pmc-row-label">Start or Sub</span>
+      <span class="pmc-seg" id="pmcStartSub">
+        <button type="button" class="pmc-seg-btn" data-val="start">Start</button>
+        <button type="button" class="pmc-seg-btn" data-val="sub">Sub</button>
+      </span>
+    </div>
+    <div class="pmc-row">
+      <span class="pmc-row-label">Minutes played</span>
+      <input type="number" min="0" max="130" class="pmc-num" id="pmcMinutes" placeholder="—">
+    </div>
+  </div>
+
+  <!-- ACTIVATION -> OUTCOME TREND -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Activation &rarr; Outcome Trend</span></div>
+    <div id="trendWrap"></div>
   </div>
 
   <!-- WEEKLY TRAINING LOAD -->
@@ -395,6 +449,174 @@ body::after {
   }
 
   // ============================================================
+  // POST-MATCH CHECK — Saturdays only. Fast Y/N/N-A toggles + reused
+  // confidence stars, no free text. Every field is optional on its own;
+  // the card border/badge just nudge toward finishing all of them.
+  // Stored one object per date: fb:postMatchCheck:{date}
+  // ============================================================
+  const PMC_ACTIONS = [
+    { id: 'action1', label: 'Action 1 — Communicate early' },
+    { id: 'action2', label: 'Action 2 — Demand the ball' },
+    { id: 'action3', label: 'Action 3 — Win first duel' },
+  ];
+  function postMatchKey(dateStr) { return 'fb:postMatchCheck:' + (dateStr || todayKey()); }
+  function getPostMatchCheck(dateStr) { return loadJSON(postMatchKey(dateStr), {}); }
+  function savePostMatchCheck(dateStr, patch) {
+    const next = Object.assign({}, getPostMatchCheck(dateStr), patch);
+    saveJSON(postMatchKey(dateStr), next); // instant local write; sync.js pushes to Supabase in the background
+    return next;
+  }
+  function pmcIsComplete(d) {
+    return !!(d.action1 && d.action2 && d.action3 && d.mistakeProtocol && d.confidence > 0 && d.startOrSub && d.minutes !== undefined && d.minutes !== null);
+  }
+  function updatePmcBadge() {
+    const complete = pmcIsComplete(getPostMatchCheck());
+    $('pmcCard').classList.toggle('complete', complete);
+    $('pmcBadge').textContent = complete ? 'Complete' : 'Incomplete';
+    $('pmcBadge').classList.toggle('complete', complete);
+  }
+  function renderPmcActionRows() {
+    const data = getPostMatchCheck();
+    const rows = PMC_ACTIONS.map(a => ({ id: a.id, label: a.label, val: data[a.id], opts: [['Y', 'Y'], ['N', 'N']] }))
+      .concat([{ id: 'mistakeProtocol', label: 'Mistake protocol fired', val: data.mistakeProtocol, opts: [['Y', 'Y'], ['N', 'N'], ['NA', 'N/A']] }]);
+    const wrap = $('pmcActionRows');
+    wrap.innerHTML = rows.map(r =>
+      '<div class="pmc-row"><span class="pmc-row-label">' + esc(r.label) + '</span><span class="pmc-seg">' +
+        r.opts.map(([val, lbl]) => {
+          const active = r.val === val;
+          const cls = active ? ' active' + (val === 'N' ? ' no' : val === 'NA' ? ' na' : '') : '';
+          return '<button type="button" class="pmc-seg-btn' + cls + '" data-field="' + r.id + '" data-val="' + val + '">' + lbl + '</button>';
+        }).join('') +
+      '</span></div>'
+    ).join('');
+    wrap.querySelectorAll('.pmc-seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const field = btn.dataset.field;
+        const cur = getPostMatchCheck();
+        const next = cur[field] === btn.dataset.val ? undefined : btn.dataset.val; // tap again to clear
+        savePostMatchCheck(todayKey(), { [field]: next });
+        renderPmcActionRows();
+        updatePmcBadge();
+        renderTrendChart();
+      });
+    });
+  }
+  $('pmcStartSub').querySelectorAll('.pmc-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cur = getPostMatchCheck();
+      const next = cur.startOrSub === btn.dataset.val ? undefined : btn.dataset.val;
+      savePostMatchCheck(todayKey(), { startOrSub: next });
+      $('pmcStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', next === b.dataset.val));
+      updatePmcBadge();
+      renderTrendChart();
+    });
+  });
+  $('pmcMinutes').addEventListener('input', () => {
+    const raw = $('pmcMinutes').value;
+    const val = raw === '' ? undefined : Math.max(0, Math.min(130, parseInt(raw, 10) || 0));
+    savePostMatchCheck(todayKey(), { minutes: val });
+    updatePmcBadge();
+    renderTrendChart();
+  });
+  function renderPostMatchCheck() {
+    const isMatch = new Date().getDay() === DOW_SAT;
+    const card = $('pmcCard');
+    if (!isMatch) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    const data = getPostMatchCheck();
+    renderPmcActionRows();
+    buildStars($('pmcStars'), (v) => { savePostMatchCheck(todayKey(), { confidence: v }); updatePmcBadge(); renderTrendChart(); });
+    paintStars($('pmcStars'), data.confidence || 0);
+    $('pmcStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', data.startOrSub === b.dataset.val));
+    $('pmcMinutes').value = data.minutes != null ? data.minutes : '';
+    updatePmcBadge();
+  }
+
+  // ============================================================
+  // ACTIVATION -> OUTCOME TREND — reads every fb:postMatchCheck:* entry
+  // across the season. Rendered as small multiples (one axis each,
+  // sharing the same match-date x-axis) rather than one dual-axis
+  // chart, since compliance %, confidence and minutes are different
+  // scales. Compliance counts a field compliant when action1/2/3 = Y,
+  // or mistakeProtocol is Y or N/A (no mistake happened is not a failure);
+  // an unanswered field counts as not compliant that match.
+  // ============================================================
+  function computeMatchTrend() {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || k.indexOf('fb:postMatchCheck:') !== 0) continue;
+      const d = loadJSON(k, null);
+      if (!d) continue;
+      const complianceCount =
+        (d.action1 === 'Y' ? 1 : 0) +
+        (d.action2 === 'Y' ? 1 : 0) +
+        (d.action3 === 'Y' ? 1 : 0) +
+        ((d.mistakeProtocol === 'Y' || d.mistakeProtocol === 'NA') ? 1 : 0);
+      out.push({
+        date: k.slice('fb:postMatchCheck:'.length),
+        complianceCount,
+        compliancePct: Math.round((complianceCount / 4) * 100),
+        confidence: d.confidence || 0,
+        minutes: d.minutes != null ? d.minutes : 0,
+        startOrSub: d.startOrSub || null,
+      });
+    }
+    out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    return out;
+  }
+  function trendDotColor(val, good, warn) {
+    if (val >= good) return '#6BE3A4';
+    if (val >= warn) return '#F2C063';
+    return '#FF6B6B';
+  }
+  function buildTrendLineSVG(values, min, max, good, warn) {
+    const W = 320, H = 60, pad = 8;
+    const n = values.length;
+    const stepX = n > 1 ? (W - 2 * pad) / (n - 1) : 0;
+    const pts = values.map((v, i) => ({
+      x: pad + i * stepX,
+      y: H - pad - ((Math.min(max, Math.max(min, v)) - min) / (max - min)) * (H - 2 * pad),
+    }));
+    const line = n > 1 ? pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ') : '';
+    const dots = pts.map((p, i) => '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3.5" fill="' + trendDotColor(values[i], good, warn) + '"></circle>').join('');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><path d="' + line + '" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' + dots + '</svg>';
+  }
+  function buildTrendBarSVG(matches) {
+    const W = 320, H = 60, pad = 8;
+    const n = matches.length;
+    const maxMin = Math.max(90, ...matches.map(m => m.minutes));
+    const slot = (W - 2 * pad) / n;
+    const barW = Math.max(6, slot - 5);
+    const bars = matches.map((m, i) => {
+      const x = pad + i * slot + (slot - barW) / 2;
+      const h = Math.max(1, (m.minutes / maxMin) * (H - 2 * pad));
+      const y = H - pad - h;
+      const color = m.startOrSub === 'start' ? '#6BE3A4' : (m.startOrSub === 'sub' ? '#76746E' : 'rgba(255,255,255,0.15)');
+      return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + color + '"></rect>';
+    }).join('');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + bars + '</svg>';
+  }
+  function renderTrendChart() {
+    const wrap = $('trendWrap');
+    const matches = computeMatchTrend();
+    if (matches.length < 3) {
+      wrap.innerHTML = '<div class="empty-note">Log at least 3 Post-Match Checks to see the activation &rarr; outcome trend.</div>';
+      return;
+    }
+    const recent = matches.slice(-10);
+    const dateLabels = recent.map(m => { const p = m.date.split('-'); return p[2] + '/' + p[1]; });
+    wrap.innerHTML =
+      '<div class="trend-row-label">Compliance &mdash; 3 actions + mistake protocol</div>' +
+      buildTrendLineSVG(recent.map(m => m.compliancePct), 0, 100, 75, 50) +
+      '<div class="trend-row-label" style="margin-top:12px">Confidence</div>' +
+      buildTrendLineSVG(recent.map(m => m.confidence), 0, 5, 4, 3) +
+      '<div class="trend-row-label" style="margin-top:12px">Minutes played <span class="trend-legend"><span class="dot start"></span>Start<span class="dot sub"></span>Sub</span></div>' +
+      buildTrendBarSVG(recent) +
+      '<div class="trend-dates">' + dateLabels.map(d => '<span>' + esc(d) + '</span>').join('') + '</div>';
+  }
+
+  // ============================================================
   // WEEKLY TRAINING LOAD — Mon..Sat, ticks when a session was logged that day
   // ============================================================
   const WEEK_PLAN = [
@@ -542,6 +764,8 @@ body::after {
     renderHeader();
     renderActivation();
     renderSessions();
+    renderPostMatchCheck();
+    renderTrendChart();
     renderWeekGrid();
     renderFitTests();
     renderFilm();
