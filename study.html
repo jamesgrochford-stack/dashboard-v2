@@ -185,13 +185,38 @@ body::after {
 .topic-add input { flex: 1; padding: 8px 11px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 12.5px; outline: none; }
 .topic-add button { padding: 8px 14px; border-radius: 9px; border: 0; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 
-/* ===== AAC tracker ===== */
-.aac-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-.aac-row:last-child { border-bottom: none; }
-.aac-name { font-size: 13.5px; color: var(--text-primary); font-weight: 600; }
-.aac-row select { padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 12.5px; }
-.aac-card { transition: border-color 0.3s; border: 1px solid transparent; }
-.aac-card.all-selected { border-color: rgba(107,227,164,0.4); }
+/* ===== AAC project tracker (summer checklist + 6th-year deadlines) ===== */
+.aacp-sub-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin: 4px 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.aacp-progress-badge { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+.aacp-progress-badge.full { background: rgba(107,227,164,0.15); color: var(--success); }
+.aacp-check-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+.aacp-check-row:last-child { border-bottom: none; }
+.aacp-check { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28); position: relative; transition: background 0.2s, border-color 0.2s; }
+.aacp-check.on { background: var(--success); border-color: var(--success); }
+.aacp-check.on::after { content: ''; position: absolute; left: 5px; top: 1px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.aacp-check-label { font-size: 13px; color: var(--text-secondary); }
+.aacp-check-row.done .aacp-check-label { color: var(--text-tertiary); text-decoration: line-through; }
+.aacp-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0 14px; }
+.aacp-phase-row { padding: 11px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.aacp-phase-row:last-child { border-bottom: none; }
+.aacp-phase-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.aacp-phase-label { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.aacp-pace-badge { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; flex: none; white-space: nowrap; }
+.aacp-pace-badge.ok { background: rgba(107,227,164,0.12); color: var(--success); }
+.aacp-pace-badge.behind { background: rgba(255,107,107,0.15); color: var(--danger); }
+.aacp-pace-badge.done { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+.aacp-status-seg { display: flex; gap: 6px; }
+.aacp-status-btn { flex: 1; padding: 7px 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-secondary); font-family: inherit; font-size: 10.5px; font-weight: 700; cursor: pointer; text-align: center; }
+.aacp-status-btn.active { background: var(--success); border-color: var(--success); color: #0A0A0B; }
+.aacp-status-btn.active.progress { background: var(--warning); border-color: var(--warning); }
+.aacp-deadline-row { padding-top: 12px; }
+.aacp-deadline-placeholder { font-size: 12.5px; color: var(--warning); cursor: pointer; padding: 10px 12px; border-radius: 10px; border: 1px dashed rgba(242,192,99,0.4); background: rgba(242,192,99,0.06); }
+.aacp-deadline-countdown { font-size: 12.5px; color: var(--text-secondary); cursor: pointer; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.04); line-height: 1.5; }
+.aacp-deadline-countdown b { font-size: 18px; color: var(--success); display: block; }
+.aacp-deadline-edit { display: none; gap: 8px; margin-top: 8px; }
+.aacp-deadline-edit.show { display: flex; }
+.aacp-deadline-edit input { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13px; }
+.aacp-deadline-edit button { padding: 8px 14px; border-radius: 8px; border: 0; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 
 /* ===== streaks ===== */
 .streaks-row { display: flex; gap: 10px; }
@@ -274,10 +299,26 @@ body::after {
     <div id="subjectCards"></div>
   </div>
 
-  <!-- AAC PROJECTS TRACKER -->
-  <div class="card aac-card" id="aacCard">
-    <div class="card-title"><span class="card-title-label">AAC Projects</span></div>
-    <div id="aacRows"></div>
+  <!-- AAC PROJECT: CHEMISTRY -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Chemistry AAC</span></div>
+    <div class="aacp-sub-label">Summer Research Checklist <span class="aacp-progress-badge" id="aacProgress-chemistry">0/5</span></div>
+    <div id="aacChecklist-chemistry"></div>
+    <div class="aacp-divider"></div>
+    <div class="aacp-sub-label">6th-Year Deadline Tracker</div>
+    <div id="aacPhases-chemistry"></div>
+    <div class="aacp-deadline-row" id="aacDeadlineRow-chemistry"></div>
+  </div>
+
+  <!-- AAC PROJECT: PHYSICS -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Physics AAC</span></div>
+    <div class="aacp-sub-label">Summer Research Checklist <span class="aacp-progress-badge" id="aacProgress-physics">0/5</span></div>
+    <div id="aacChecklist-physics"></div>
+    <div class="aacp-divider"></div>
+    <div class="aacp-sub-label">6th-Year Deadline Tracker</div>
+    <div id="aacPhases-physics"></div>
+    <div class="aacp-deadline-row" id="aacDeadlineRow-physics"></div>
   </div>
 
   <!-- STREAKS -->
@@ -878,34 +919,145 @@ body::after {
   }
 
   // ============================================================
-  // AAC PROJECTS TRACKER
+  // AAC PROJECT TRACKER — Summer Research Checklist + 6th-Year Deadline
+  // Tracker, one card per subject. Stored under sd:aacProject:{subject}.
   // ============================================================
-  const AAC_STATUSES = ['Not Started', 'Topic Selected', 'Research Started', 'Draft Complete'];
-  const AAC_ROWS = [
-    { id: 'physicsInPractice', label: 'Physics in Practice' },
-    { id: 'chemistryInvestigation', label: 'Chemistry Investigation' },
-    { id: 'peAssessment', label: 'PE Performance Assessment' },
-    { id: 'peProject', label: 'PE Physical Activity Project' },
+  function parseISODate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+  const AAC_SUBJECTS = {
+    chemistry: {
+      checklist: [
+        { id: 'guidelines', label: 'Read the LC Chemistry AAC guidelines on examinations.ie' },
+        { id: 'bgReading1', label: 'Background reading: lactic acid in exercise physiology' },
+        { id: 'bgReading2', label: 'Background reading: acid-base titration and buffer chemistry' },
+        { id: 'researchQuestion', label: 'Draft a specific research question' },
+        { id: 'equipment', label: 'List equipment needed' },
+      ],
+      // Seeded from james_chemistry_plan_v3.html: guidelines confirmed read, and a
+      // working research question is already drafted there. Everything else (the
+      // two background-reading areas, equipment) isn't yet — left unchecked.
+      defaults: { guidelines: true, bgReading1: false, bgReading2: false, researchQuestion: true, equipment: false },
+    },
+    physics: {
+      checklist: [
+        { id: 'guidelines', label: 'Read the LC Physics AAC guidelines on examinations.ie' },
+        { id: 'bgReading1', label: 'Background reading: phase change materials and thermal storage principles' },
+        { id: 'bgReading2', label: 'Background reading: heat transfer equations relevant to the Python model' },
+        { id: 'researchQuestion', label: 'Draft a specific research question' },
+        { id: 'equipment', label: 'List equipment needed' },
+      ],
+      // james_physics_plan_reference_v2.md: "Current state: Untouched beyond an
+      // introductory chat" — nothing confirmed done yet, so nothing pre-checked.
+      defaults: { guidelines: false, bgReading1: false, bgReading2: false, researchQuestion: false, equipment: false },
+    },
+  };
+  const AAC_PHASES = [
+    { id: 'sept', label: 'September — Methodology signed off, first trials run', windowEnd: new Date(2026, 8, 30) },
+    { id: 'octNov', label: 'October–November — Data collection complete', windowEnd: new Date(2026, 10, 30) },
+    { id: 'dec', label: 'December — First full draft written', windowEnd: new Date(2026, 11, 31) },
+    { id: 'submission', label: 'Submission — Final polish and submission', windowEnd: null },
   ];
-  function getAAC() { return loadJSON('sd:aac', {}); }
-  function renderAAC() {
-    const state = getAAC();
-    const wrap = $('aacRows');
-    wrap.innerHTML = '';
-    let allSelected = true;
-    AAC_ROWS.forEach(r => {
-      const val = state[r.id] || AAC_STATUSES[0];
-      if (AAC_STATUSES.indexOf(val) < 1) allSelected = false;
-      const row = document.createElement('div');
-      row.className = 'aac-row';
-      const opts = AAC_STATUSES.map(st => '<option value="' + st + '"' + (val === st ? ' selected' : '') + '>' + st + '</option>').join('');
-      row.innerHTML = '<span class="aac-name">' + esc(r.label) + '</span><select>' + opts + '</select>';
-      row.querySelector('select').addEventListener('change', (e) => {
-        const s = getAAC(); s[r.id] = e.target.value; saveJSON('sd:aac', s); renderAAC();
+  const AAC_STATUS_OPTS = [['not-started', 'Not started'], ['in-progress', 'In progress'], ['done', 'Done']];
+
+  function aacKey(subject) { return 'sd:aacProject:' + subject; }
+  function getAacProject(subject) {
+    const existing = loadJSON(aacKey(subject), null);
+    if (existing) return existing;
+    const seeded = { checklist: Object.assign({}, AAC_SUBJECTS[subject].defaults), phases: {}, deadline: null };
+    saveJSON(aacKey(subject), seeded);
+    return seeded;
+  }
+  function saveAacProject(subject, patch) {
+    const next = Object.assign({}, getAacProject(subject), patch);
+    saveJSON(aacKey(subject), next); // instant local write; sync.js pushes to Supabase in the background
+    return next;
+  }
+  function renderAacChecklist(subject) {
+    const def = AAC_SUBJECTS[subject];
+    const data = getAacProject(subject);
+    const wrap = $('aacChecklist-' + subject);
+    const doneCount = def.checklist.filter(item => data.checklist[item.id]).length;
+    wrap.innerHTML = def.checklist.map(item => {
+      const on = !!data.checklist[item.id];
+      return '<div class="aacp-check-row' + (on ? ' done' : '') + '" data-id="' + item.id + '">' +
+        '<span class="aacp-check' + (on ? ' on' : '') + '"></span>' +
+        '<span class="aacp-check-label">' + esc(item.label) + '</span>' +
+      '</div>';
+    }).join('');
+    wrap.querySelectorAll('.aacp-check-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const cur = getAacProject(subject);
+        cur.checklist[row.dataset.id] = !cur.checklist[row.dataset.id];
+        saveAacProject(subject, { checklist: cur.checklist });
+        renderAacChecklist(subject);
       });
-      wrap.appendChild(row);
     });
-    $('aacCard').classList.toggle('all-selected', allSelected);
+    const badge = $('aacProgress-' + subject);
+    badge.textContent = doneCount + '/' + def.checklist.length;
+    badge.classList.toggle('full', doneCount === def.checklist.length);
+  }
+  function aacPaceStatus(phase, status, deadline) {
+    if (status === 'done') return 'done';
+    const windowEnd = phase.id === 'submission' ? (deadline ? parseISODate(deadline) : null) : phase.windowEnd;
+    if (windowEnd && new Date() > windowEnd) return 'behind';
+    return 'ok';
+  }
+  function renderAacPhases(subject) {
+    const data = getAacProject(subject);
+    const wrap = $('aacPhases-' + subject);
+    wrap.innerHTML = AAC_PHASES.map(phase => {
+      const status = data.phases[phase.id] || 'not-started';
+      const pace = aacPaceStatus(phase, status, data.deadline);
+      const paceLabel = pace === 'done' ? 'Done' : pace === 'behind' ? 'Behind' : 'On pace';
+      return '<div class="aacp-phase-row">' +
+        '<div class="aacp-phase-top"><span class="aacp-phase-label">' + esc(phase.label) + '</span>' +
+        '<span class="aacp-pace-badge ' + pace + '">' + paceLabel + '</span></div>' +
+        '<div class="aacp-status-seg" data-phase="' + phase.id + '">' +
+          AAC_STATUS_OPTS.map(([val, lbl]) => '<button type="button" class="aacp-status-btn' + (status === val ? (val === 'in-progress' ? ' active progress' : ' active') : '') + '" data-val="' + val + '">' + lbl + '</button>').join('') +
+        '</div>' +
+      '</div>';
+    }).join('');
+    wrap.querySelectorAll('.aacp-status-seg').forEach(seg => {
+      seg.querySelectorAll('.aacp-status-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const cur = getAacProject(subject);
+          cur.phases[seg.dataset.phase] = btn.dataset.val;
+          saveAacProject(subject, { phases: cur.phases });
+          renderAacPhases(subject);
+        });
+      });
+    });
+  }
+  function renderAacDeadline(subject) {
+    const data = getAacProject(subject);
+    const wrap = $('aacDeadlineRow-' + subject);
+    if (data.deadline) {
+      const days = Math.round((parseISODate(data.deadline) - startOfDay(new Date())) / (1000 * 60 * 60 * 24));
+      const daysText = days > 0 ? days + ' day' + (days === 1 ? '' : 's') + ' remaining'
+        : days === 0 ? 'Due today'
+        : (-days) + ' day' + (days === -1 ? '' : 's') + ' overdue';
+      wrap.innerHTML =
+        '<div class="aacp-deadline-countdown" id="aacDeadlineDisplay-' + subject + '"><b>' + esc(daysText) + '</b>Submission deadline: ' + esc(data.deadline) + ' &mdash; tap to change</div>' +
+        '<div class="aacp-deadline-edit" id="aacDeadlineEdit-' + subject + '"><input type="date" id="aacDeadlineInput-' + subject + '" value="' + esc(data.deadline) + '"><button type="button" id="aacDeadlineSave-' + subject + '">Save</button></div>';
+    } else {
+      wrap.innerHTML =
+        '<div class="aacp-deadline-placeholder" id="aacDeadlineDisplay-' + subject + '">~January 2027 &mdash; not yet confirmed, tap to set exact date</div>' +
+        '<div class="aacp-deadline-edit" id="aacDeadlineEdit-' + subject + '"><input type="date" id="aacDeadlineInput-' + subject + '"><button type="button" id="aacDeadlineSave-' + subject + '">Save</button></div>';
+    }
+    $('aacDeadlineDisplay-' + subject).addEventListener('click', () => {
+      $('aacDeadlineEdit-' + subject).classList.toggle('show');
+    });
+    $('aacDeadlineSave-' + subject).addEventListener('click', () => {
+      const val = $('aacDeadlineInput-' + subject).value;
+      if (!val) return;
+      saveAacProject(subject, { deadline: val });
+      renderAacDeadline(subject);
+      renderAacPhases(subject); // submission phase's pace check depends on the deadline
+    });
+  }
+  function renderAacProject(subject) {
+    renderAacChecklist(subject);
+    renderAacPhases(subject);
+    renderAacDeadline(subject);
   }
 
   // ============================================================
@@ -950,7 +1102,8 @@ body::after {
     renderAM();
     renderPointsRows();
     renderSubjectCards();
-    renderAAC();
+    renderAacProject('chemistry');
+    renderAacProject('physics');
     renderStreaks();
   }
   renderAll();
