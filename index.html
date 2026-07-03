@@ -77,18 +77,25 @@ body::after {
 .card {
   position: relative;
   background: rgba(255,255,255,0.04);
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 20px;
   margin-bottom: 16px;
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+  border-left: 3px solid transparent;
 }
+.card.accent-blue   { border-left-color: rgba(125,211,252,0.55); }
+.card.accent-lime   { border-left-color: rgba(200,240,96,0.55); }
+.card.accent-green  { border-left-color: rgba(107,227,164,0.55); }
+.card.accent-cyan   { border-left-color: rgba(103,232,249,0.55); }
+.card.accent-purple { border-left-color: rgba(176,138,240,0.55); }
+.card.accent-amber  { border-left-color: rgba(242,192,99,0.55); }
 .card-title {
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--text-tertiary); margin: 0 0 14px; display: flex; align-items: center; gap: 10px;
+  font-size: 14.5px; font-weight: 800; letter-spacing: 0.01em;
+  color: var(--text-primary); margin: 0 0 14px; display: flex; align-items: center; gap: 8px;
 }
-.card-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+.card-title::after { content: ''; flex: 1; height: 1.5px; background: linear-gradient(90deg, var(--title-accent, rgba(255,255,255,0.08)), transparent); }
 
 /* ===== Day Banner ===== */
 .day-banner {
@@ -104,10 +111,10 @@ body::after {
 }
 .day-banner-left { min-width: 0; }
 .day-banner-type {
-  font-size: 26px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);
+  font-size: 33px; font-weight: 900; letter-spacing: -0.025em; color: var(--text-primary);
   margin: 0 0 10px;
 }
-@media (max-width: 480px) { .day-banner-type { font-size: 21px; } }
+@media (max-width: 480px) { .day-banner-type { font-size: 25px; } }
 .day-banner-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
 .day-banner-row:last-child { margin-bottom: 0; }
 .day-banner-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); }
@@ -116,6 +123,22 @@ body::after {
 .day-arc-track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6; }
 .day-arc-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 31px 31px; transition: stroke-dashoffset 0.6s ease; }
 .day-arc-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); }
+
+/* ===== Week View Strip ===== */
+.week-strip { display: flex; gap: 6px; margin-bottom: 16px; }
+.week-strip-day {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 9px 2px; border-radius: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  font-family: inherit; color: inherit;
+}
+.week-strip-day:hover { background: rgba(255,255,255,0.06); }
+.week-strip-day.is-today { border-color: rgba(255,255,255,0.32); background: rgba(255,255,255,0.08); }
+.week-strip-day.is-selected:not(.is-today) { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); }
+.week-strip-icon { font-size: 15px; line-height: 1; }
+.week-strip-label { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-tertiary); }
+.week-strip-day.is-today .week-strip-label { color: var(--text-primary); }
 
 /* ===== Schedule timeline ===== */
 .sched-list { list-style: none; margin: 0; padding: 0; }
@@ -178,6 +201,15 @@ body::after {
 .habit-yesterday { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); display: none; }
 .habit-yesterday.show { display: block; }
 .habit-yesterday-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.habit-chart-label-row { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 16px; margin-bottom: 8px; }
+.habit-chart { display: flex; align-items: flex-end; gap: 4px; height: 54px; }
+.habit-chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.habit-chart-bar { width: 100%; border-radius: 3px 3px 1px 1px; min-height: 3px; background: rgba(255,255,255,0.08); transition: height 0.3s ease; }
+.habit-chart-bar.good { background: var(--success); }
+.habit-chart-bar.mid { background: var(--warning); }
+.habit-chart-bar.bad { background: var(--danger); }
+.habit-chart-col-label { font-family: var(--font-mono); font-size: 8px; color: var(--text-tertiary); }
+.habit-chart-col.is-today .habit-chart-col-label { color: var(--text-primary); font-weight: 700; }
 
 /* ===== Fluids (read-only summary — logging happens on nutrition.html) ===== */
 .fluid-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-decoration: none; cursor: pointer; }
@@ -204,6 +236,17 @@ body::after {
 .garmin-spark { margin-top: 16px; }
 .garmin-spark svg { width: 100%; height: 50px; display: block; }
 .garmin-spark-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+
+/* ===== Goals shortcut ===== */
+.goals-shortcut {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 18px; margin-bottom: 16px; border-radius: 16px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-primary); text-decoration: none; font-size: 14px; font-weight: 700;
+  transition: background 0.15s, border-color 0.15s;
+}
+.goals-shortcut:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); }
+.goals-shortcut-arrow { color: var(--text-tertiary); font-weight: 400; }
 
 /* ===== Journal ===== */
 .journal-textarea { width: 100%; min-height: 100px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 14px; line-height: 1.5; outline: none; resize: vertical; }
@@ -250,27 +293,32 @@ body::after {
     </div>
   </div>
 
+  <!-- Week View Strip -->
+  <div class="week-strip" id="weekStrip"></div>
+
   <!-- Today's Schedule -->
-  <div class="card">
-    <div class="card-title">Today's Schedule</div>
+  <div class="card accent-blue">
+    <div class="card-title" style="--title-accent:var(--blue)">📅 Today's Schedule</div>
     <ul class="sched-list" id="schedList"></ul>
   </div>
 
   <!-- Today's Study -->
-  <div class="card">
-    <div class="card-title">Today's Study</div>
+  <div class="card accent-lime">
+    <div class="card-title" style="--title-accent:#C8F060">📚 Today's Study</div>
     <div class="study-week" id="studyWeek"></div>
     <div id="studySessions"></div>
   </div>
 
   <!-- Habits -->
-  <div class="card">
-    <div class="card-title">Habits</div>
+  <div class="card accent-green">
+    <div class="card-title" style="--title-accent:var(--success)">&#9989; Habits</div>
     <div class="habit-overall" id="habitOverall">
       <span class="habit-overall-num" id="habitOverallNum">0</span>
       <span class="habit-overall-label">day streak &mdash; all habits</span>
     </div>
     <div id="habitRows"></div>
+    <div class="habit-chart-label-row">14-day completion</div>
+    <div class="habit-chart" id="habitChart"></div>
     <button type="button" class="habit-edit-btn" id="habitEditYesterday">Edit yesterday</button>
     <div class="habit-yesterday" id="habitYesterdayPanel">
       <div class="habit-yesterday-label" id="habitYesterdayLabel">Yesterday</div>
@@ -279,17 +327,17 @@ body::after {
   </div>
 
   <!-- Fluids — read-only summary; logging happens on nutrition.html -->
-  <a class="card fluid-card" href="nutrition.html" id="fluidCard">
+  <a class="card accent-cyan fluid-card" href="nutrition.html" id="fluidCard">
     <div>
-      <div class="card-title" style="margin-bottom:8px">Fluids</div>
+      <div class="card-title" style="margin-bottom:8px; --title-accent:#67E8F9">&#128167; Fluids</div>
       <div class="fluid-card-num" id="fluidCardNum">&mdash;<span> today</span></div>
     </div>
     <span class="fluid-card-arrow">&rarr;</span>
   </a>
 
   <!-- Garmin -->
-  <div class="card">
-    <div class="card-title">Garmin</div>
+  <div class="card accent-purple">
+    <div class="card-title" style="--title-accent:var(--purple)">&#8987; Garmin Data</div>
     <div class="garmin-updated" id="garminUpdated">No data logged yet</div>
     <div class="garmin-headline">
       <span class="garmin-bb" id="garminBB">&mdash;</span>
@@ -302,7 +350,7 @@ body::after {
       <div class="garmin-stat"><div class="v" id="garminBed">&mdash;</div><div class="l">Bedtime</div></div>
       <div class="garmin-stat"><div class="v" id="garminWakeStat">&mdash;</div><div class="l">Wake time</div></div>
     </div>
-    <div class="garmin-spark" id="garminSparkWrap" style="display:none">
+    <div class="garmin-spark" id="garminSparkWrap">
       <div class="garmin-spark-label">Body Battery &middot; last 7 days</div>
       <div id="garminSpark"></div>
     </div>
@@ -317,9 +365,15 @@ body::after {
     <button type="button" class="garmin-save" id="garminSaveBtn">Save today's Garmin data</button>
   </div>
 
+  <!-- Goals shortcut -->
+  <a class="goals-shortcut" href="goals.html">
+    <span>&#127919; Goals and Milestones</span>
+    <span class="goals-shortcut-arrow">&rarr;</span>
+  </a>
+
   <!-- Daily Journal -->
-  <div class="card">
-    <div class="card-title">Daily Journal</div>
+  <div class="card accent-amber">
+    <div class="card-title" style="--title-accent:var(--warning)">&#128221; Daily Journal</div>
     <textarea class="journal-textarea" id="journalText" placeholder="How did today go?"></textarea>
     <div>
       <button type="button" class="journal-save" id="journalSaveBtn">Save entry</button>
@@ -383,6 +437,15 @@ body::after {
     0: { key: 'sun', type: 'Recovery Day',         wake: '07:30', bed: '22:00', event: 'Pool and Sauna',                 accent: 'purple' },
   };
   const ACCENT_HEX = { blue: '#7DD3FC', green: '#6BE3A4', orange: '#F2A063', purple: '#B08AF0' };
+  // Very dark per-day-type tint behind the banner — training(blue)/free+gym(green)/
+  // match(orange)/recovery(purple). Low-opacity colour stop over a near-black
+  // stop keeps it "very dark", not a bright coloured card.
+  const ACCENT_GRADIENT = {
+    blue:   'linear-gradient(135deg, rgba(125,211,252,0.16), rgba(5,5,6,0.35) 65%)',
+    green:  'linear-gradient(135deg, rgba(107,227,164,0.16), rgba(5,5,6,0.35) 65%)',
+    orange: 'linear-gradient(135deg, rgba(242,160,99,0.18), rgba(5,5,6,0.35) 65%)',
+    purple: 'linear-gradient(135deg, rgba(176,138,240,0.16), rgba(5,5,6,0.35) 65%)',
+  };
   function todayConfig() { return DAY_CONFIG[new Date().getDay()]; }
 
   function timeToDateToday(hhmm) {
@@ -404,6 +467,7 @@ body::after {
     const cfg = todayConfig();
     const banner = $('dayBanner');
     banner.style.setProperty('--accent', ACCENT_HEX[cfg.accent]);
+    banner.style.background = ACCENT_GRADIENT[cfg.accent] || '';
     $('dbType').textContent = cfg.type;
     $('dbWake').textContent = cfg.wake;
     $('dbEvent').textContent = cfg.event;
@@ -497,6 +561,38 @@ body::after {
       { time: '22:00', title: 'Bed' },
     ],
   };
+  // ============================================================
+  // WEEK VIEW STRIP — Mon..Sun, tap a day to browse its schedule
+  // below without changing what the Day Banner reports as "today."
+  // ============================================================
+  const WEEK_STRIP_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun, JS getDay() values
+  function dayStripIcon(dow) {
+    if (dow === 3) return '🏋️';       // Wed — gym day
+    if (dow === 0) return '🌊';       // Sun — recovery day
+    if (dow === 5) return '📚';       // Fri — free day
+    return '⚽';                       // Mon/Tue/Thu training, Sat match
+  }
+  let selectedScheduleDow = new Date().getDay();
+  function renderWeekStrip() {
+    const strip = $('weekStrip');
+    if (!strip) return;
+    const today = new Date().getDay();
+    strip.innerHTML = '';
+    WEEK_STRIP_ORDER.forEach(dow => {
+      const cfg = DAY_CONFIG[dow];
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'week-strip-day' + (dow === today ? ' is-today' : '') + (dow === selectedScheduleDow ? ' is-selected' : '');
+      btn.innerHTML = '<span class="week-strip-icon">' + dayStripIcon(dow) + '</span><span class="week-strip-label">' + cfg.key.slice(0, 3) + '</span>';
+      btn.addEventListener('click', () => {
+        selectedScheduleDow = dow;
+        renderWeekStrip();
+        renderSchedule(DAY_CONFIG[selectedScheduleDow]);
+      });
+      strip.appendChild(btn);
+    });
+  }
+
   function renderSchedule(cfg) {
     const list = $('schedList');
     list.innerHTML = '';
@@ -862,9 +958,38 @@ body::after {
       container.appendChild(row);
     });
   }
+  // Fraction of that day's APPLICABLE habits (respecting disabledDays) that
+  // were completed — used by the 14-day chart below.
+  function habitCompletionRate(dateStr) {
+    const dk = dayKeyOf(dateStr);
+    const log = getHabitLog(dateStr);
+    const applicable = HABITS.filter(h => habitApplies(h, dk));
+    if (!applicable.length) return 0;
+    return applicable.filter(h => !!log[h.id]).length / applicable.length;
+  }
+  function renderHabitChart() {
+    const wrap = $('habitChart');
+    if (!wrap) return;
+    const todayStr = todayKey();
+    wrap.innerHTML = '';
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dStr = dateKey(d);
+      const rate = habitCompletionRate(dStr);
+      const pct = Math.round(rate * 100);
+      const cls = rate >= 0.8 ? 'good' : (rate >= 0.4 ? 'mid' : 'bad');
+      const col = document.createElement('div');
+      col.className = 'habit-chart-col' + (dStr === todayStr ? ' is-today' : '');
+      const label = ['S','M','T','W','T','F','S'][d.getDay()];
+      col.innerHTML = '<div class="habit-chart-bar ' + cls + '" style="height:' + Math.max(4, pct) + '%" title="' + pct + '% complete"></div><span class="habit-chart-col-label">' + label + '</span>';
+      wrap.appendChild(col);
+    }
+  }
   function renderHabits() {
     $('habitOverallNum').textContent = overallStreak();
     renderHabitRowsInto($('habitRows'), todayKey(), true, todayConfig().key);
+    renderHabitChart();
   }
   $('habitEditYesterday').addEventListener('click', () => {
     const panel = $('habitYesterdayPanel');
@@ -914,22 +1039,42 @@ body::after {
   // ============================================================
   const GARMIN_LOG_KEY = 'td:garminLog';
   function getGarminLog() { return loadJSON(GARMIN_LOG_KEY, {}); }
+  // entries: 7 objects for the last 7 CALENDAR days (regardless of whether
+  // Garmin data was actually logged that day) — { date, bodyBattery|null }.
+  // Fixed 0-100 scale since Body Battery always is; missing days get a
+  // dash placeholder on the baseline instead of being silently skipped.
   function buildSparkSVG(entries) {
     const W = 300, H = 50, pad = 6;
-    const vals = entries.map(e => e.bodyBattery).filter(v => v != null);
-    if (vals.length < 2) return '';
-    const stepX = (W - 2 * pad) / (entries.length - 1);
-    const pts = entries.map((e, i) => ({
-      x: pad + i * stepX,
-      y: H - pad - (((e.bodyBattery || 0) / 100) * (H - 2 * pad))
-    }));
-    const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
-    const dots = pts.map(p => '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2.6" fill="#6BE3A4"></circle>').join('');
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '"><path d="' + line + '" fill="none" stroke="#6BE3A4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' + dots + '</svg>';
+    const stepX = entries.length > 1 ? (W - 2 * pad) / (entries.length - 1) : 0;
+    const pts = entries.map((e, i) => {
+      const x = pad + i * stepX;
+      if (e.bodyBattery == null) return { x, y: null };
+      return { x, y: H - pad - ((e.bodyBattery / 100) * (H - 2 * pad)) };
+    });
+    let line = '';
+    let started = false;
+    pts.forEach(p => {
+      if (p.y == null) { started = false; return; }
+      line += (started ? ' L' : 'M') + p.x.toFixed(1) + ',' + p.y.toFixed(1);
+      started = true;
+    });
+    const marks = pts.map(p => p.y == null
+      ? '<text x="' + p.x.toFixed(1) + '" y="' + (H - pad) + '" font-size="11" fill="rgba(255,255,255,0.28)" text-anchor="middle">&#8211;</text>'
+      : '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2.6" fill="#6BE3A4"></circle>'
+    ).join('');
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '">' + (line ? '<path d="' + line + '" fill="none" stroke="#6BE3A4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' : '') + marks + '</svg>';
+  }
+  function last7CalendarDays() {
+    const out = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      out.push(dateKey(d));
+    }
+    return out;
   }
   function renderGarmin() {
     const log = getGarminLog();
-    const dates = Object.keys(log).sort();
     const todays = log[todayKey()];
     if (todays) {
       $('garminBB').textContent = todays.bodyBattery != null ? todays.bodyBattery : '—';
@@ -948,14 +1093,8 @@ body::after {
     } else {
       $('garminUpdated').textContent = 'No data logged yet today';
     }
-    const last7 = dates.slice(-7).map(d => log[d]);
-    const wrap = $('garminSparkWrap');
-    if (last7.filter(e => e.bodyBattery != null).length >= 2) {
-      wrap.style.display = '';
-      $('garminSpark').innerHTML = buildSparkSVG(last7);
-    } else {
-      wrap.style.display = 'none';
-    }
+    const last7 = last7CalendarDays().map(d => ({ date: d, bodyBattery: (log[d] && log[d].bodyBattery != null) ? log[d].bodyBattery : null }));
+    $('garminSpark').innerHTML = buildSparkSVG(last7);
   }
   $('garminSaveBtn').addEventListener('click', () => {
     const log = getGarminLog();
@@ -1002,8 +1141,9 @@ body::after {
 
   // ---------- boot ----------
   function renderAll() {
-    const cfg = renderDayBanner();
-    renderSchedule(cfg);
+    renderDayBanner(); // always today, independent of the week-strip selection
+    renderWeekStrip();
+    renderSchedule(DAY_CONFIG[selectedScheduleDow]);
     renderStudy();
     renderHabits();
     fetchFluidSummary();
