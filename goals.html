@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Goals</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --blue: #7DD3FC;
+  --green: #6BE3A4;
+  --orange: #F2A063;
+  --purple: #B08AF0;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #050506;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  min-height: 100vh; position: relative; overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.16), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
+  filter: blur(40px); pointer-events: none; z-index: -2;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -1;
+}
+@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
+
+.page { max-width: 720px; margin: 0 auto; }
+
+/* ===== header ===== */
+.goals-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.dash-title {
+  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+.goals-head-sub { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 20px; }
+
+/* ===== shared card ===== */
+.card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+  border-left: 3px solid transparent;
+}
+.card.accent-green  { border-left-color: rgba(107,227,164,0.55); }
+.card.accent-amber   { border-left-color: rgba(242,192,99,0.55); }
+.card.accent-blue   { border-left-color: rgba(125,211,252,0.55); }
+.card.accent-orange { border-left-color: rgba(242,160,99,0.55); }
+.card.accent-purple { border-left-color: rgba(176,138,240,0.55); }
+.card.accent-cyan   { border-left-color: rgba(103,232,249,0.55); }
+.card-title {
+  font-size: 14.5px; font-weight: 800; letter-spacing: 0.01em;
+  color: var(--text-primary); margin: 0 0 14px; display: flex; align-items: center; gap: 8px;
+}
+.card-title::after { content: ''; flex: 1; height: 1.5px; background: linear-gradient(90deg, var(--title-accent, rgba(255,255,255,0.08)), transparent); }
+
+/* ===== goal cards ===== */
+.goal-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.goal-emoji { font-size: 26px; line-height: 1; flex: none; }
+.goal-num { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 2px; }
+.goal-title { font-size: 16.5px; font-weight: 700; color: var(--text-primary); }
+.goal-horizon { margin-left: auto; flex: none; font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; }
+.goal-desc { font-size: 13.5px; line-height: 1.5; color: var(--text-secondary); margin: 0 0 2px; }
+
+.mile-row { display: flex; align-items: center; gap: 10px; padding: 8px 2px; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+.mile-check {
+  width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.28); position: relative; flex: none; transition: background 0.2s, border-color 0.2s;
+}
+.mile-check.on { background: var(--success); border-color: var(--success); }
+.mile-check.on::after { content: ''; position: absolute; left: 5px; top: 1px; width: 5px; height: 9px; border: solid #0A0A0B; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.mile-label { font-size: 13px; color: var(--text-secondary); }
+.mile-row.done .mile-label { color: var(--text-tertiary); text-decoration: line-through; }
+
+.goal-progress-row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin: 10px 0 6px; }
+.prog-track { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+
+/* ===== summer priorities ===== */
+.priorities-overall { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(242,192,99,0.08); border: 1px solid rgba(242,192,99,0.2); }
+.priorities-overall-num { font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--warning); }
+.priorities-overall-label { font-size: 12px; color: var(--text-secondary); }
+
+.task-row { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: opacity 0.15s; -webkit-tap-highlight-color: transparent; user-select: none; }
+.task-row:last-of-type { border-bottom: none; }
+.task-row.done { opacity: 0.55; }
+.task-check {
+  flex: none; width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.28); position: relative; transition: background 0.2s, border-color 0.2s;
+}
+.task-row.critical .task-check { border-color: rgba(255,107,107,0.5); }
+.task-check.on { background: var(--success); border-color: var(--success); }
+.task-check.on::after { content: ''; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.task-body { flex: 1; min-width: 0; }
+.task-name { font-size: 14px; color: var(--text-primary); }
+.task-row.done .task-name { color: var(--text-tertiary); text-decoration: line-through; }
+.task-tag { display: inline-block; margin-top: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; }
+.task-tag.crit { background: rgba(255,107,107,0.15); color: var(--danger); }
+.task-tag.summer { background: rgba(242,192,99,0.15); color: var(--warning); }
+.task-tag.school { background: rgba(125,211,252,0.15); color: var(--blue); }
+
+/* ===== LC points tracker ===== */
+.pts-big { text-align: center; padding: 6px 0 4px; }
+.pts-now { font-family: var(--font-mono); font-size: 52px; font-weight: 700; color: var(--warning); line-height: 1; }
+.pts-arrow { font-size: 20px; color: var(--text-tertiary); margin: 2px 0; }
+.pts-target { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--success); }
+.pts-gap { font-size: 13px; font-weight: 600; margin-top: 8px; color: var(--danger); }
+.pts-gap.met { color: var(--success); }
+.pts-track { height: 9px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 14px 0 2px; }
+.pts-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--warning), var(--success)); transition: width 0.4s; }
+
+.goal-link-btn { display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; font-size: 11.5px; font-weight: 700; color: var(--text-secondary); text-decoration: none; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); transition: background 0.15s, color 0.15s; }
+.goal-link-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="goals-head">
+    <h1 class="dash-title">Goals</h1>
+  </div>
+  <div class="goals-head-sub">5 life goals &middot; summer priorities</div>
+
+  <!-- Goal 1: Pro footballer -->
+  <div class="card accent-green">
+    <div class="goal-top">
+      <span class="goal-emoji">&#9917;</span>
+      <div style="flex:1;min-width:0">
+        <div class="goal-num">Goal 01</div>
+        <div class="goal-title">Professional Footballer</div>
+      </div>
+      <span class="goal-horizon" style="background:rgba(107,227,164,0.14);color:var(--success)">Long-term</span>
+    </div>
+    <p class="goal-desc">Play at professional or semi-professional level as a CDM. Treaty United U20s is the current platform &mdash; perform, progress, get noticed.</p>
+    <div id="gm1"></div>
+  </div>
+
+  <!-- Goal 2: 625 LC points -->
+  <div class="card accent-amber">
+    <div class="goal-top">
+      <span class="goal-emoji">&#128218;</span>
+      <div style="flex:1;min-width:0">
+        <div class="goal-num">Goal 02</div>
+        <div class="goal-title">625 Leaving Cert Points</div>
+      </div>
+      <span class="goal-horizon" style="background:rgba(242,192,99,0.14);color:var(--warning)">June 2027</span>
+    </div>
+    <p class="goal-desc">Tracked live below &mdash; syncs automatically from the Study page. Focus areas: Chemistry AAC, Accounting H1, Applied Maths H1.</p>
+    <div class="goal-progress-row"><span id="g2Now">&mdash;</span><span>625 target</span></div>
+    <div class="prog-track"><div class="prog-fill" id="g2Fill" style="width:0%;background:linear-gradient(90deg,var(--warning),var(--success))"></div></div>
+  </div>
+
+  <!-- Goal 3: Engineering -->
+  <div class="card accent-blue">
+    <div class="goal-top">
+      <span class="goal-emoji">&#9881;&#65039;</span>
+      <div style="flex:1;min-width:0">
+        <div class="goal-num">Goal 03</div>
+        <div class="goal-title">Engineering at UCD / Trinity</div>
+      </div>
+      <span class="goal-horizon" style="background:rgba(125,211,252,0.14);color:var(--blue)">Sept 2027</span>
+    </div>
+    <p class="goal-desc">CAO first preference: Engineering Science at UCD or Civil/Structural at Trinity. Points required: 580&ndash;620. Close &mdash; need consistent H1s in sciences.</p>
+  </div>
+
+  <!-- Goal 4: Financial freedom -->
+  <div class="card accent-orange">
+    <div class="goal-top">
+      <span class="goal-emoji">&#127757;</span>
+      <div style="flex:1;min-width:0">
+        <div class="goal-num">Goal 04</div>
+        <div class="goal-title">Financial &amp; Travel Freedom</div>
+      </div>
+      <span class="goal-horizon" style="background:rgba(242,160,99,0.14);color:var(--orange)">5&ndash;10 years</span>
+    </div>
+    <p class="goal-desc">Build income through sport, Vinted, and eventually an engineering career. Travel freely, live without financial stress. No dependency.</p>
+  </div>
+
+  <!-- Goal 5: Physical & personal image -->
+  <div class="card accent-purple">
+    <div class="goal-top">
+      <span class="goal-emoji">&#128140;</span>
+      <div style="flex:1;min-width:0">
+        <div class="goal-num">Goal 05</div>
+        <div class="goal-title">Physical &amp; Personal Image</div>
+      </div>
+      <span class="goal-horizon" style="background:rgba(176,138,240,0.14);color:var(--purple)">Daily</span>
+    </div>
+    <p class="goal-desc">Consistent skincare, SPF, retainer, grooming and physique. Daily habits compounding over time. Discipline is the output.</p>
+    <div id="gm5"></div>
+  </div>
+
+  <!-- LC Points Tracker -->
+  <div class="card accent-amber">
+    <div class="card-title" style="--title-accent:var(--warning)">&#127919; LC Points Tracker</div>
+    <div class="pts-big">
+      <div class="pts-now" id="ptsNow">&mdash;</div>
+      <div class="pts-arrow">&uarr;</div>
+      <div class="pts-target">625</div>
+      <div class="pts-gap" id="ptsGap">&mdash;</div>
+    </div>
+    <div class="pts-track"><div class="pts-fill" id="ptsFill" style="width:0%"></div></div>
+    <a href="study.html" class="goal-link-btn">Edit subjects &rarr;</a>
+  </div>
+
+  <!-- Summer Priority Projects -->
+  <div class="card accent-cyan">
+    <div class="card-title" style="--title-accent:var(--blue)">&#9728;&#65039; Summer Priorities</div>
+    <div class="priorities-overall">
+      <span class="priorities-overall-num" id="taskOverallNum">0 / 0</span>
+      <span class="priorities-overall-label">tasks done</span>
+    </div>
+    <div id="taskList"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  function loadJSON(k, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(k)); return (v == null ? fallback : v); } catch (e) { return fallback; }
+  }
+  function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+  // ---------- goal milestones (synced under 'gl:') ----------
+  const MILESTONES = {
+    gm1: [
+      'Start consistently in Treaty U20s XI',
+      'Get scouted / trial at senior level',
+      'Earn first professional contract',
+      'Play in League of Ireland',
+    ],
+    gm5: [
+      'Daily morning + evening skincare routine',
+      'SPF every single day',
+      'Retainer worn every night',
+      'Body recomp: 75kg lean at 12% BF',
+    ],
+  };
+  function renderMilestones(id) {
+    const done = loadJSON('gl:mile:' + id, {});
+    const items = MILESTONES[id] || [];
+    $(id).innerHTML = items.map((m, i) =>
+      '<div class="mile-row' + (done[i] ? ' done' : '') + '" data-mid="' + id + '" data-mi="' + i + '">' +
+        '<span class="mile-check' + (done[i] ? ' on' : '') + '"></span>' +
+        '<span class="mile-label">' + m + '</span>' +
+      '</div>'
+    ).join('');
+    $(id).querySelectorAll('.mile-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        const mid = row.getAttribute('data-mid');
+        const mi = Number(row.getAttribute('data-mi'));
+        const d = loadJSON('gl:mile:' + mid, {});
+        d[mi] = !d[mi];
+        saveJSON('gl:mile:' + mid, d);
+        renderMilestones(mid);
+      });
+    });
+  }
+
+  // ---------- summer priority tasks (synced under 'gl:') ----------
+  const TASKS = [
+    { name: 'Chemistry AAC topic selected', tag: 'crit', critical: true },
+    { name: 'Physics AAC topic selected', tag: 'crit', critical: true },
+    { name: 'PE project 1 started', tag: 'school', critical: false },
+    { name: 'PE project 2 started', tag: 'school', critical: false },
+    { name: 'Applied Maths summer lessons complete', tag: 'school', critical: false },
+    { name: 'Vinted listings live', tag: 'summer', critical: false },
+  ];
+  const TASKS_KEY = 'gl:tasks';
+  function renderTasks() {
+    const done = loadJSON(TASKS_KEY, {});
+    const doneCount = TASKS.filter((_, i) => done[i]).length;
+    $('taskOverallNum').textContent = doneCount + ' / ' + TASKS.length;
+    $('taskList').innerHTML = TASKS.map((t, i) => {
+      const tagLabel = t.critical ? '&#128680; Critical' : (t.tag === 'summer' ? '&#9728;&#65039; Summer' : '&#128218; School');
+      return '<div class="task-row' + (done[i] ? ' done' : '') + (t.critical ? ' critical' : '') + '" data-ti="' + i + '">' +
+        '<span class="task-check' + (done[i] ? ' on' : '') + '"></span>' +
+        '<div class="task-body">' +
+          '<div class="task-name">' + t.name + '</div>' +
+          '<span class="task-tag ' + t.tag + '">' + tagLabel + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    $('taskList').querySelectorAll('.task-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        const ti = Number(row.getAttribute('data-ti'));
+        const d = loadJSON(TASKS_KEY, {});
+        d[ti] = !d[ti];
+        saveJSON(TASKS_KEY, d);
+        renderTasks();
+      });
+    });
+  }
+
+  // ---------- LC points (mirrors study.html's estimator, reading the
+  // same 'sd:points' localStorage data so both pages always agree) ----------
+  const SUBJECTS = [
+    { id: 'maths' }, { id: 'irish' }, { id: 'physics' }, { id: 'chemistry' },
+    { id: 'pe' }, { id: 'accounting' }, { id: 'appliedMaths' }, { id: 'english' }, { id: 'french' },
+  ];
+  const GRADE_POINTS = { H1: 100, H2: 88, H3: 77, H4: 66, H5: 56, H6: 46, H7: 37, H8: 0 };
+  const DEFAULT_GRADES = { maths: 'H1', irish: 'H1', physics: 'H1', chemistry: 'H2', pe: 'H1', accounting: 'H3', appliedMaths: 'H1', english: 'H7', french: 'H7' };
+  function computePoints() {
+    const grades = loadJSON('sd:points', DEFAULT_GRADES);
+    const scores = SUBJECTS.map((s) => GRADE_POINTS[grades[s.id]] || 0);
+    scores.sort((a, b) => b - a);
+    let total = scores.slice(0, 6).reduce((a, v) => a + v, 0);
+    if (grades.maths === 'H1') total += 25;
+    return total;
+  }
+  function renderPoints() {
+    const total = computePoints();
+    const gap = 625 - total;
+    $('ptsNow').textContent = total;
+    $('g2Now').textContent = total + ' current';
+    const fillPct = Math.min(100, (total / 625) * 100) + '%';
+    $('ptsFill').style.width = fillPct;
+    $('g2Fill').style.width = fillPct;
+    if (gap <= 0) {
+      $('ptsGap').textContent = '625 reached — +' + (-gap) + ' over';
+      $('ptsGap').classList.add('met');
+    } else {
+      $('ptsGap').textContent = gap + ' points to target';
+      $('ptsGap').classList.remove('met');
+    }
+  }
+
+  function renderAll() {
+    renderMilestones('gm1');
+    renderMilestones('gm5');
+    renderTasks();
+    renderPoints();
+  }
+  renderAll();
+  window.addEventListener('storage', renderAll);
+})();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof initCloudSync !== 'function') return;
+  initCloudSync({
+    appKey: 'goalsPage',
+    syncedPrefixes: ['gl:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+});
+</script>
+</body>
+</html>
