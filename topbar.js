@@ -91,6 +91,7 @@
 .tab-gym        { --accent: #F2A063; --accent-bg: rgba(242, 160, 99, 0.14); }
 .tab-nutrition  { --accent: #C8F060; --accent-bg: rgba(200, 240, 96, 0.14); }
 .tab-finance    { --accent: #D4AF37; --accent-bg: rgba(212, 175, 55, 0.14); }
+.tab-health     { --accent: #FF6B6B; --accent-bg: rgba(255, 107, 107, 0.14); }
 .bottombar-tab-icon {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
@@ -227,6 +228,10 @@ body.topbar-modal-open {
     <span class="bottombar-tab-icon">💰</span>
     <span>Finance</span>
   </a>
+  <a href="health.html" class="bottombar-tab tab-health" data-page="health">
+    <span class="bottombar-tab-icon">❤️</span>
+    <span>Health</span>
+  </a>
 </nav>
 `;
 
@@ -253,6 +258,7 @@ body.topbar-modal-open {
     if (p.endsWith('gym.html')) return 'gym';
     if (p.endsWith('nutrition.html')) return 'nutrition';
     if (p.endsWith('finance.html')) return 'finance';
+    if (p.endsWith('health.html')) return 'health';
     return 'today'; // index.html, /, or anything else falls back to today
   }
 
