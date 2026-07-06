@@ -771,6 +771,308 @@ main {
   })();
   </script>
 
+  <!-- ===== YOUR DAY — modeled energy curve (circadian x recovery) from garmin_daily ===== -->
+  <style>
+    .yourday-section { margin-bottom: 32px; }
+    .yd-card { padding: 24px 22px 20px; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 22px; box-shadow: 0 1px 0 0 rgba(255,255,255,0.06) inset, 0 12px 40px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.25); }
+    .yd-empty { text-align:center; padding:30px 12px; font-size:13px; color:var(--text-tertiary); line-height:1.5; }
+    .yd-err { background:rgba(255,138,138,0.08); border:1px solid rgba(255,138,138,0.28); color:#FF8A8A; padding:10px 12px; border-radius:10px; font-size:11.5px; font-family:var(--font-mono); margin-bottom:14px; display:none; }
+    /* sleep bar */
+    .yd-sleepbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 15px; margin-bottom:16px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,0.02); }
+    .yd-sb-item { font-family:var(--font-mono); font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--text-tertiary); }
+    .yd-sb-item b { color:var(--text-primary); font-size:14px; font-weight:700; text-transform:none; letter-spacing:0; margin-left:4px; }
+    .yd-sb-dot { color:var(--text-quaternary); }
+    .yd-sb-note { font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-tertiary); margin-left:auto; }
+    /* top: ring + label + toggle */
+    .yd-top { display:flex; align-items:center; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+    .yd-ring { position:relative; width:76px; height:76px; flex-shrink:0; display:grid; place-items:center; }
+    .yd-ring svg { position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); overflow:visible; }
+    .yd-ring-tr { fill:none; stroke:rgba(255,255,255,0.07); stroke-width:4; }
+    .yd-ring-fl { fill:none; stroke:#6BE3A4; stroke-width:4; stroke-linecap:round; transition:stroke-dashoffset .5s cubic-bezier(.16,1,.3,1); filter:drop-shadow(0 0 5px rgba(107,227,164,.7)); }
+    .yd-ring-num { position:relative; z-index:1; font-size:26px; font-weight:700; color:var(--text-primary); font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+    .yd-top-label { flex:1; min-width:180px; }
+    .yd-top-row { display:flex; align-items:baseline; gap:10px; }
+    .yd-curve-word { font-size:17px; font-weight:700; color:var(--text-primary); }
+    .yd-curve-at { font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-tertiary); }
+    .yd-eyebrow { font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--text-tertiary); margin-top:4px; }
+    .yd-desc { font-size:12px; color:var(--text-tertiary); line-height:1.5; margin:6px 0 0; max-width:54ch; }
+    .yd-seg { display:inline-flex; background:rgba(0,0,0,0.28); border:1px solid var(--border); border-radius:999px; padding:3px; gap:2px; align-self:flex-start; }
+    .yd-seg-btn { appearance:none; background:transparent; border:0; cursor:pointer; color:var(--text-tertiary); font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:6px 13px; border-radius:999px; transition:all .2s; }
+    .yd-seg-btn.on { background:rgba(107,227,164,0.14); color:#6BE3A4; }
+    /* "right now" readout (non-interactive) */
+    .yd-nowbar { margin-bottom:16px; padding:12px 15px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,0.02); }
+    .yd-nowbar-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:12px; }
+    .yd-nowbar-title { font-size:13px; font-weight:700; color:var(--text-primary); }
+    .yd-nowbar-note { font-family:var(--font-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--warning); white-space:nowrap; }
+    .yd-nowbar-note.ready { color:#6BE3A4; }
+    .yd-nowbar-row { display:flex; align-items:center; gap:14px; }
+    .yd-nowbar-track { position:relative; flex:1; height:8px; border-radius:999px; background:linear-gradient(90deg,#FF8A8A,#F2C063,#6BE3A4); }
+    .yd-nowbar-thumb { position:absolute; top:50%; left:0%; width:16px; height:16px; border-radius:50%; background:#0d0d0f; border:3px solid #6BE3A4; transform:translate(-50%,-50%); box-shadow:0 0 10px rgba(107,227,164,.5); transition:left .5s cubic-bezier(.16,1,.3,1); }
+    .yd-nowbar-pct { font-size:22px; font-weight:800; color:var(--text-primary); font-variant-numeric:tabular-nums; min-width:54px; text-align:right; }
+    /* chart */
+    .yd-chart-wrap { position:relative; width:100%; }
+    .yd-chart-svg { width:100%; height:230px; display:block; overflow:visible; touch-action:none; cursor:crosshair; }
+    .yd-scrub-line { position:absolute; top:0; bottom:0; width:1px; background:rgba(255,255,255,.28); pointer-events:none; display:none; }
+    .yd-scrub-dot { position:absolute; width:12px; height:12px; border-radius:50%; background:#F2C063; box-shadow:0 0 12px #F2C063; transform:translate(-50%,-50%); pointer-events:none; display:none; }
+    .yd-scrub-tip { position:absolute; transform:translate(-50%,-130%); background:rgba(15,15,18,0.96); border:1px solid var(--border-strong); border-radius:10px; padding:6px 10px; pointer-events:none; display:none; white-space:nowrap; text-align:center; }
+    .yd-tip-v { font-size:16px; font-weight:700; color:#6BE3A4; }
+    .yd-tip-l { font-family:var(--font-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-tertiary); margin-top:1px; }
+    .yd-xaxis { display:flex; justify-content:space-between; margin-top:6px; padding:0 2px; }
+    .yd-xaxis span { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); }
+    .yd-plan { margin-top:16px; padding:14px; text-align:center; border:1px dashed var(--border-strong); border-radius:12px; font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-tertiary); }
+    @media (max-width:480px){ .yd-top { gap:12px; } .yd-desc { display:none; } .yd-chart-svg { height:200px; } .yd-nowbar-pct { font-size:20px; } }
+  </style>
+  <section class="yourday-section">
+    <div class="section-title">Your Day</div>
+    <div class="yd-card">
+      <div id="ydErr" class="yd-err"></div>
+      <div id="ydLoading" class="yd-empty">Loading your day…</div>
+      <div id="ydBody" style="display:none">
+        <div class="yd-sleepbar">
+          <span class="yd-sb-item">&#127769; Bed <b id="ydBed">&mdash;</b></span>
+          <span class="yd-sb-dot">&middot;</span>
+          <span class="yd-sb-item">&#9728;&#65039; Wake <b id="ydWake">&mdash;</b></span>
+          <span class="yd-sb-note" id="ydSlept"></span>
+        </div>
+        <div class="yd-top">
+          <div class="yd-ring">
+            <svg viewBox="0 0 84 84"><circle class="yd-ring-tr" cx="42" cy="42" r="38"/><circle class="yd-ring-fl" id="ydPeakFill" cx="42" cy="42" r="38"/></svg>
+            <div class="yd-ring-num" id="ydPeakNum">&mdash;</div>
+          </div>
+          <div class="yd-top-label">
+            <div class="yd-top-row"><span class="yd-curve-word" id="ydCurveWord">Peak</span><span class="yd-curve-at" id="ydCurveAt">&mdash;</span></div>
+            <div class="yd-eyebrow">Today's energy curve</div>
+            <p class="yd-desc">Modeled from your circadian rhythm &times; recovery &mdash; a prediction from your daily Garmin data, not a minute-by-minute measurement.</p>
+          </div>
+          <div class="yd-seg">
+            <button type="button" class="yd-seg-btn on" data-chart="line">Line</button>
+            <button type="button" class="yd-seg-btn" data-chart="bars">Bars</button>
+          </div>
+        </div>
+        <div class="yd-nowbar">
+          <div class="yd-nowbar-head"><span class="yd-nowbar-title">Right now</span><span class="yd-nowbar-note" id="ydCalib">&mdash;</span></div>
+          <div class="yd-nowbar-row">
+            <div class="yd-nowbar-track"><div class="yd-nowbar-thumb" id="ydNowThumb"></div></div>
+            <span class="yd-nowbar-pct" id="ydNowPct">&mdash;</span>
+          </div>
+        </div>
+        <div class="yd-chart-wrap" id="ydChartWrap">
+          <div id="ydChartSlot"></div>
+          <div class="yd-scrub-line" id="ydScrubLine"></div>
+          <div class="yd-scrub-dot" id="ydScrubDot"></div>
+          <div class="yd-scrub-tip" id="ydScrubTip"></div>
+        </div>
+        <div class="yd-xaxis"><span>12A</span><span>3A</span><span>6A</span><span>9A</span><span>12P</span><span>3P</span><span>6P</span><span>9P</span><span>12A</span></div>
+        <div class="yd-plan">Plan your day around your peak</div>
+      </div>
+    </div>
+  </section>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    // Same public anon config the Garmin card uses. Reading garmin_daily needs
+    // the anon SELECT policy already added for the Garmin card.
+    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
+    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+    const num = (v) => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
+
+    function parseClock(s) {
+      if (typeof s !== 'string') return null;
+      const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      if (!m) return null;
+      return (+m[1]) + (+m[2]) / 60 + (m[3] ? (+m[3]) / 3600 : 0);
+    }
+    function nowT() { const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+    function clockOf(t) {
+      t = ((t % 24) + 24) % 24; let hh = Math.floor(t); let mm = Math.round((t - hh) * 60);
+      if (mm === 60) { hh += 1; mm = 0; }
+      const ap = hh < 12 ? 'AM' : 'PM'; let h12 = hh % 12; if (h12 === 0) h12 = 12;
+      return h12 + (mm ? ':' + String(mm).padStart(2, '0') : '') + ' ' + ap;
+    }
+
+    // ---- model (peak.html two-process circadian shape, verbatim) ----
+    let ANCHOR = null;   // { wake, bed } in decimal hours
+    let REC = 70;        // recovery score 0-100 -> scales curve amplitude
+    let CURVE = [];      // [{t, e}]
+    let PEAK = null;
+    let chartType = 'line';
+
+    function shape(t, wake, bed) {
+      const L = (((bed - wake) % 24) + 24) % 24 || 16;   // hours awake
+      const aw = (((t - wake) % 24) + 24) % 24;           // hours since waking
+      if (aw > L) {                                       // asleep
+        const into = aw - L, sleepLen = 24 - L || 8, mid = sleepLen / 2;
+        return 0.12 - 0.07 * (1 - Math.abs(into - mid) / mid);
+      }
+      const inertia = 0.55 + 0.45 * (1 - Math.exp(-aw / 1.0));       // sleep inertia
+      const decline = 1 - 0.16 * (aw / L);                          // homeostatic pressure
+      const winddown = 1 - 0.40 * clamp((aw - (L - 1.5)) / 1.5, 0, 1); // taper before bed
+      const dip = 0.13 * Math.exp(-Math.pow(aw - L * 0.45, 2) / (2 * 1.7 * 1.7)); // post-lunch dip
+      const eve = 0.07 * Math.exp(-Math.pow(aw - (L - 4), 2) / (2 * 2.0 * 2.0));   // evening second wind
+      return Math.max(0.04, 0.92 * inertia * decline * winddown - dip + eve);
+    }
+    const recScale = () => 0.58 + 0.42 * (REC / 100);
+    function energyAt(t) { return ANCHOR ? clamp(shape(t, ANCHOR.wake, ANCHOR.bed) * 100 * recScale(), 1, 100) : 0; }
+    function buildCurve() { const a = []; for (let t = 0; t <= 24; t += 0.5) a.push({ t, e: energyAt(t) }); return a; }
+    function peakOf(curve) {
+      const { wake, bed } = ANCHOR; let best = curve[0];
+      for (const p of curve) { const inDay = bed > wake ? (p.t >= wake && p.t <= bed) : (p.t >= wake || p.t <= bed); if (inDay && p.e > best.e) best = p; }
+      if (best.e <= 2) { for (const p of curve) if (p.e > best.e) best = p; }
+      return best;
+    }
+
+    // Recovery score (Hybrid): sleep_score + body_battery_high absolute, RHR vs personal baseline.
+    function computeRec(latest, rhrBaseline) {
+      const parts = [], w = [];
+      const ss = num(latest.sleep_score);
+      if (ss != null) { parts.push(clamp(ss, 1, 100)); w.push(0.40); }
+      const bb = num(latest.body_battery_high);
+      if (bb != null) { parts.push(clamp(bb, 1, 100)); w.push(0.35); }
+      const rhr = num(latest.resting_hr);
+      if (rhr != null && rhrBaseline) { parts.push(clamp(50 + (1 - rhr / rhrBaseline) * 300, 5, 99)); w.push(0.25); }
+      if (!parts.length) return 70;                        // no data -> neutral (peak's rec ?? 70)
+      const sw = w.reduce((a, b) => a + b, 0); let s = 0;
+      for (let i = 0; i < parts.length; i++) s += parts[i] * w[i];
+      return Math.round(s / sw);
+    }
+
+    // ---- chart (peak.html geometry, recolored to the dashboard palette) ----
+    const CW = 1000, CH = 300, PADT = 20, PADB = 18;
+    const xOf = (t) => (t / 24) * CW;
+    const yOf = (e) => PADT + (1 - e / 100) * (CH - PADT - PADB);
+    function smoothPath(pts) {
+      if (!pts.length) return '';
+      let d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+      for (let i = 1; i < pts.length; i++) { const p0 = pts[i - 1], p1 = pts[i]; const cx = (p0[0] + p1[0]) / 2; d += ' C' + cx.toFixed(1) + ' ' + p0[1].toFixed(1) + ' ' + cx.toFixed(1) + ' ' + p1[1].toFixed(1) + ' ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1); }
+      return d;
+    }
+    function gridLines() { let g = ''; for (let i = 1; i <= 3; i++) { const y = PADT + (i / 4) * (CH - PADT - PADB); g += '<line x1="0" y1="' + y.toFixed(1) + '" x2="' + CW + '" y2="' + y.toFixed(1) + '" stroke="rgba(255,255,255,.05)" stroke-dasharray="2 5"/>'; } return g; }
+    function nowMarker() { const x = xOf(nowT()); return '<line x1="' + x.toFixed(1) + '" y1="0" x2="' + x.toFixed(1) + '" y2="' + (CH - PADB) + '" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/>'; }
+    function sleepMarkers() {
+      const ln = (t, col) => { const x = xOf(t); return '<line x1="' + x.toFixed(1) + '" y1="0" x2="' + x.toFixed(1) + '" y2="' + (CH - PADB) + '" stroke="' + col + '" stroke-width="1.2" stroke-dasharray="1 5" opacity=".55"/>'; };
+      return ln(ANCHOR.bed, '#6BE3A4') + ln(ANCHOR.wake, '#F2C063');
+    }
+    function chartSvg() {
+      const defs = '<defs><linearGradient id="ydArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6BE3A4" stop-opacity=".28"/><stop offset="100%" stop-color="#6BE3A4" stop-opacity="0"/></linearGradient></defs>';
+      let body = '';
+      if (chartType === 'bars') {
+        const n = 24, bw = CW / n * 0.62;
+        for (let h = 0; h < n; h++) { const v = energyAt(h + 0.5); const x = xOf(h + 0.5) - bw / 2, y = yOf(v); const isNow = Math.floor(nowT()) === h; body += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (CH - PADB - y).toFixed(1) + '" rx="3" fill="' + (isNow ? '#F2C063' : '#6BE3A4') + '" opacity="' + (isNow ? '.9' : '.5') + '"/>'; }
+      } else {
+        const pts = CURVE.map(p => [xOf(p.t), yOf(p.e)]);
+        const line = smoothPath(pts);
+        body += '<path d="' + line + ' L' + CW + ' ' + (CH - PADB) + ' L0 ' + (CH - PADB) + ' Z" fill="url(#ydArea)"/>';
+        body += '<path d="' + line + '" fill="none" stroke="#6BE3A4" stroke-width="2.4" stroke-linecap="round" style="filter:drop-shadow(0 0 5px rgba(107,227,164,.7))"/>';
+      }
+      let pk = '';
+      if (PEAK) { const px = xOf(PEAK.t), py = yOf(PEAK.e); pk = '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="4.5" fill="#0b110e" stroke="#6BE3A4" stroke-width="2"/>'; }
+      return '<svg class="yd-chart-svg" viewBox="0 0 ' + CW + ' ' + CH + '" preserveAspectRatio="none">' + defs + gridLines() + sleepMarkers() + nowMarker() + body + pk + '</svg>';
+    }
+
+    // ---- scrub ----
+    function curveAtT(t) { if (!CURVE.length) return 0; t = clamp(t, 0, 24); const i = Math.min(CURVE.length - 2, Math.floor(t / 0.5)); const a = CURVE[i], b = CURVE[i + 1]; const f = (t - a.t) / (b.t - a.t || 1); return a.e + (b.e - a.e) * f; }
+    function setScrub(t) {
+      if (!CURVE.length || !ANCHOR) return;
+      const e = curveAtT(t); const xPct = (t / 24) * 100; const yPct = (yOf(e) / CH) * 100;
+      const line = $('ydScrubLine'), dot = $('ydScrubDot'), tip = $('ydScrubTip');
+      line.style.display = 'block'; line.style.left = xPct + '%';
+      dot.style.display = 'block'; dot.style.left = xPct + '%'; dot.style.top = yPct + '%';
+      tip.style.display = 'block'; tip.style.left = xPct + '%'; tip.style.top = yPct + '%';
+      tip.innerHTML = '<div class="yd-tip-v">' + Math.round(e) + '</div><div class="yd-tip-l">' + clockOf(t) + '</div>';
+      $('ydPeakNum').textContent = Math.round(e);
+      const c = 2 * Math.PI * 38; $('ydPeakFill').style.strokeDashoffset = c * (1 - e / 100);
+      $('ydCurveWord').textContent = 'Scrubbing'; $('ydCurveAt').textContent = 'at ' + clockOf(t);
+    }
+    function clearScrub() {
+      ['ydScrubLine', 'ydScrubDot', 'ydScrubTip'].forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
+      if (PEAK) { $('ydPeakNum').textContent = Math.round(PEAK.e); const c = 2 * Math.PI * 38; $('ydPeakFill').style.strokeDashoffset = c * (1 - PEAK.e / 100); $('ydCurveWord').textContent = 'Peak'; $('ydCurveAt').textContent = 'at ' + clockOf(PEAK.t); }
+    }
+    function bindScrub() {
+      const wrap = $('ydChartWrap'); if (!wrap || wrap.dataset.bound) return; wrap.dataset.bound = '1';
+      const tFromX = (clientX) => { const r = wrap.getBoundingClientRect(); return clamp((clientX - r.left) / r.width, 0, 1) * 24; };
+      let active = false;
+      wrap.addEventListener('mousemove', (e) => { if (!active) setScrub(tFromX(e.clientX)); });
+      wrap.addEventListener('mouseleave', () => { if (!active) clearScrub(); });
+      wrap.addEventListener('pointerdown', (e) => { active = true; setScrub(tFromX(e.clientX)); });
+      window.addEventListener('pointerup', () => { if (active) { active = false; clearScrub(); } });
+      wrap.addEventListener('pointermove', (e) => { if (active) { e.preventDefault(); setScrub(tFromX(e.clientX)); } });
+    }
+    function bindToggle() {
+      document.querySelectorAll('.yd-seg-btn').forEach(b => {
+        if (b.dataset.bound) return; b.dataset.bound = '1';
+        b.addEventListener('click', () => { chartType = b.dataset.chart; document.querySelectorAll('.yd-seg-btn').forEach(x => x.classList.toggle('on', x === b)); $('ydChartSlot').innerHTML = chartSvg(); });
+      });
+    }
+
+    function renderAll() {
+      CURVE = buildCurve();
+      PEAK = peakOf(CURVE);
+      $('ydBed').textContent = clockOf(ANCHOR.bed);
+      $('ydWake').textContent = clockOf(ANCHOR.wake);
+      const c = 2 * Math.PI * 38;
+      $('ydPeakFill').style.strokeDasharray = c;
+      $('ydPeakFill').style.strokeDashoffset = c * (1 - PEAK.e / 100);
+      $('ydPeakNum').textContent = Math.round(PEAK.e);
+      $('ydCurveWord').textContent = 'Peak';
+      $('ydCurveAt').textContent = 'at ' + clockOf(PEAK.t);
+      const nowE = Math.round(energyAt(nowT()));
+      $('ydNowThumb').style.left = nowE + '%';
+      $('ydNowPct').textContent = nowE + '%';
+      $('ydChartSlot').innerHTML = chartSvg();
+      bindScrub(); bindToggle();
+    }
+
+    function showState(msg, isErr) {
+      $('ydBody').style.display = 'none';
+      if (isErr) { const e = $('ydErr'); e.style.display = 'block'; e.textContent = msg; $('ydLoading').style.display = 'none'; }
+      else { $('ydLoading').style.display = 'block'; $('ydLoading').textContent = msg; $('ydErr').style.display = 'none'; }
+    }
+
+    function apply(rows) {
+      if (!Array.isArray(rows) || !rows.length) { showState('No Garmin data yet — the daily sync writes here each morning.'); return; }
+      const anchorRow = rows.find(r => parseClock(r.wake_time) != null);
+      if (!anchorRow) { showState('Waiting for Garmin sleep data — wake/bed times populate after the next sync.'); return; }
+      const wake = parseClock(anchorRow.wake_time);
+      let bed = parseClock(anchorRow.bed_time);
+      if (bed == null) bed = (((wake - 8) % 24) + 24) % 24;   // fallback: 8h before wake
+      ANCHOR = { wake, bed };
+      const rhrs = rows.map(r => num(r.resting_hr)).filter(v => v != null);
+      const rhrBaseline = rhrs.length ? rhrs.reduce((a, b) => a + b, 0) / rhrs.length : null;
+      REC = computeRec(anchorRow, rhrBaseline);
+      const nDays = rows.filter(r => parseClock(r.wake_time) != null).length;
+      const calEl = $('ydCalib');
+      if (nDays < 30) { calEl.textContent = 'Calibrating · ' + nDays + '/30 days'; calEl.classList.remove('ready'); }
+      else { calEl.textContent = 'Tuned to your last 30 days ✓'; calEl.classList.add('ready'); }
+      const sh = num(anchorRow.sleep_hours);
+      $('ydSlept').textContent = sh != null ? (sh.toFixed(1) + 'h slept') : '';
+      $('ydLoading').style.display = 'none';
+      $('ydErr').style.display = 'none';
+      $('ydBody').style.display = '';
+      renderAll();
+    }
+
+    async function loadData() {
+      if (window.__YOURDAY_MOCK__) { apply(window.__YOURDAY_MOCK__); return; }
+      try {
+        if (!window.supabase || !SUPABASE_URL || SUPABASE_URL.indexOf('PASTE-') === 0) throw new Error('Supabase not configured');
+        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const { data, error } = await supa
+          .from('garmin_daily')
+          .select('date,wake_time,bed_time,sleep_score,body_battery_high,resting_hr,sleep_hours')
+          .order('date', { ascending: false }).limit(30);
+        if (error) throw error;
+        apply(data || []);
+      } catch (e) {
+        showState('Could not load Garmin data: ' + (e && e.message ? e.message : e), true);
+      }
+    }
+    loadData();
+    window.addEventListener('focus', loadData);
+  })();
+  </script>
+
   <div class="section-title">Daily Stack</div>
 
   <div class="stack-card">
