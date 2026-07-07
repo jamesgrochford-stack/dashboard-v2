@@ -218,25 +218,6 @@ body::after {
 .fluid-card-num span { font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
 .fluid-card-arrow { font-size: 18px; color: var(--text-tertiary); flex: none; }
 
-/* ===== Garmin ===== */
-.garmin-headline { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
-.garmin-bb { font-size: 46px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1; }
-.garmin-bb-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
-.garmin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
-.garmin-stat { text-align: center; padding: 10px 6px; border-radius: 10px; background: rgba(255,255,255,0.03); }
-.garmin-stat .v { font-size: 17px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.garmin-stat .l { font-size: 9px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 4px; }
-.garmin-updated { font-size: 11px; color: var(--text-tertiary); margin-bottom: 10px; }
-.garmin-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
-.garmin-field { display: flex; flex-direction: column; gap: 5px; }
-.garmin-field label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
-.garmin-field input { padding: 9px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; }
-.garmin-field input:focus { border-color: rgba(255,255,255,0.3); }
-.garmin-save { width: 100%; margin-top: 12px; padding: 11px; border: 0; border-radius: 12px; background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-.garmin-spark { margin-top: 16px; }
-.garmin-spark svg { width: 100%; height: 50px; display: block; }
-.garmin-spark-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
-
 /* ===== Goals shortcut ===== */
 .goals-shortcut {
   display: flex; align-items: center; justify-content: space-between;
@@ -279,7 +260,6 @@ body::after {
 @media (max-width: 480px) {
   .card { padding: 16px; }
   .day-banner { padding: 16px 18px; }
-  .garmin-form { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 </head>
@@ -353,36 +333,6 @@ body::after {
     </div>
     <span class="fluid-card-arrow">&rarr;</span>
   </a>
-
-  <!-- Garmin -->
-  <div class="card accent-purple">
-    <div class="card-title" style="--title-accent:var(--purple)">&#8987; Garmin Data</div>
-    <div class="garmin-updated" id="garminUpdated">No data logged yet</div>
-    <div class="garmin-headline">
-      <span class="garmin-bb" id="garminBB">&mdash;</span>
-      <span class="garmin-bb-label">Body Battery / 100</span>
-    </div>
-    <div class="garmin-grid">
-      <div class="garmin-stat"><div class="v" id="garminSleep">&mdash;</div><div class="l">Sleep score</div></div>
-      <div class="garmin-stat"><div class="v" id="garminRHR">&mdash;</div><div class="l">RHR</div></div>
-      <div class="garmin-stat"><div class="v" id="garminSteps">&mdash;</div><div class="l">Steps</div></div>
-      <div class="garmin-stat"><div class="v" id="garminBed">&mdash;</div><div class="l">Bedtime</div></div>
-      <div class="garmin-stat"><div class="v" id="garminWakeStat">&mdash;</div><div class="l">Wake time</div></div>
-    </div>
-    <div class="garmin-spark" id="garminSparkWrap">
-      <div class="garmin-spark-label">Body Battery &middot; last 7 days</div>
-      <div id="garminSpark"></div>
-    </div>
-    <form class="garmin-form" id="garminForm">
-      <div class="garmin-field"><label>Body Battery</label><input type="number" min="0" max="100" id="gBodyBattery"></div>
-      <div class="garmin-field"><label>Sleep score</label><input type="number" min="0" max="100" id="gSleepScore"></div>
-      <div class="garmin-field"><label>RHR</label><input type="number" min="0" max="220" id="gRHR"></div>
-      <div class="garmin-field"><label>Bedtime</label><input type="time" id="gBedtime"></div>
-      <div class="garmin-field"><label>Wake time</label><input type="time" id="gWakeTime"></div>
-      <div class="garmin-field"><label>Steps</label><input type="number" min="0" id="gSteps"></div>
-    </form>
-    <button type="button" class="garmin-save" id="garminSaveBtn">Save today's Garmin data</button>
-  </div>
 
   <!-- Goals shortcut -->
   <a class="goals-shortcut" href="goals.html">
@@ -1064,84 +1014,6 @@ body::after {
   }
 
   // ============================================================
-  // GARMIN
-  // ============================================================
-  const GARMIN_LOG_KEY = 'td:garminLog';
-  function getGarminLog() { return loadJSON(GARMIN_LOG_KEY, {}); }
-  // entries: 7 objects for the last 7 CALENDAR days (regardless of whether
-  // Garmin data was actually logged that day) — { date, bodyBattery|null }.
-  // Fixed 0-100 scale since Body Battery always is; missing days get a
-  // dash placeholder on the baseline instead of being silently skipped.
-  function buildSparkSVG(entries) {
-    const W = 300, H = 50, pad = 6;
-    const stepX = entries.length > 1 ? (W - 2 * pad) / (entries.length - 1) : 0;
-    const pts = entries.map((e, i) => {
-      const x = pad + i * stepX;
-      if (e.bodyBattery == null) return { x, y: null };
-      return { x, y: H - pad - ((e.bodyBattery / 100) * (H - 2 * pad)) };
-    });
-    let line = '';
-    let started = false;
-    pts.forEach(p => {
-      if (p.y == null) { started = false; return; }
-      line += (started ? ' L' : 'M') + p.x.toFixed(1) + ',' + p.y.toFixed(1);
-      started = true;
-    });
-    const marks = pts.map(p => p.y == null
-      ? '<text x="' + p.x.toFixed(1) + '" y="' + (H - pad) + '" font-size="11" fill="rgba(255,255,255,0.28)" text-anchor="middle">&#8211;</text>'
-      : '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2.6" fill="#6BE3A4"></circle>'
-    ).join('');
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '">' + (line ? '<path d="' + line + '" fill="none" stroke="#6BE3A4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' : '') + marks + '</svg>';
-  }
-  function last7CalendarDays() {
-    const out = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      out.push(dateKey(d));
-    }
-    return out;
-  }
-  function renderGarmin() {
-    const log = getGarminLog();
-    const todays = log[todayKey()];
-    if (todays) {
-      $('garminBB').textContent = todays.bodyBattery != null ? todays.bodyBattery : '—';
-      $('garminSleep').textContent = todays.sleepScore != null ? todays.sleepScore : '—';
-      $('garminRHR').textContent = todays.rhr != null ? todays.rhr : '—';
-      $('garminSteps').textContent = todays.steps != null ? todays.steps : '—';
-      $('garminBed').textContent = todays.bedtime || '—';
-      $('garminWakeStat').textContent = todays.wakeTime || '—';
-      $('garminUpdated').textContent = 'Last updated ' + relTime(todays.updatedAt);
-      $('gBodyBattery').value = todays.bodyBattery != null ? todays.bodyBattery : '';
-      $('gSleepScore').value = todays.sleepScore != null ? todays.sleepScore : '';
-      $('gRHR').value = todays.rhr != null ? todays.rhr : '';
-      $('gBedtime').value = todays.bedtime || '';
-      $('gWakeTime').value = todays.wakeTime || '';
-      $('gSteps').value = todays.steps != null ? todays.steps : '';
-    } else {
-      $('garminUpdated').textContent = 'No data logged yet today';
-    }
-    const last7 = last7CalendarDays().map(d => ({ date: d, bodyBattery: (log[d] && log[d].bodyBattery != null) ? log[d].bodyBattery : null }));
-    $('garminSpark').innerHTML = buildSparkSVG(last7);
-  }
-  $('garminSaveBtn').addEventListener('click', () => {
-    const log = getGarminLog();
-    const num = (v) => (v === '' ? null : Number(v));
-    log[todayKey()] = {
-      bodyBattery: num($('gBodyBattery').value),
-      sleepScore: num($('gSleepScore').value),
-      rhr: num($('gRHR').value),
-      bedtime: $('gBedtime').value || null,
-      wakeTime: $('gWakeTime').value || null,
-      steps: num($('gSteps').value),
-      updatedAt: Date.now()
-    };
-    saveJSON(GARMIN_LOG_KEY, log);
-    renderGarmin();
-  });
-
-  // ============================================================
   // DAILY JOURNAL
   // ============================================================
   const JOURNAL_KEY = 'td:journal';
@@ -1176,7 +1048,6 @@ body::after {
     renderStudy();
     renderHabits();
     fetchFluidSummary();
-    renderGarmin();
     renderJournal();
   }
   renderAll();

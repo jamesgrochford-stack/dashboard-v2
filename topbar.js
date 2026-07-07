@@ -249,7 +249,13 @@ body.topbar-modal-open {
   function isEmbedded() {
     try { return window.self !== window.top; } catch (e) { return true; }
   }
-  function shouldShowTopbar() { return !isEmbedded(); }
+  // The home page (index.html) hides the top date + Body Battery bar -- Body
+  // Battery now lives on the Health page's Garmin card. Other pages keep it.
+  function isHomePage() {
+    const p = (window.location.pathname || '').toLowerCase();
+    return p === '/' || p.endsWith('/') || p.endsWith('/index.html') || p.endsWith('index.html');
+  }
+  function shouldShowTopbar() { return !isEmbedded() && !isHomePage(); }
   function shouldShowBottombar() { return !isFinancePage() && !isEmbedded(); }
   function currentPageKey() {
     const p = (window.location.pathname || '').toLowerCase();
