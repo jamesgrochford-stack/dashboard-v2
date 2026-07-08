@@ -249,13 +249,9 @@ body.topbar-modal-open {
   function isEmbedded() {
     try { return window.self !== window.top; } catch (e) { return true; }
   }
-  // The home page (index.html) hides the top date + Body Battery bar -- Body
-  // Battery now lives on the Health page's Garmin card. Other pages keep it.
-  function isHomePage() {
-    const p = (window.location.pathname || '').toLowerCase();
-    return p === '/' || p.endsWith('/') || p.endsWith('/index.html') || p.endsWith('index.html');
-  }
-  function shouldShowTopbar() { return !isEmbedded() && !isHomePage(); }
+  // The date + Body Battery top bar was removed site-wide -- Body Battery now
+  // lives on the Health page's Garmin card. The bottom nav below is unaffected.
+  function shouldShowTopbar() { return false; }
   function shouldShowBottombar() { return !isFinancePage() && !isEmbedded(); }
   function currentPageKey() {
     const p = (window.location.pathname || '').toLowerCase();
@@ -408,21 +404,9 @@ body.topbar-modal-open {
 
   // -------- Boot --------
   function boot() {
-    injectStyleAndHTML();
-    renderDate();
-    fetchBodyBattery();
+    injectStyleAndHTML();   // bottom nav only now; the topbar is disabled above
     lockGestures();
     startModalLock();
-
-    // Re-render when localStorage changes from another tab/window OR when
-    // the page becomes visible (sync may have pulled in the background).
-    window.addEventListener('storage', () => { renderDate(); fetchBodyBattery(); });
-    window.addEventListener('focus', () => { renderDate(); fetchBodyBattery(); });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderDate(); fetchBodyBattery(); } });
-
-    // Periodic refresh — date rolls over at midnight, Body Battery can be
-    // logged from another device at any time.
-    setInterval(() => { renderDate(); fetchBodyBattery(); }, 2 * 60 * 1000);
   }
 
   if (document.readyState === 'loading') {

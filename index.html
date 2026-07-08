@@ -63,15 +63,6 @@ body::after {
   -webkit-text-fill-color: transparent; color: transparent;
 }
 @media (max-width: 480px) { .dash-title { font-size: 22px; } }
-.apps-btn {
-  width: 42px; height: 42px; flex-shrink: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 12px; border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04); color: var(--text-secondary);
-  text-decoration: none; cursor: pointer; transition: background 0.15s, color 0.15s;
-}
-.apps-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.apps-btn svg { width: 20px; height: 20px; }
 
 /* ===== shared card ===== */
 .card {
@@ -268,12 +259,6 @@ body::after {
 
   <div class="hub-head">
     <h1 class="dash-title">Today</h1>
-    <a class="apps-btn" href="hub.html" aria-label="All apps" title="All apps">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
-      </svg>
-    </a>
   </div>
 
   <!-- Day Banner -->
