@@ -55,14 +55,67 @@ body::after {
 @keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
 
 .page { max-width: 720px; margin: 0 auto; }
-.hub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.dash-title {
-  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
+
+/* ===== Hero banner — time-of-day gradient (primary) + day-context badge (secondary) ===== */
+.hero-banner {
+  position: relative; overflow: hidden;
+  border-radius: 22px; min-height: 128px;
+  padding: 20px 20px 18px;
+  margin-bottom: 16px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+  transition: background 0.6s ease;
 }
-@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+/* subtle grain so flat gradient stops don't look like a plain colour block */
+.hero-banner::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 3px 3px; mix-blend-mode: overlay;
+}
+.hero-banner.hero-dawn {
+  background:
+    radial-gradient(120% 90% at 15% 115%, rgba(255,183,94,0.55), transparent 60%),
+    linear-gradient(150deg, #1b1035 0%, #4a3a7a 38%, #c9648a 68%, #f2a15c 100%);
+}
+.hero-banner.hero-day {
+  background:
+    radial-gradient(120% 100% at 85% -10%, rgba(255,236,164,0.45), transparent 55%),
+    linear-gradient(150deg, #0d6fa8 0%, #2694d6 45%, #6bc2ea 78%, #bfe6ff 100%);
+}
+.hero-banner.hero-dusk {
+  background:
+    radial-gradient(110% 90% at 80% 110%, rgba(255,140,90,0.5), transparent 60%),
+    linear-gradient(150deg, #170826 0%, #5b2a5e 35%, #c1495a 68%, #f2884a 100%);
+}
+.hero-banner.hero-night {
+  background:
+    radial-gradient(1.5px 1.5px at 18% 25%, rgba(255,255,255,0.9), transparent 60%),
+    radial-gradient(1px 1px at 68% 18%, rgba(255,255,255,0.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 40% 62%, rgba(255,255,255,0.65), transparent 60%),
+    radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.8), transparent 60%),
+    radial-gradient(1px 1px at 55% 40%, rgba(255,255,255,0.5), transparent 60%),
+    radial-gradient(1.5px 1.5px at 28% 80%, rgba(255,255,255,0.55), transparent 60%),
+    linear-gradient(150deg, #03040a 0%, #0b1024 45%, #171f38 100%);
+}
+.hero-greeting {
+  position: relative; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;
+  color: #FFFFFF; text-shadow: 0 2px 14px rgba(0,0,0,0.4);
+}
+@media (max-width: 480px) { .hero-greeting { font-size: 22px; } }
+.hero-sub {
+  position: relative; font-size: 12.5px; font-weight: 600; margin-top: 4px;
+  color: rgba(255,255,255,0.88); text-shadow: 0 1px 8px rgba(0,0,0,0.35);
+}
+.hero-daybadge {
+  position: absolute; top: 16px; right: 16px; z-index: 1;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: rgba(0,0,0,0.30); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.20);
+  font-size: 11.5px; font-weight: 700; color: #FFFFFF; white-space: nowrap;
+}
+.hero-daybadge .ic { font-size: 14px; line-height: 1; }
+@media (max-width: 380px) { .hero-daybadge { font-size: 10.5px; padding: 5px 10px; } }
 
 /* ===== shared card ===== */
 .card {
@@ -257,8 +310,11 @@ body::after {
 <body>
 <div class="page">
 
-  <div class="hub-head">
-    <h1 class="dash-title">Today</h1>
+  <!-- Hero banner: time-of-day gradient (primary) + day-context badge (secondary) -->
+  <div class="hero-banner" id="heroBanner">
+    <span class="hero-daybadge" id="heroDayBadge"><span class="ic" id="heroDayIcon">—</span><span id="heroDayLabel">—</span></span>
+    <div class="hero-greeting" id="heroGreeting">—</div>
+    <div class="hero-sub" id="heroDate">—</div>
   </div>
 
   <!-- Day Banner -->
@@ -392,13 +448,13 @@ body::after {
   // DAY BANNER
   // ============================================================
   const DAY_CONFIG = {
-    1: { key: 'mon', type: 'Evening Training Day', wake: '07:30', bed: '22:00', event: 'Club Training 18:00–19:30', accent: 'blue' },
-    2: { key: 'tue', type: 'Morning Training Day', wake: '06:15', bed: '22:00', event: 'Club Training 07:30–09:00', accent: 'blue' },
-    3: { key: 'wed', type: 'Gym Day',              wake: '07:30', bed: '22:30', event: 'Gym 08:30–10:00',           accent: 'green' },
-    4: { key: 'thu', type: 'Morning Training Day', wake: '06:15', bed: '22:00', event: 'Club Training 07:30–09:00', accent: 'blue' },
-    5: { key: 'fri', type: 'Free Day',             wake: '07:30', bed: '22:30', event: 'Study',                          accent: 'green' },
-    6: { key: 'sat', type: 'Match Day',            wake: '08:00', bed: '23:00', event: 'Match',                          accent: 'orange' },
-    0: { key: 'sun', type: 'Recovery Day',         wake: '07:30', bed: '22:00', event: 'Pool and Sauna',                 accent: 'purple' },
+    1: { key: 'mon', type: 'Evening Training Day', wake: '07:30', bed: '22:00', event: 'Club Training 18:00–19:30', accent: 'blue',   icon: '⚽' },
+    2: { key: 'tue', type: 'Morning Training Day', wake: '06:15', bed: '22:00', event: 'Club Training 07:30–09:00', accent: 'blue',   icon: '⚽' },
+    3: { key: 'wed', type: 'Gym Day',              wake: '07:30', bed: '22:30', event: 'Gym 08:30–10:00',           accent: 'green',  icon: '🏋️' },
+    4: { key: 'thu', type: 'Morning Training Day', wake: '06:15', bed: '22:00', event: 'Club Training 07:30–09:00', accent: 'blue',   icon: '⚽' },
+    5: { key: 'fri', type: 'Free Day',             wake: '07:30', bed: '22:30', event: 'Study',                          accent: 'green',  icon: '📚' },
+    6: { key: 'sat', type: 'Match Day',            wake: '08:00', bed: '23:00', event: 'Match',                          accent: 'orange', icon: '🏆' },
+    0: { key: 'sun', type: 'Recovery Day',         wake: '07:30', bed: '22:00', event: 'Pool and Sauna',                 accent: 'purple', icon: '💧' },
   };
   const ACCENT_HEX = { blue: '#7DD3FC', green: '#6BE3A4', orange: '#F2A063', purple: '#B08AF0' };
   // Very dark per-day-type tint behind the banner — training(blue)/free+gym(green)/
@@ -441,6 +497,37 @@ body::after {
     fill.setAttribute('stroke-dashoffset', ARC_C * (1 - pct / 100));
     $('dbArcPct').textContent = Math.round(pct) + '%';
     return cfg;
+  }
+
+  // ============================================================
+  // HERO BANNER — time-of-day gradient (primary) layered with the
+  // day's schedule context (secondary badge), reusing DAY_CONFIG so
+  // there's one source of truth for "what kind of day is it" shared
+  // with the Day Banner below.
+  // ============================================================
+  function timeBucket(hour) {
+    if (hour >= 5 && hour < 8) return 'dawn';
+    if (hour >= 8 && hour < 17) return 'day';
+    if (hour >= 17 && hour < 20) return 'dusk';
+    return 'night';
+  }
+  function greetingFor(hour) {
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 21) return 'Good evening';
+    return 'Good night';
+  }
+  function renderHeroBanner() {
+    const now = new Date();
+    const hour = now.getHours();
+    const banner = $('heroBanner');
+    banner.classList.remove('hero-dawn', 'hero-day', 'hero-dusk', 'hero-night');
+    banner.classList.add('hero-' + timeBucket(hour));
+    $('heroGreeting').textContent = greetingFor(hour);
+    $('heroDate').textContent = now.toLocaleDateString('en-IE', { weekday: 'long', month: 'long', day: 'numeric' });
+    const cfg = todayConfig();
+    $('heroDayIcon').textContent = cfg.icon;
+    $('heroDayLabel').textContent = cfg.type;
   }
 
   // ============================================================
@@ -1027,6 +1114,7 @@ body::after {
 
   // ---------- boot ----------
   function renderAll() {
+    renderHeroBanner();
     renderDayBanner(); // always today, independent of the week-strip selection
     renderWeekStrip();
     renderSchedule(DAY_CONFIG[selectedScheduleDow]);
@@ -1036,7 +1124,7 @@ body::after {
     renderJournal();
   }
   renderAll();
-  setInterval(renderDayBanner, 60 * 1000);
+  setInterval(() => { renderHeroBanner(); renderDayBanner(); }, 60 * 1000);
   setInterval(fetchFluidSummary, 2 * 60 * 1000);
   window.addEventListener('storage', renderAll);
   window.addEventListener('focus', fetchFluidSummary);
