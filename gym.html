@@ -225,6 +225,8 @@
   .btn-mint{background:var(--mint);border:1px solid var(--mint);color:#04140d;font-family:var(--sans);font-weight:700;
     font-size:14px;padding:11px 22px;border-radius:999px;cursor:pointer;transition:background .2s,transform .15s var(--spring)}
   .btn-mint:hover{background:#5dd6a6} .btn-mint:active{transform:scale(.97)}
+  .btn-mint.btn-danger{background:var(--rose);border-color:var(--rose);color:#2a0d0f}
+  .btn-mint.btn-danger:hover{background:#e8898d}
 
   /* ════ TUNE: icon + label rows, steppers, weight tap-to-type ════ */
   .tune{display:flex;flex-direction:column;margin:8px 0 2px}
@@ -374,6 +376,12 @@
   .sessionClock{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--muted);min-height:15px;font-variant-numeric:tabular-nums}
   .sessionClock.live{color:var(--mint-cool)}
 
+  /* ── cancel-session link: only visible while a session is in progress ── */
+  .cancelSessionLink{display:none;background:none;border:none;color:var(--muted);font-family:var(--serif);
+    font-style:italic;font-size:12.5px;text-decoration:underline;text-underline-offset:2px;cursor:pointer;padding:2px;margin-top:1px}
+  .cancelSessionLink:hover{color:var(--rose)}
+  .cancelSessionLink.on{display:inline-block}
+
   /* ── rest timer: one global countdown after any hit/miss, Hevy-style ── */
   .restBar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(160%);z-index:60;
     display:flex;align-items:center;gap:13px;background:#0a0f0c;border:1px solid rgba(110,231,183,.35);
@@ -406,6 +414,7 @@
 
   <div class="finish-wrap" id="finishWrap">
     <div class="sessionClock" id="sessionClock"></div>
+    <button class="cancelSessionLink" id="cancelSessionLink" type="button">cancel session</button>
     <button class="finish" id="finishBtn"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg> Finish session</button>
     <div class="finish-cap" id="finishCap"></div>
   </div>
@@ -472,7 +481,7 @@
   // WITH the saved payload (not a separate key) so the check still catches a
   // stale copy pulled down from Supabase, not just a stale local cache —
   // otherwise an old push from before this fix would silently win a sync.
-  const SEED_VERSION = 2;
+  const SEED_VERSION = 3;
   let LIFTS = [];
   // Declared here (not down in @episode-start:hevy-sync where it's used) --
   // saveLog() calls scheduleHevySync() synchronously during the very first
@@ -516,74 +525,33 @@
   // a few past sessions so "history" has a real line to draw (top-set weight)
   const hist = (base, step, reps) => Array.from({length:6}, (_,i) => ({ w: base + i*step, r: reps }));
 
-  // Your program. No exercise library — these are the two sessions you told
-  // me to log (Wednesday / Sunday); the + button still lets you add anything.
-  // Fresh start: history is empty, so the graph and progressive-overload
-  // "conquered" state build up from here rather than fake demo data.
+  // Your real current program, pulled directly from your two most recent
+  // logged sessions (hevy_workouts #42 "Heavy Strength" 8 Jul 2026, #39
+  // "Light Power + Durability" 14 Jun 2026) -- every name/weight/rep target
+  // below is the actual top set you logged, not invented. Names match
+  // hevy_sets.exercise_title exactly, so no reconciliation table is needed
+  // going forward (see the removed HEVY_NAME map). Shorter than the old
+  // ported program on purpose -- this is the real baseline, extend later.
   const SEED = [
-    // Wednesday
-    { name:'Squat',                     tier:1, muscle:'legs',  day:'wed', slot:'wed-squat-trap', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:97.5 },
-    { name:'Trap bar deadlift',         tier:1, muscle:'legs',  day:'wed', slot:'wed-squat-trap', targetSets:3, setLabel:'3-4', targetReps:3, repLabel:'3-5',        weight:0 },
-    { name:'Bulgarian split squat',     tier:2, muscle:'legs',  day:'wed', targetSets:2, setLabel:'2-3', targetReps:5, repLabel:'5 ea',       weight:20, perHand:true },
-    { name:'RDL',                       tier:2, muscle:'legs',  day:'wed', slot:'wed-rdl-nordics', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:60 },
-    { name:'Nordics',                   tier:3, muscle:'legs',  day:'wed', slot:'wed-rdl-nordics', targetSets:2, setLabel:'2-3', targetReps:4, repLabel:'4-6',        weight:0 },
-    { name:'Bench press',               tier:1, muscle:'chest', day:'wed', targetSets:3,                 targetReps:5, repLabel:'5-8',        weight:72.5 },
-    { name:'Pull-ups',                  tier:2, muscle:'back',  day:'wed', targetSets:3,                 targetReps:5, repLabel:'5-8',        weight:5 },
-    { name:'Copenhagen plank',          tier:3, muscle:'core',  day:'wed', targetSets:3,                 targetReps:20, repLabel:'20-30s ea side', weight:0 },
-    { name:'Pallof press',              tier:3, muscle:'core',  day:'wed', targetSets:3,                 targetReps:10, weight:10 },
-    { name:'Box jumps',                 tier:3, muscle:'legs',  day:'wed', targetSets:3,                 targetReps:3, weight:0 },
-    { name:'Pogos',                     tier:3, muscle:'legs',  day:'wed', targetSets:3,                 targetReps:3, weight:0 },
-    { name:'Accelerations',             tier:3, muscle:'legs',  day:'wed', targetSets:3,                 targetReps:1, repLabel:'sprint', unit:'m', weight:0 },
+    // Wednesday -- "Heavy Strength"
+    { name:'Squat (Barbell)',                    tier:1, muscle:'legs',      day:'wed', targetSets:2, targetReps:3, weight:95 },
+    { name:'Dumbbell Step Up',                   tier:2, muscle:'legs',      day:'wed', targetSets:2, targetReps:5, weight:41, perHand:true },
+    { name:'Cable Core Pallof Press',            tier:3, muscle:'core',      day:'wed', targetSets:2, targetReps:10, weight:0 },
+    { name:'Swiss Ball Roll Out',                tier:3, muscle:'core',      day:'wed', targetSets:2, targetReps:6, weight:0 },
+    { name:'Single Leg Standing Calf Raise (Barbell)', tier:3, muscle:'legs', day:'wed', targetSets:2, targetReps:10, weight:75 },
+    { name:'Pull Up (Weighted)',                 tier:2, muscle:'back',      day:'wed', targetSets:2, targetReps:7, repLabel:'7-8', weight:5 },
+    { name:'Incline Bench Press (Barbell)',      tier:1, muscle:'chest',     day:'wed', targetSets:2, targetReps:8, repLabel:'8-9', weight:50 },
 
-    // Sunday
-    { name:'Speed trap bar deadlift',   tier:1, muscle:'legs',      day:'sun', targetSets:5, targetReps:2, repLabel:'2 @ 50-60%',       weight:0 },
-    { name:'Single-leg hip thrust',     tier:2, muscle:'legs',      day:'sun', targetSets:3, targetReps:5, repLabel:'5 ea',             weight:20 },
-    { name:'Copenhagen plank',          tier:3, muscle:'core',      day:'sun', targetSets:3, targetReps:20, repLabel:'20-30s',          weight:0 },
-    { name:'Single-arm landmine press', tier:2, muscle:'shoulders', day:'sun', targetSets:3, targetReps:5, weight:15, perHand:true },
-    { name:'Bent-over row',             tier:1, muscle:'back',      day:'sun', targetSets:3, targetReps:5, weight:50 },
-    { name:'Hip flexor KB hold',        tier:3, muscle:'core',      day:'sun', targetSets:3, targetReps:20, repLabel:'20-30s ea leg',   weight:8 },
-    { name:'Isometric calf raise',      tier:3, muscle:'legs',      day:'sun', targetSets:3, targetReps:30, repLabel:'30-45s',          weight:10 },
-    { name:'Tibialis raises',           tier:3, muscle:'legs',      day:'sun', targetSets:3, targetReps:12, repLabel:'12-15',           weight:0 },
+    // Sunday -- "Light Power + Durability"
+    { name:'Single-Leg Bent-Knee Calf Hold (Dumbbell)', tier:3, muscle:'legs', day:'sun', targetSets:2, targetReps:30, repLabel:'30s', weight:24 },
+    { name:'Swiss Ball Roll Out',                tier:3, muscle:'core',      day:'sun', targetSets:2, targetReps:5, weight:0 },
+    { name:'Speed Trap Bar Pull',                tier:1, muscle:'legs',      day:'sun', targetSets:3, targetReps:3, weight:80 },
+    { name:'Copenhagen Plank',                   tier:3, muscle:'core',      day:'sun', targetSets:2, targetReps:20, repLabel:'20s', weight:0 },
+    { name:'Bent Over Row (Dumbbell)',           tier:1, muscle:'back',      day:'sun', targetSets:2, targetReps:11, repLabel:'11-12', weight:24, perHand:true },
+    { name:'Hip flexed Raise',                   tier:3, muscle:'core',      day:'sun', targetSets:2, targetReps:20, repLabel:'20s', weight:10 },
+    { name:'Tibialis Raises',                    tier:3, muscle:'legs',      day:'sun', targetSets:1, targetReps:25, weight:0 },
+    { name:'Single Arm Landmine Press (Barbell)', tier:2, muscle:'shoulders', day:'sun', targetSets:2, targetReps:5, repLabel:'5-8', weight:28.75, perHand:true },
   ];
-
-  // @episode-start:hevy-name-map
-  // One-time, human-confirmed mapping from this program's exercise names to
-  // the real exercise_title strings already sitting in Supabase's hevy_sets
-  // table (from a one-time Hevy CSV import of James's actual training
-  // history, corrected row-by-row against his real memory of each session).
-  // Deliberately NOT fuzzy-matched at runtime -- e.g. "Hip flexor KB hold"
-  // and "Hip flexed Raise" look unrelated as strings but are the same
-  // movement, which no similarity heuristic would have found safely. A lift
-  // with no entry here (e.g. Accelerations, never logged in Hevy under any
-  // name) just uses its own current `name` -- a clean, if historyless, start.
-  // Two entries resolve dynamically: James's dumbbells top out at 24kg, so a
-  // logged weight above that is real-physically only possible on a barbell.
-  const HEVY_NAME = {
-    'Squat': 'Squat (Barbell)',
-    'Trap bar deadlift': 'Speed Trap Bar Pull',       // same movement as Speed trap bar deadlift below, just Wed's slot-pair entry
-    'Bulgarian split squat': 'Bulgarian Split Squat',
-    'RDL': w => (w > 24 ? 'Single Leg Romanian Deadlift (Barbell)' : 'Single Leg Romanian Deadlift (Dumbbell)'),
-    'Nordics': 'Swiss Ball Roll Out',
-    'Bench press': 'Bench Press (Barbell)',
-    'Pull-ups': 'Pull Up (Weighted)',
-    'Copenhagen plank': 'Copenhagen Plank',
-    'Pallof press': 'Cable Core Pallof Press',
-    'Box jumps': 'Box Jump',
-    'Pogos': 'pogos',
-    'Speed trap bar deadlift': 'Speed Trap Bar Pull',
-    'Single-leg hip thrust': w => (w > 24 ? 'Single Leg Barbel Hip Thrust' : 'Single Leg Hip Thrust (Dumbbell)'),
-    'Single-arm landmine press': 'Single Arm Landmine Press (Barbell)',
-    'Bent-over row': 'Bent Over Row (Dumbbell)',
-    'Hip flexor KB hold': 'Hip flexed Raise',
-    'Isometric calf raise': 'Single-Leg Bent-Knee Calf Hold (Dumbbell)',
-    'Tibialis raises': 'Tibialis Raises',
-  };
-  function exerciseTitleFor(lift, weight){
-    const mapped = HEVY_NAME[lift.name];
-    if (typeof mapped === 'function') return mapped(weight || 0);
-    return mapped || lift.name;
-  }
-  // @episode-end:hevy-name-map
 
   // @episode-start:session-key
   // Which live session (if any) is in progress -- local-only, NOT one of
@@ -1022,58 +990,153 @@
   const pad2 = n => String(n).padStart(2, '0');
   const ymdKey = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   function offsetDate(days){ const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + days); return ymdKey(d); }
-  // turn a lift's history (+ today's logged sets) into a chartable session list
-  function liftSessions(lift){
-    const h = lift.history || [];
-    const sessions = h.map((s, i) => ({
-      date: s.date || offsetDate(-((h.length - i) * 4 + 1)),
-      kg: s.w,
-      sets: s.sets || Array.from({ length: Math.max(1, lift.targetSets) }, () => ({ r: s.r }))
-    }));
+  // @episode-start:real-history
+  // The "history" chip used to only ever read lift.history (local, populated
+  // solely by finishSession()) -- empty for every lift under a freshly-seeded
+  // program, even though months of real training already sit in hevy_sets.
+  // This fetches that real data directly, keyed by lift.name (which IS the
+  // real exercise_title now -- see the removed HEVY_NAME map), and merges
+  // in today's still-in-progress sets as a provisional last point.
+
+  // Isometric holds (Copenhagen Plank, Hip flexed Raise, etc.) have no
+  // separate "duration" input in this app's set row -- James types the hold
+  // time into the same reps field, distinguished only by repLabel ending in
+  // 's' (e.g. '30s'), exactly like the old program already did. Detecting it
+  // this way (rather than a new field) keeps what gets pushed to hevy_sets
+  // consistent with how the imported historical rows for these same lifts
+  // are already shaped (duration_seconds populated, reps null).
+  function isIsometricLift(lift){ return /s$/.test(lift.repLabel || ''); }
+
+  function fmtMetric(v, unit){
+    if (unit === 'kg') return fmtN(v) + ' kg';
+    if (unit === 's') return Math.round(v) + 's';
+    return Math.round(v) + ' reps';
+  }
+
+  // A dead/blocked connection can leave supabase-js retrying internally for
+  // 10s+ before it gives up on its own (measured ~14s against a fully
+  // unreachable host) -- far too long for something the History sheet is
+  // visibly waiting on (unlike the background sync calls, nothing else is
+  // watching those). Race it against a much shorter local timeout instead.
+  function withTimeout(promise, ms, fallback){
+    return Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(fallback), ms))]);
+  }
+
+  // Real sessions for one exercise from hevy_sets, grouped by workout, with
+  // the metric (weight / duration / reps) auto-detected from what's actually
+  // there -- duration wins when present (an isometric hold's whole point is
+  // holding longer, even if it's also weighted), else weight, else reps.
+  async function fetchHevyHistory(name){
+    const supa = hevyClient();
+    if (!supa) return { sessions: [], unit: 'kg' };
+    try {
+      const { data, error } = await withTimeout(
+        supa.from('hevy_sets').select('weight_kg,reps,duration_seconds,hevy_workouts(start_time)').eq('exercise_title', name),
+        6000,
+        { data: null, error: 'timed out' }
+      );
+      if (error || !data || !data.length) return { sessions: [], unit: 'kg' };
+      const unit = data.some(r => r.duration_seconds != null) ? 's'
+        : data.some(r => r.weight_kg != null) ? 'kg' : 'reps';
+      const metricOf = row => unit === 's' ? (row.duration_seconds || 0) : unit === 'kg' ? (row.weight_kg || 0) : (row.reps || 0);
+      const bySession = new Map();
+      data.forEach(row => {
+        const st = row.hevy_workouts && row.hevy_workouts.start_time;
+        if (!st) return;
+        if (!bySession.has(st)) bySession.set(st, []);
+        bySession.get(st).push(row);
+      });
+      const sessions = [...bySession.entries()]
+        .map(([start_time, rows]) => ({ date: new Date(start_time), val: Math.max(...rows.map(metricOf)) }))
+        .sort((a, b) => a.date - b.date);
+      return { sessions, unit };
+    } catch(e){ return { sessions: [], unit: 'kg' }; }
+  }
+
+  // Real history + today's provisional in-progress sets, merged into one
+  // chartable list. Skips appending today if a real session dated today is
+  // already fetched (avoids an obvious duplicate point once synced).
+  async function liftSessions(lift){
+    const real = await fetchHevyHistory(lift.name);
+    const sessions = real.sessions.slice();
+    let unit = real.unit;
     const logged = lift.sets.filter(s => s.done || s.failed);
     if (logged.length){
-      const top = lift.sets.filter(s => s.done && !s.failed);
-      sessions.push({
-        date: offsetDate(0),
-        kg: top.length ? Math.max(...top.map(s => s.weight)) : lift.weight,
-        sets: logged.map(s => ({ r: s.reps || 0, fail: !!s.failed }))
-      });
+      const todayYmd = offsetDate(0);
+      const alreadyToday = sessions.length && ymdKey(sessions[sessions.length - 1].date) === todayYmd;
+      if (!alreadyToday){
+        if (!sessions.length) unit = isIsometricLift(lift) ? 's' : 'kg';
+        const top = lift.sets.filter(s => s.done && !s.failed);
+        const val = unit === 'kg'
+          ? (top.length ? Math.max(...top.map(s => s.weight || 0)) : lift.weight)
+          : (top.length ? Math.max(...top.map(s => s.reps || 0)) : 0);
+        sessions.push({ date: new Date(), val });
+      }
     }
-    return sessions;
+    return { sessions, unit };
   }
+
+  function buildHistoryStats(sessions, unit){
+    if (!sessions.length) return '';
+    const best = Math.max(...sessions.map(s => s.val));
+    const latestStr = sessions[sessions.length - 1].date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return '<div class="sheet-stats">' +
+      '<div class="sheet-stat"><div class="k">Sessions</div><div class="v">' + sessions.length + '</div></div>' +
+      '<div class="sheet-stat"><div class="k">Best</div><div class="v gold">' + fmtMetric(best, unit) + '</div></div>' +
+      '<div class="sheet-stat"><div class="k">Latest</div><div class="v">' + esc(latestStr) + '</div></div>' +
+    '</div>';
+  }
+
   // history opens an inline chart in the same sheet modal everything else
   // uses — no second file to keep in sync, this stays one file as promised.
-  function buildChartSVG(sessions){
+  function buildChartSVG(sessions, unit){
     if (!sessions.length) return '<div class="ov-empty">No sessions logged yet — finish a session to start the graph.</div>';
     const W = 400, H = 140, pad = 12;
-    const vals = sessions.map(s => s.kg);
+    const vals = sessions.map(s => s.val);
     const min = Math.min(...vals), max = Math.max(...vals);
     const range = (max - min) || 1;
     const stepX = sessions.length > 1 ? (W - 2*pad) / (sessions.length - 1) : 0;
     const pts = sessions.map((s, i) => ({
       x: pad + i * stepX,
-      y: H - pad - ((s.kg - min) / range) * (H - 2*pad),
-      kg: s.kg, best: s.kg === max
+      y: H - pad - ((s.val - min) / range) * (H - 2*pad),
+      best: s.val === max
     }));
     const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
     const area = line + ' L' + pts[pts.length-1].x.toFixed(1) + ',' + (H-pad) + ' L' + pts[0].x.toFixed(1) + ',' + (H-pad) + ' Z';
     const dots = pts.map(p => '<circle class="ch-dot' + (p.best ? ' best' : '') + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3.2"></circle>').join('');
-    const delta = sessions[sessions.length-1].kg - sessions[0].kg;
+    const delta = sessions[sessions.length-1].val - sessions[0].val;
+    const deltaStr = (delta >= 0 ? '+' : '-') + fmtMetric(Math.abs(delta), unit);
     const cap = sessions.length > 1
-      ? '<div class="ch-cap">' + (delta >= 0 ? '+' : '') + fmtN(delta) + ' kg since first logged session</div>'
+      ? '<div class="ch-cap">' + deltaStr + ' since first logged session</div>'
       : '<div class="ch-cap">First session logged — the graph grows from here.</div>';
     return '<div class="chart"><svg viewBox="0 0 ' + W + ' ' + H + '"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">' +
       '<stop offset="0%" stop-color="#6EE7B7" stop-opacity="0.35"/><stop offset="100%" stop-color="#6EE7B7" stop-opacity="0"/></linearGradient></defs>' +
       '<line class="ch-grid" x1="0" y1="' + (H-pad) + '" x2="' + W + '" y2="' + (H-pad) + '"/>' +
       '<path class="ch-area" d="' + area + '"/><path class="ch-line" d="' + line + '"/>' + dots + '</svg></div>' + cap;
   }
-  function openOverload(lift){
+
+  // Async: fetches real data, so the sheet opens with a loading state first
+  // and repaints once resolved (same re-openSheet idiom Tune already uses on
+  // every stepper tap). Guarded against a stale response landing after the
+  // sheet was closed or a different lift's history was opened in the meantime.
+  let overloadRequestId = 0;
+  async function openOverload(lift){
+    const myId = ++overloadRequestId;
     openSheet(
       '<div class="sheet-eyebrow">History</div>' +
       '<div class="sheet-title">' + esc(lift.name) + '</div>' +
-      buildChartSVG(liftSessions(lift))
+      '<div class="ov-empty">Loading your real history…</div>'
+    );
+    const { sessions, unit } = await liftSessions(lift);
+    if (myId !== overloadRequestId || !modal.classList.contains('on')) return;
+    openSheet(
+      '<div class="sheet-eyebrow">History</div>' +
+      '<div class="sheet-title">' + esc(lift.name) + '</div>' +
+      buildHistoryStats(sessions, unit) +
+      buildChartSVG(sessions, unit)
     );
   }
+  // @episode-end:real-history
 
   // @episode-start:overload-card
   // The ★ overload card — 1:1 with the app's OverloadModal. Tap the ★ (before any
@@ -1288,16 +1351,19 @@
     if (!session || !session.workoutId) return;
     const rows = [];
     visibleLifts().forEach(lift => {
+      const isometric = isIsometricLift(lift);
       lift.sets.forEach((set, i) => {
         if (!set.done && !set.failed) return;
+        const loggedVal = set.failed ? null : set.reps;
         rows.push({
           client_id: hevySetClientId(session.clientId, lift, i),
           workout_id: session.workoutId,
-          exercise_title: exerciseTitleFor(lift, set.weight),
+          exercise_title: lift.name,
           set_index: i,
           set_type: 'normal',
           weight_kg: set.weight,
-          reps: set.failed ? null : set.reps,
+          reps: isometric ? null : loggedVal,
+          duration_seconds: isometric ? loggedVal : null,
           is_backfilled: false,
         });
       });
@@ -1330,6 +1396,42 @@
     clearSession();
     stopSessionClock();
   }
+
+  // Abort an in-progress session: a real, permanent delete, not a "finish
+  // with nothing logged." hevy_sets.workout_id has no ON DELETE CASCADE
+  // (checked the original schema -- it's plain NO ACTION), so sets must be
+  // deleted BEFORE the workout row or Postgres rejects the workout delete
+  // with a foreign-key violation. Also resets the local cards so aborting
+  // really means "this session never happened," not just "stop tracking it."
+  async function cancelSession(){
+    const s = loadSession();
+    if (!s) return;
+    clearTimeout(hevySyncTimer); // a queued push must not recreate rows we're about to delete
+    const supa = hevyClient();
+    if (supa && s.workoutId){
+      try {
+        await supa.from('hevy_sets').delete().eq('workout_id', s.workoutId);
+        await supa.from('hevy_workouts').delete().eq('id', s.workoutId);
+      } catch(e){}
+    }
+    clearSession();
+    stopSessionClock();
+    stopRestTimer();
+    LIFTS.forEach(lift => { lift.sets = blankSets(lift.targetSets); });
+    saveLog(); render();
+  }
+
+  function confirmCancelSession(){
+    if (!loadSession()) return;
+    openSheet(
+      '<div class="sheet-eyebrow">Cancel session</div>' +
+      '<div class="sheet-title">Abort this session?</div>' +
+      '<div class="sheet-sub">This deletes everything logged in this session from Supabase and clears it on this device. It can’t be undone.</div>' +
+      '<div class="card-foot"><button class="btn-ghost" data-act="back">never mind</button><button class="btn-mint btn-danger" data-act="confirm">Yes, delete it</button></div>'
+    );
+    sheet.querySelector('[data-act="back"]').onclick = closeSheet;
+    sheet.querySelector('[data-act="confirm"]').onclick = () => { closeSheet(); cancelSession(); };
+  }
   // @episode-end:hevy-sync
 
   // @episode-start:timers
@@ -1349,11 +1451,15 @@
     const tick = () => { if (el){ el.textContent = fmtElapsed(Date.now() - Date.parse(startAt)); el.classList.add('live'); } };
     tick();
     sessionClockTimer = setInterval(tick, 1000);
+    const cancelLink = document.getElementById('cancelSessionLink');
+    if (cancelLink) cancelLink.classList.add('on');
   }
   function stopSessionClock(){
     clearInterval(sessionClockTimer); sessionClockTimer = null;
     const el = document.getElementById('sessionClock');
     if (el){ el.textContent = ''; el.classList.remove('live'); }
+    const cancelLink = document.getElementById('cancelSessionLink');
+    if (cancelLink) cancelLink.classList.remove('on');
   }
 
   // Rest timer: one global countdown (not per-lift -- this program has no
@@ -1382,6 +1488,8 @@
   }
   const restSkipBtn = document.getElementById('restSkip');
   if (restSkipBtn) restSkipBtn.onclick = stopRestTimer;
+  const cancelSessionBtn = document.getElementById('cancelSessionLink');
+  if (cancelSessionBtn) cancelSessionBtn.onclick = confirmCancelSession;
   // @episode-end:timers
 
   // ── finish session: today's logged sets become a saved session, the graph
