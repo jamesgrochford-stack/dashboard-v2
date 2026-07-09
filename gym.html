@@ -369,6 +369,22 @@
   /* ── finish toast: a calm on-brand confirmation (replaces the old overlay) ── */
   .finish-cap.saved{color:var(--mint-cool);animation:savedPulse 1.8s var(--ease)}
   @keyframes savedPulse{0%{opacity:.4;transform:translateY(3px)}18%{opacity:1;transform:none}100%{opacity:1}}
+
+  /* ── session elapsed clock: ticks from the first logged set to Finish ── */
+  .sessionClock{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--muted);min-height:15px;font-variant-numeric:tabular-nums}
+  .sessionClock.live{color:var(--mint-cool)}
+
+  /* ── rest timer: one global countdown after any hit/miss, Hevy-style ── */
+  .restBar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(160%);z-index:60;
+    display:flex;align-items:center;gap:13px;background:#0a0f0c;border:1px solid rgba(110,231,183,.35);
+    border-radius:999px;padding:10px 10px 10px 18px;box-shadow:0 16px 44px rgba(0,0,0,.55);
+    transition:transform .32s var(--spring);max-width:92vw}
+  .restBar.on{transform:translateX(-50%) translateY(0)}
+  .restLabel{font-family:var(--serif);font-style:italic;color:var(--muted-strong);font-size:14px;white-space:nowrap}
+  .restTime{font-family:var(--mono);font-size:18px;color:var(--mint-cool);font-variant-numeric:tabular-nums;min-width:3.6ch;text-align:center}
+  .restSkip{background:rgba(110,231,183,.1);border:1px solid rgba(110,231,183,.3);color:var(--mint);
+    font-family:var(--sans);font-weight:600;font-size:12px;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:border-color .2s,background .2s}
+  .restSkip:hover{border-color:var(--mint);background:rgba(110,231,183,.16)}
 </style>
 </head>
 <body>
@@ -389,6 +405,7 @@
   <div id="list"></div>
 
   <div class="finish-wrap" id="finishWrap">
+    <div class="sessionClock" id="sessionClock"></div>
     <button class="finish" id="finishBtn"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg> Finish session</button>
     <div class="finish-cap" id="finishCap"></div>
   </div>
@@ -409,6 +426,7 @@
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
 <div class="po-modal" id="poModal"><div class="po-card" id="poCard"></div></div>
+<div class="restBar" id="restBar"><span class="restLabel">Rest</span><span class="restTime" id="restTime">0:00</span><button class="restSkip" id="restSkip" type="button">skip</button></div>
 
 <script>
   // ====================================================================
@@ -456,6 +474,13 @@
   // otherwise an old push from before this fix would silently win a sync.
   const SEED_VERSION = 2;
   let LIFTS = [];
+  // Declared here (not down in @episode-start:hevy-sync where it's used) --
+  // saveLog() calls scheduleHevySync() synchronously during the very first
+  // loadLog(), which runs long before the script reaches that block, and a
+  // `let` referenced before its own declaration line throws (temporal dead
+  // zone), not just returns undefined. Learned this the hard way: it silently
+  // aborted the whole script, so nothing rendered at all.
+  let hevySyncTimer = null;
   function loadLog(){
     try {
       const raw = localStorage.getItem(STORE);
@@ -470,7 +495,10 @@
     saveLog();
     return LIFTS;
   }
-  function saveLog(){ try { localStorage.setItem(STORE, JSON.stringify({ seedVersion: SEED_VERSION, lifts: LIFTS })); } catch(e){} }
+  function saveLog(){
+    try { localStorage.setItem(STORE, JSON.stringify({ seedVersion: SEED_VERSION, lifts: LIFTS })); } catch(e){}
+    if (typeof scheduleHevySync === 'function') scheduleHevySync();
+  }
   function getLift(id){ return LIFTS.find(l => l.id === id); }
   function updateLift(id, patch){
     const lift = getLift(id); if (!lift) return;
@@ -517,6 +545,58 @@
     { name:'Isometric calf raise',      tier:3, muscle:'legs',      day:'sun', targetSets:3, targetReps:30, repLabel:'30-45s',          weight:10 },
     { name:'Tibialis raises',           tier:3, muscle:'legs',      day:'sun', targetSets:3, targetReps:12, repLabel:'12-15',           weight:0 },
   ];
+
+  // @episode-start:hevy-name-map
+  // One-time, human-confirmed mapping from this program's exercise names to
+  // the real exercise_title strings already sitting in Supabase's hevy_sets
+  // table (from a one-time Hevy CSV import of James's actual training
+  // history, corrected row-by-row against his real memory of each session).
+  // Deliberately NOT fuzzy-matched at runtime -- e.g. "Hip flexor KB hold"
+  // and "Hip flexed Raise" look unrelated as strings but are the same
+  // movement, which no similarity heuristic would have found safely. A lift
+  // with no entry here (e.g. Accelerations, never logged in Hevy under any
+  // name) just uses its own current `name` -- a clean, if historyless, start.
+  // Two entries resolve dynamically: James's dumbbells top out at 24kg, so a
+  // logged weight above that is real-physically only possible on a barbell.
+  const HEVY_NAME = {
+    'Squat': 'Squat (Barbell)',
+    'Trap bar deadlift': 'Speed Trap Bar Pull',       // same movement as Speed trap bar deadlift below, just Wed's slot-pair entry
+    'Bulgarian split squat': 'Bulgarian Split Squat',
+    'RDL': w => (w > 24 ? 'Single Leg Romanian Deadlift (Barbell)' : 'Single Leg Romanian Deadlift (Dumbbell)'),
+    'Nordics': 'Swiss Ball Roll Out',
+    'Bench press': 'Bench Press (Barbell)',
+    'Pull-ups': 'Pull Up (Weighted)',
+    'Copenhagen plank': 'Copenhagen Plank',
+    'Pallof press': 'Cable Core Pallof Press',
+    'Box jumps': 'Box Jump',
+    'Pogos': 'pogos',
+    'Speed trap bar deadlift': 'Speed Trap Bar Pull',
+    'Single-leg hip thrust': w => (w > 24 ? 'Single Leg Barbel Hip Thrust' : 'Single Leg Hip Thrust (Dumbbell)'),
+    'Single-arm landmine press': 'Single Arm Landmine Press (Barbell)',
+    'Bent-over row': 'Bent Over Row (Dumbbell)',
+    'Hip flexor KB hold': 'Hip flexed Raise',
+    'Isometric calf raise': 'Single-Leg Bent-Knee Calf Hold (Dumbbell)',
+    'Tibialis raises': 'Tibialis Raises',
+  };
+  function exerciseTitleFor(lift, weight){
+    const mapped = HEVY_NAME[lift.name];
+    if (typeof mapped === 'function') return mapped(weight || 0);
+    return mapped || lift.name;
+  }
+  // @episode-end:hevy-name-map
+
+  // @episode-start:session-key
+  // Which live session (if any) is in progress -- local-only, NOT one of
+  // sync.js's syncedKeys. Unlike vitality.logger.v3 (the actual lift data,
+  // worth syncing across devices), a session is inherently single-device,
+  // single-sitting: you don't start a workout on your phone and finish it on
+  // a laptop. Survives a reload (so the elapsed clock resumes correctly
+  // instead of resetting to zero), cleared once Finish session completes.
+  const SESSION_KEY = 'vitality.logger.session.v1';
+  function loadSession(){ try { const raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
+  function saveSession(s){ try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch(e){} }
+  function clearSession(){ try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
+  // @episode-end:session-key
 
   const DAY_KEY = 'vitality.logger.day.v1';
   function loadDay(){
@@ -732,16 +812,17 @@
       if (!isFinite(rv) || rv <= 0 || rv > 100) return;
       set.weight = wv; set.reps = rv; set.done = true; set.failed = false;
       saveLog(); render();  // render() fires the on-card gold burst if this lift just got conquered
+      startRestTimer(lift.rest || 150);
     };
     if (logged){
       const word = statusWord(lift, set, kind);
       group.innerHTML = '<span class="pillStatus">' + (kind==='over' ? '<span class="pillPr">&#9733; </span>' : '') + word + '</span>' +
         '<button class="pillReset" title="Reset this set"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5 A4 4 0 1 0 5.5 2.5"/><polyline points="2 2 3.5 5.5 7 4.5"/></svg></button>';
-      group.querySelector('.pillReset').onclick = () => { set.done=false; set.failed=false; set.weight=null; set.reps=null; saveLog(); render(); };
+      group.querySelector('.pillReset').onclick = () => { deleteHevySet(lift, i); set.done=false; set.failed=false; set.weight=null; set.reps=null; saveLog(); render(); };
     } else {
       group.innerHTML = '<button class="pillHit">hit it &rarr;</button><button class="pillMiss">miss</button>';
       group.querySelector('.pillHit').onclick = commit;
-      group.querySelector('.pillMiss').onclick = () => { set.failed=true; set.done=false; saveLog(); render(); };
+      group.querySelector('.pillMiss').onclick = () => { set.failed=true; set.done=false; saveLog(); render(); startRestTimer(lift.rest || 150); };
     }
     wIn.onkeydown = rIn.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); commit(); } };
     return row;
@@ -1160,9 +1241,156 @@
   }
   // @episode-end:overload-celebrate
 
+  // @episode-start:hevy-sync
+  // Reconnects this logger to the SAME hevy_workouts/hevy_sets tables the
+  // imported Hevy history lives in (not a separate table). vitality.logger.v3
+  // + sync.js's app_state mirror keep working exactly as before, untouched --
+  // that stays the offline-resilience fallback. This is a second, additive,
+  // isolated write path: DOM updates instantly (unchanged), this pushes to
+  // Supabase in the background, same idiom as everywhere else in the app.
+  const HEVY_SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
+  const HEVY_SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  let hevySupa = null;
+  function hevyClient(){
+    if (!hevySupa && typeof window !== 'undefined' && window.supabase) hevySupa = window.supabase.createClient(HEVY_SUPABASE_URL, HEVY_SUPABASE_KEY);
+    return hevySupa;
+  }
+
+  function hevySetClientId(sessionClientId, lift, i){ return sessionClientId + '-' + lift.id + '-' + i; }
+
+  // Creates (once per session) or reuses the hevy_workouts row for today's
+  // in-progress session, keyed by a locally-generated client_id so repeated
+  // background pushes upsert the SAME row instead of duplicating it.
+  async function ensureSessionRow(){
+    let s = loadSession();
+    if (s && s.workoutId) return s;
+    const supa = hevyClient(); if (!supa) return null;
+    if (!s){
+      s = { clientId: 'gym-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), day: currentDay, startAt: new Date().toISOString(), workoutId: null };
+      saveSession(s);
+      startSessionClock(s.startAt);
+    }
+    try {
+      const { data, error } = await supa.from('hevy_workouts')
+        .upsert({ client_id: s.clientId, title: s.day === 'sun' ? 'Sunday' : 'Wednesday', start_time: s.startAt, end_time: null }, { onConflict: 'client_id' })
+        .select('id').single();
+      if (!error && data){ s.workoutId = data.id; saveSession(s); }
+    } catch(e){}
+    return s;
+  }
+
+  function scheduleHevySync(){ clearTimeout(hevySyncTimer); hevySyncTimer = setTimeout(pushHevySync, 250); }
+
+  async function pushHevySync(){
+    const anyLogged = LIFTS.some(l => l.sets.some(x => x.done || x.failed));
+    if (!anyLogged) return;
+    const session = await ensureSessionRow();
+    if (!session || !session.workoutId) return;
+    const rows = [];
+    visibleLifts().forEach(lift => {
+      lift.sets.forEach((set, i) => {
+        if (!set.done && !set.failed) return;
+        rows.push({
+          client_id: hevySetClientId(session.clientId, lift, i),
+          workout_id: session.workoutId,
+          exercise_title: exerciseTitleFor(lift, set.weight),
+          set_index: i,
+          set_type: 'normal',
+          weight_kg: set.weight,
+          reps: set.failed ? null : set.reps,
+          is_backfilled: false,
+        });
+      });
+    });
+    if (!rows.length) return;
+    const supa = hevyClient(); if (!supa) return;
+    try { await supa.from('hevy_sets').upsert(rows, { onConflict: 'client_id' }); } catch(e){}
+  }
+
+  // Resetting a logged set (the pillReset button) needs to remove its
+  // already-pushed hevy_sets row too, not just wait for the next debounced
+  // push -- pushHevySync only ever sends CURRENTLY-logged sets, so a reset
+  // set would otherwise leave a stale row behind forever.
+  async function deleteHevySet(lift, i){
+    const s = loadSession(); if (!s) return;
+    const supa = hevyClient(); if (!supa) return;
+    try { await supa.from('hevy_sets').delete().eq('client_id', hevySetClientId(s.clientId, lift, i)); } catch(e){}
+  }
+
+  // Finish session: stamp end_time on the same row and clear the local
+  // pointer so the next logged set starts a brand-new session/row. A session
+  // left open overnight (browser closed mid-workout, never Finished) is left
+  // as end_time = null in Supabase -- harmless, and a fresh session starts
+  // regardless the next time a set is logged.
+  async function finalizeHevySession(){
+    const s = loadSession();
+    if (!s || !s.workoutId){ clearSession(); stopSessionClock(); return; }
+    const supa = hevyClient();
+    if (supa){ try { await supa.from('hevy_workouts').update({ end_time: new Date().toISOString() }).eq('id', s.workoutId); } catch(e){} }
+    clearSession();
+    stopSessionClock();
+  }
+  // @episode-end:hevy-sync
+
+  // @episode-start:timers
+  // Session elapsed clock: starts on the first logged set, ticks every
+  // second, and survives a reload (the START TIMESTAMP is what's persisted,
+  // not a running count) so closing the tab mid-workout and coming back
+  // doesn't reset it to zero.
+  let sessionClockTimer = null;
+  function fmtElapsed(ms){
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    return (h > 0 ? h + ':' + pad2(m) : String(m)) + ':' + pad2(s);
+  }
+  function startSessionClock(startAt){
+    stopSessionClock();
+    const el = document.getElementById('sessionClock');
+    const tick = () => { if (el){ el.textContent = fmtElapsed(Date.now() - Date.parse(startAt)); el.classList.add('live'); } };
+    tick();
+    sessionClockTimer = setInterval(tick, 1000);
+  }
+  function stopSessionClock(){
+    clearInterval(sessionClockTimer); sessionClockTimer = null;
+    const el = document.getElementById('sessionClock');
+    if (el){ el.textContent = ''; el.classList.remove('live'); }
+  }
+
+  // Rest timer: one global countdown (not per-lift -- this program has no
+  // supersets, and Hevy itself only ever runs one at a time), (re)started by
+  // every hit/miss tap, duration from that lift's own `rest` field (already
+  // existed, was purely decorative until now). Deliberately NOT persisted --
+  // a reload just drops it, unlike the session clock above which is real data.
+  let restTimer = null, restDeadline = 0;
+  function startRestTimer(seconds){
+    clearInterval(restTimer);
+    restDeadline = Date.now() + Math.max(1, seconds) * 1000;
+    const bar = document.getElementById('restBar');
+    const timeEl = document.getElementById('restTime');
+    if (bar) bar.classList.add('on');
+    const tick = () => {
+      const left = Math.round((restDeadline - Date.now()) / 1000);
+      if (left <= 0){ stopRestTimer(); return; }
+      if (timeEl) timeEl.textContent = Math.floor(left/60) + ':' + pad2(left%60);
+    };
+    tick();
+    restTimer = setInterval(tick, 250);
+  }
+  function stopRestTimer(){
+    clearInterval(restTimer); restTimer = null;
+    const bar = document.getElementById('restBar'); if (bar) bar.classList.remove('on');
+  }
+  const restSkipBtn = document.getElementById('restSkip');
+  if (restSkipBtn) restSkipBtn.onclick = stopRestTimer;
+  // @episode-end:timers
+
   // ── finish session: today's logged sets become a saved session, the graph
   //    grows, and the rows reset for next time. This is the loop made whole. ──
-  function finishSession(){
+  async function finishSession(){
+    const hasLogged = visibleLifts().some(lift => lift.sets.some(s => s.done || s.failed));
+    if (!hasLogged) return;
+    clearTimeout(hevySyncTimer);
+    await pushHevySync();  // flush this session's final sets before we blank them below
     let lifts = 0, totalSets = 0;
     visibleLifts().forEach(lift => {
       const logged = lift.sets.filter(s => s.done || s.failed);
@@ -1183,6 +1411,8 @@
     const cap = document.getElementById('finishCap');
     cap.textContent = 'Session saved · ' + totalSets + ' set' + (totalSets > 1 ? 's' : '') + ' now on your graph';
     cap.classList.remove('saved'); void cap.offsetWidth; cap.classList.add('saved');
+    await finalizeHevySession();
+    stopRestTimer();
   }
   const finishBtn = document.getElementById('finishBtn');
   finishBtn.onclick = finishSession;
@@ -1231,6 +1461,13 @@
 
   conqueredPrev = currentConquered();  // lifts already conquered from saved state shouldn't burst on load
   render();
+
+  // Resume the elapsed clock if a session was already in progress when this
+  // page loaded (e.g. the tab was closed mid-workout and reopened).
+  (function resumeSession(){
+    const s = loadSession();
+    if (s && s.startAt) startSessionClock(s.startAt);
+  })();
 </script>
 
 <script>
