@@ -64,8 +64,9 @@
   .glyph{flex:none;width:20px;height:20px;color:var(--mint);opacity:.8;display:grid;place-items:center;cursor:grab;touch-action:none}
   .lift.dragging .glyph{cursor:grabbing}
   .glyph svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-  .lift-name{font-family:var(--serif);font-size:28px;line-height:1;letter-spacing:-.01em;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lift-name{font-family:var(--serif);font-size:28px;line-height:1.15;letter-spacing:-.01em;min-width:0;
+    flex:1 1 auto;white-space:normal;overflow-wrap:break-word}
+  .lift-name.long{font-size:21px}
   .info{flex:none;width:18px;height:18px;border:1px solid rgba(110,231,183,.4);color:var(--mint);border-radius:50%;
     font-family:var(--serif);font-style:italic;font-size:11px;display:grid;place-items:center;cursor:pointer;opacity:.8;transition:opacity .2s,background .2s}
   .info:hover{opacity:1;background:rgba(110,231,183,.08)}
@@ -527,7 +528,7 @@
   // WITH the saved payload (not a separate key) so the check still catches a
   // stale copy pulled down from Supabase, not just a stale local cache —
   // otherwise an old push from before this fix would silently win a sync.
-  const SEED_VERSION = 4;
+  const SEED_VERSION = 5;
   let LIFTS = [];
   // Declared here (not down in @episode-start:hevy-sync where it's used) --
   // saveLog() calls scheduleHevySync() synchronously during the very first
@@ -591,21 +592,22 @@
     { name:'Bulgarian Split Squat',               tier:2, muscle:'legs',      day:'wed', slot:'wed-legs-accessory', targetSets:2, targetReps:5, repLabel:'5 ea', weight:48, perHand:true },
     { name:'Dumbbell Step Up',                   tier:2, muscle:'legs',      day:'wed', slot:'wed-legs-accessory', targetSets:2, targetReps:5, weight:41, perHand:true },
     { name:'RDL',                                 tier:2, muscle:'legs',      day:'wed', slot:'wed-rdl-ball', targetSets:3, targetReps:5, weight:57.5 },
-    { name:'Swiss Ball Roll Out',                tier:3, muscle:'legs',      day:'wed', slot:'wed-rdl-ball', targetSets:2, targetReps:6, weight:0 },
-    { name:'Cable Core Pallof Press',            tier:3, muscle:'core',      day:'wed', targetSets:2, targetReps:10, weight:0 },
+    { name:'Swiss Ball Roll Out',                tier:3, muscle:'legs',      day:'wed', slot:'wed-rdl-ball', targetSets:2, targetReps:6, weight:0, bodyweight:true },
+    { name:'Pallof Press',                        tier:3, muscle:'core',      day:'wed', slot:'wed-core-rotation', targetSets:2, targetReps:10, weight:0, bodyweight:true },
+    { name:'Landmine 180',                       tier:2, muscle:'core',      day:'wed', slot:'wed-core-rotation', targetSets:2, targetReps:10, weight:37.5 },
     { name:'Single Leg Standing Calf Raise (Barbell)', tier:3, muscle:'legs', day:'wed', targetSets:2, targetReps:10, weight:75 },
     { name:'Pull Up (Weighted)',                 tier:2, muscle:'back',      day:'wed', targetSets:2, targetReps:7, repLabel:'7-8', weight:5 },
     { name:'Incline Bench Press (Barbell)',      tier:1, muscle:'chest',     day:'wed', targetSets:2, targetReps:8, repLabel:'8-9', weight:50 },
 
     // Sunday -- "Light Power + Durability"
     { name:'Speed Trap Bar Pull',                tier:1, muscle:'legs',      day:'sun', targetSets:3, targetReps:3, weight:80 },
-    { name:'Copenhagen Plank',                   tier:3, muscle:'core',      day:'sun', targetSets:2, targetReps:20, repLabel:'20s', weight:0 },
-    { name:'Swiss Ball Roll Out',                tier:3, muscle:'legs',      day:'sun', targetSets:2, targetReps:5, weight:0 },
+    { name:'Copenhagen Plank',                   tier:3, muscle:'core',      day:'sun', targetSets:2, targetReps:20, repLabel:'20s', weight:0, bodyweight:true },
+    { name:'Swiss Ball Roll Out',                tier:3, muscle:'legs',      day:'sun', targetSets:2, targetReps:5, weight:0, bodyweight:true },
     { name:'Single Arm Landmine Press (Barbell)', tier:2, muscle:'shoulders', day:'sun', targetSets:2, targetReps:5, repLabel:'5-8', weight:28.75, perHand:true },
     { name:'Bent Over Row (Dumbbell)',           tier:1, muscle:'back',      day:'sun', targetSets:2, targetReps:11, repLabel:'11-12', weight:24, perHand:true },
     { name:'Hip flexed Raise',                   tier:3, muscle:'core',      day:'sun', targetSets:2, targetReps:20, repLabel:'20s', weight:10 },
     { name:'Single-Leg Bent-Knee Calf Hold (Dumbbell)', tier:3, muscle:'legs', day:'sun', targetSets:2, targetReps:30, repLabel:'30s', weight:24 },
-    { name:'Tibialis Raises',                    tier:3, muscle:'legs',      day:'sun', targetSets:2, targetReps:25, weight:0 },
+    { name:'Tibialis Raises',                    tier:3, muscle:'legs',      day:'sun', targetSets:2, targetReps:25, weight:0, bodyweight:true },
   ];
 
   // @episode-start:session-key
@@ -758,17 +760,23 @@
     // slot pair (e.g. Squat / Trap bar deadlift) — the other variant, if any,
     // gets a small toggle so James can flip which one is showing today.
     const slotOther = lift.slot ? LIFTS.find(l => l.slot === lift.slot && l.day === lift.day && l !== lift) : null;
+    // Long, equipment-qualified real names (e.g. "Single-Leg Bent-Knee Calf
+    // Hold (Dumbbell)") are never shortened -- the parenthetical matters for
+    // matching real hevy_sets history -- so past a length that clips at
+    // mobile width, drop to a smaller size and let it wrap to 2 lines instead.
+    const nameCls = 'lift-name' + (lift.name.length > 28 ? ' long' : '');
+    const metaWeight = lift.bodyweight ? '' : (' &middot; last ' + lift.weight + ' ' + unit);
     el.innerHTML =
       '<div class="lift-head">' +
         '<span class="glyph" title="Drag to reorder">' + SVG(GLYPH[lift.muscle] || GLYPH.chest) + '</span>' +
-        '<span class="lift-name">' + esc(lift.name) + '</span>' +
+        '<span class="' + nameCls + '">' + esc(lift.name) + '</span>' +
         '<span class="info" title="About this lift">i</span>' +
         (conquered ? '<span class="conqueredStar" title="Progressive overload conquered">' + SVG(ICON.star) + '</span>' : '') +
         (slotOther ? '<button class="slotToggle" data-act="slotToggle" title="Switch to ' + esc(slotOther.name) + '">' + SVG(ICON.swap) + esc(slotOther.name) + '</button>' : '') +
         '<span class="sp"></span>' +
         '<button class="lift-x" title="Remove (kept, never deleted)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
       '</div>' +
-      '<div class="lift-meta"><span class="tierchip">TIER ' + lift.tier + '</span> &middot; <b>' + setsDisplay + ' &times; ' + repsDisplay + '</b> &middot; last ' + lift.weight + ' ' + unit + '</div>' +
+      '<div class="lift-meta"><span class="tierchip">TIER ' + lift.tier + '</span> &middot; <b>' + setsDisplay + ' &times; ' + repsDisplay + '</b>' + metaWeight + '</div>' +
       '<div class="chips">' +
         '<button class="chip" data-act="swap">' + SVG(ICON.swap) + 'swap</button>' +
         '<button class="chip" data-act="history">' + SVG(ICON.history) + 'history</button>' +
@@ -811,29 +819,39 @@
     const roman = ['i','ii','iii','iv','v','vi','vii','viii','ix','x'][i] || (i+1);
     const row = document.createElement('div');
     row.className = 'pill ' + kind;
+    // Only show the fields that actually mean something for this exercise:
+    // no weight input at all for genuinely bodyweight moves (lift.bodyweight),
+    // and the second number is labeled/suffixed as seconds, not reps, for
+    // isometric holds -- whether or not that same lift also has real weight
+    // (e.g. Hip flexed Raise: weight AND time, never weight AND "reps").
+    const isometric = isIsometricLift(lift);
+    const weightHtml = lift.bodyweight ? '' :
+      '<input class="pillInput" type="text" inputmode="decimal" value="' + w + '" aria-label="weight">' +
+      '<span class="pillUnit">' + unit + '</span>' +
+      '<span class="pillTimes">&times;</span>';
+    const secondHtml =
+      '<input class="pillInput" type="text" inputmode="numeric" value="' + r + '" aria-label="' + (isometric ? 'seconds' : 'reps') + '">' +
+      (isometric ? '<span class="pillUnit">s</span>' : '');
     row.innerHTML =
       '<span class="pillIdx">' + roman + '</span>' +
-      '<span class="pillValue">' +
-        '<input class="pillInput" type="text" inputmode="decimal" value="' + w + '" aria-label="weight">' +
-        '<span class="pillUnit">' + unit + '</span>' +
-        '<span class="pillTimes">&times;</span>' +
-        '<input class="pillInput" type="text" inputmode="numeric" value="' + r + '" aria-label="reps">' +
-      '</span>' +
+      '<span class="pillValue">' + weightHtml + secondHtml + '</span>' +
       '<span class="pillSpacer"></span>' +
       '<div class="pillGroup"></div>';
-    const [wIn, rIn] = row.querySelectorAll('.pillInput');
+    const inputs = row.querySelectorAll('.pillInput');
+    const wIn = lift.bodyweight ? null : inputs[0];
+    const rIn = lift.bodyweight ? inputs[0] : inputs[1];
     // cross-browser auto-width: field-sizing covers modern browsers, the size
     // attribute (text inputs) covers Safari so "32.5" never clips to "32."
     const fit = el => el.setAttribute('size', Math.max(1, el.value.length));
-    fit(wIn); fit(rIn);
-    wIn.addEventListener('input', () => fit(wIn));
-    rIn.addEventListener('input', () => fit(rIn));
+    if (wIn){ fit(wIn); wIn.addEventListener('input', () => fit(wIn)); }
+    fit(rIn); rIn.addEventListener('input', () => fit(rIn));
     const group = row.querySelector('.pillGroup');
     const commit = () => {
-      const wv = parseFloat(wIn.value), rv = Math.round(parseFloat(rIn.value));
-      if (!isFinite(wv) || wv < 0 || wv > 1000) return;
+      const wv = wIn ? parseFloat(wIn.value) : null;
+      if (wIn && (!isFinite(wv) || wv < 0 || wv > 1000)) return;
+      const rv = Math.round(parseFloat(rIn.value));
       if (!isFinite(rv) || rv <= 0 || rv > 100) return;
-      set.weight = wv; set.reps = rv; set.done = true; set.failed = false;
+      set.weight = wIn ? wv : null; set.reps = rv; set.done = true; set.failed = false;
       saveLog(); render();  // render() fires the on-card gold burst if this lift just got conquered
       startRestTimer(lift.rest || 150, lift.name);
     };
@@ -847,7 +865,9 @@
       group.querySelector('.pillHit').onclick = commit;
       group.querySelector('.pillMiss').onclick = () => { set.failed=true; set.done=false; saveLog(); render(); startRestTimer(lift.rest || 150, lift.name); };
     }
-    wIn.onkeydown = rIn.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); commit(); } };
+    const onEnter = e => { if (e.key === 'Enter'){ e.preventDefault(); commit(); } };
+    if (wIn) wIn.onkeydown = onEnter;
+    rIn.onkeydown = onEnter;
     return row;
   }
   // @episode-end:set-row
@@ -945,13 +965,30 @@
     const unit = lift.unit || (lift.perHand ? 'kg/ea' : 'kg');
     const setsDisplay = lift.setLabel || lift.targetSets;
     const repsDisplay = lift.repLabel || lift.targetReps;
+    const isometric = isIsometricLift(lift);
+    // 4 phrasings matching the exercise's actual shape -- a bodyweight lift has
+    // no weight to "go heavier" than, and an isometric hold is about time, not reps.
+    let sub, lastStat;
+    if (lift.bodyweight && isometric){
+      sub = 'Tier ' + lift.tier + ' lift. To beat your best, hold longer than ' + lift.targetReps + 's.';
+      lastStat = 'N/A';
+    } else if (lift.bodyweight){
+      sub = 'Tier ' + lift.tier + ' lift. To beat your best, hit more than ' + lift.targetReps + ' reps.';
+      lastStat = 'N/A';
+    } else if (isometric){
+      sub = 'Tier ' + lift.tier + ' lift. To beat your best, go heavier than ' + lift.weight + ' ' + unit + ', or hold ' + lift.weight + ' ' + unit + ' for longer than ' + lift.targetReps + 's.';
+      lastStat = lift.weight + ' ' + unit;
+    } else {
+      sub = 'Tier ' + lift.tier + ' lift. To beat your best, go heavier than ' + lift.weight + ' ' + unit + ', or hit ' + lift.weight + ' ' + unit + ' for one more rep than ' + lift.targetReps + '.';
+      lastStat = lift.weight + ' ' + unit;
+    }
     openSheet(
       '<div class="sheet-eyebrow">About this lift</div>' +
       '<div class="sheet-title">' + esc(lift.name) + '</div>' +
-      '<div class="sheet-sub">Tier ' + lift.tier + ' lift. To beat your best, go heavier than ' + lift.weight + ' ' + unit + ', or hit ' + lift.weight + ' ' + unit + ' for one more rep than ' + lift.targetReps + '.</div>' +
+      '<div class="sheet-sub">' + sub + '</div>' +
       '<div class="sheet-stats">' +
         '<div class="sheet-stat"><div class="k">Target</div><div class="v">' + setsDisplay + ' &times; ' + repsDisplay + '</div></div>' +
-        '<div class="sheet-stat"><div class="k">Last</div><div class="v">' + lift.weight + ' ' + unit + '</div></div>' +
+        (lastStat !== 'N/A' ? '<div class="sheet-stat"><div class="k">Last</div><div class="v">' + esc(lastStat) + '</div></div>' : '') +
       '</div>');
   }
 
@@ -1001,6 +1038,7 @@
     const unit = lift.unit || (lift.perHand ? 'kg/ea' : 'kg');
     const muscleLabel = { chest:'Chest', shoulders:'Shoulders', arms:'Arms', legs:'Legs', back:'Back', core:'Core' }[lift.muscle] || 'Lift';
     const DEFAULT_REST = 150;
+    const isometric = isIsometricLift(lift);
     const d = { weight: lift.weight, targetSets: lift.targetSets, targetReps: lift.targetReps, rest: lift.rest ?? DEFAULT_REST };
     const fmtRest = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
     const stepRow = (k, icon, label, val) =>
@@ -1009,14 +1047,17 @@
       '<span class="tune-val">' + val + '</span>' +
       '<button class="tune-step" data-k="' + k + '" data-d="1" aria-label="increase">+</button></span></div>';
     function paint(){
+      // Bodyweight lifts have nothing to tune here -- no weight row at all.
+      const weightRow = lift.bodyweight ? '' :
+        '<div class="tune-row"><span class="tune-left"><span class="tune-ico">' + SVG(ICON.weight) + '</span><span class="tune-lab"><span class="tune-k">Weight</span></span></span>' +
+          '<span class="tune-ctrl"><input class="tune-num" id="tWeight" inputmode="decimal" value="' + fmtN(d.weight) + '"><span class="tune-unit">' + unit + '</span></span></div>';
       openSheet(
         '<div class="sheet-eyebrow">Tune &middot; ' + muscleLabel + '</div>' +
         '<div class="sheet-title">' + esc(lift.name) + '</div>' +
         '<div class="tune">' +
-          '<div class="tune-row"><span class="tune-left"><span class="tune-ico">' + SVG(ICON.weight) + '</span><span class="tune-lab"><span class="tune-k">Weight</span></span></span>' +
-            '<span class="tune-ctrl"><input class="tune-num" id="tWeight" inputmode="decimal" value="' + fmtN(d.weight) + '"><span class="tune-unit">' + unit + '</span></span></div>' +
+          weightRow +
           stepRow('sets', ICON.sets, 'Sets', d.targetSets) +
-          stepRow('reps', ICON.reps, 'Reps', d.targetReps) +
+          stepRow('reps', ICON.reps, isometric ? 'Time (s)' : 'Reps', d.targetReps) +
           '<div class="tune-row"><span class="tune-left"><span class="tune-ico">' + SVG(ICON.rest) + '</span><span class="tune-lab"><span class="tune-k">Rest</span>' +
             (d.rest !== DEFAULT_REST ? '<button class="tune-reset" data-act="rest-reset">reset</button>' : '') + '</span></span>' +
             '<span class="tune-ctrl"><button class="tune-step" data-k="rest" data-d="-1" aria-label="less rest">&minus;</button>' +
@@ -1026,8 +1067,8 @@
         '<div class="card-foot"><button class="btn-ghost" data-act="cancel">cancel</button><button class="btn-mint" data-act="save">save</button></div>'
       );
       const wIn = sheet.querySelector('#tWeight');
-      const readW = () => { const v = parseFloat(wIn.value); if (isFinite(v)) d.weight = clamp(v, 0, 1000); };
-      wIn.oninput = readW;
+      const readW = () => { if (!wIn) return; const v = parseFloat(wIn.value); if (isFinite(v)) d.weight = clamp(v, 0, 1000); };
+      if (wIn) wIn.oninput = readW;
       sheet.querySelectorAll('.tune-step').forEach(b => b.onclick = () => {
         readW();
         const k = b.dataset.k, dir = parseInt(b.dataset.d, 10);
