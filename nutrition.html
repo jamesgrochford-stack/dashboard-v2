@@ -113,19 +113,24 @@ body::after {
 .fluid-reset:hover { color: var(--danger); border-color: rgba(255,107,107,0.35); }
 
 /* ===== meals ===== */
+.meal-section { margin-bottom: 14px; }
+.meal-section-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
 .meal-food-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .meal-food-btn { flex: none; padding: 9px 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .meal-food-btn:hover { background: rgba(255,255,255,0.09); color: var(--text-primary); }
+.meal-food-est { color: var(--warning); font-weight: 700; font-size: 10px; margin-left: 5px; vertical-align: super; }
 .meal-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 6px; }
 .meal-item-main { flex: 1; min-width: 0; }
 .meal-item-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .meal-item-macro { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
 .meal-del { flex: none; background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 17px; padding: 0 2px; line-height: 1; }
 .meal-del:hover { color: var(--danger); }
-.meal-totals { display: flex; gap: 10px; margin-top: 14px; }
-.meal-total-box { flex: 1; text-align: center; padding: 12px 8px; border-radius: 12px; background: rgba(255,255,255,0.04); }
+.meal-totals { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.meal-total-box { flex: 1; min-width: 70px; text-align: center; padding: 12px 8px; border-radius: 12px; background: rgba(255,255,255,0.04); }
 .meal-total-val { font-size: 20px; font-weight: 800; color: var(--text-primary); }
 .meal-total-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 4px; }
+.meal-supper-note { text-align: center; padding: 14px 0 2px; opacity: 0.55; }
+.meal-supper-note-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 .empty-note { text-align: center; padding: 12px 0; font-size: 12.5px; font-style: italic; color: var(--text-tertiary); }
 
 /* ===== protein target ===== */
@@ -184,12 +189,15 @@ body::after {
   <!-- MEALS -->
   <div class="card">
     <div class="card-title"><span class="card-title-label">Meals</span></div>
-    <div class="meal-food-grid" id="mealFoodGrid"></div>
+    <div id="mealSections"></div>
     <div id="mealList"></div>
     <div class="meal-totals">
       <div class="meal-total-box"><div class="meal-total-val" id="mealTotalCal">0</div><div class="meal-total-label">Calories</div></div>
       <div class="meal-total-box"><div class="meal-total-val" id="mealTotalProtein">0g</div><div class="meal-total-label">Protein</div></div>
+      <div class="meal-total-box"><div class="meal-total-val" id="mealTotalCarb">0g</div><div class="meal-total-label">Carbs</div></div>
+      <div class="meal-total-box"><div class="meal-total-val" id="mealTotalFat">0g</div><div class="meal-total-label">Fat</div></div>
     </div>
+    <div class="meal-supper-note"><div class="meal-supper-note-title">Supper — skip it. Yoghurt only if genuinely hungry.</div></div>
   </div>
 
   <!-- PROTEIN TARGET -->
@@ -242,7 +250,7 @@ body::after {
   // POST-TRAINING CHECKLIST
   // ============================================================
   const POSTRAIN_ITEMS = [
-    { id: 'proteinMilk', label: 'Protein milk — immediately after session' },
+    { id: 'proteinMilk', label: 'Avonmore Protein Milk (chocolate) — immediately after session' },
     { id: 'nomadicYoghurt', label: 'Nomadic yoghurt — within 30 minutes' },
     { id: 'rehydrate', label: 'Rehydrate — minimum 500ml water in first hour' },
   ];
@@ -319,34 +327,63 @@ body::after {
   // ============================================================
   // MEALS
   // ============================================================
-  const FOODS = [
-    { name: 'Chicken breast', cal: 165, protein: 31 },
-    { name: 'Rice 200g cooked', cal: 260, protein: 5 },
-    { name: 'Pasta 200g cooked', cal: 280, protein: 10 },
-    { name: 'Eggs 2 large', cal: 140, protein: 12 },
-    { name: 'Protein milk 330ml', cal: 180, protein: 20 },
-    { name: 'Nomadic yoghurt', cal: 150, protein: 15 },
-    { name: 'Banana', cal: 90, protein: 1 },
-    { name: 'Toast 2 slices', cal: 160, protein: 6 },
-    { name: 'Cheese 30g', cal: 120, protein: 7 },
-    { name: 'Tuna tin', cal: 120, protein: 28 },
-    { name: 'Peanut butter 2 tbsp', cal: 190, protein: 8 },
-    { name: 'Cereal 60g', cal: 220, protein: 5 },
-    { name: 'Milk 300ml', cal: 150, protein: 10 },
-    { name: 'Orange juice 250ml', cal: 110, protein: 1 },
-    { name: 'Minced beef 150g', cal: 280, protein: 26 },
+  // Real macro values read directly off James's own product labels wherever
+  // possible (per-component data summed for composite meals); items that
+  // still rely on a guess (no label exists -- home-cooked dinners, the
+  // school lunch, or a component within an otherwise-real combo) are marked
+  // real:false with a `note` explaining why, shown as an "est" tag so it's
+  // visually distinct from confirmed label data at a glance.
+  const MEAL_SECTIONS = [
+    { label: 'Breakfast — Training Day', items: [
+      { name: '2 eggs + toast', cal: 296, protein: 17.2, carb: 20.2, fat: 15.4, real: true },
+      { name: 'Berry smoothie', cal: 144, protein: 9.75, carb: 17.85, fat: 2.7, real: false, note: 'Real ingredient data (berries + milk), but exact recipe proportions are estimated -- yours may vary.' },
+    ]},
+    { label: 'Breakfast — Normal Day', items: [
+      { name: 'Porridge + yoghurt + berries + milk + OJ', cal: 439, protein: 28.75, carb: 62.3, fat: 5.3, real: true },
+    ]},
+    { label: 'Lunch — School Day', items: [
+      { name: '3 wraps + apple + protein mousse', cal: 750, protein: 45, carb: 65, fat: 30, real: false, note: 'No product label available for any component -- rough estimate.' },
+    ]},
+    { label: 'Lunch — Non-School Day', items: [
+      { name: 'Scrambled/fried eggs + toast', cal: 296, protein: 17.2, carb: 20.2, fat: 15.4, real: true },
+      { name: 'Chicken & veg soup', cal: 204, protein: 5.7, carb: 14.1, fat: 12.9, real: true },
+      { name: 'Sausage quesadilla', cal: 510, protein: 20.6, carb: 35.8, fat: 34, real: false, note: 'Sausage portion is real label data; tortilla + cheese have no label, so that part is a rough estimate.' },
+    ]},
+    { label: 'Dinner', items: [
+      { name: 'Salmon + potatoes + veg', cal: 550, protein: 40, carb: 45, fat: 22, real: false, note: 'Home-cooked, no packaging to read -- rough estimate.' },
+      { name: 'Steak + potatoes + veg', cal: 600, protein: 45, carb: 45, fat: 25, real: false, note: 'Home-cooked, no packaging to read -- rough estimate.' },
+      { name: 'Ribs + potatoes + veg', cal: 650, protein: 35, carb: 50, fat: 32, real: false, note: 'Home-cooked, no packaging to read -- rough estimate.' },
+      { name: 'Chicken korma', cal: 700, protein: 35, carb: 70, fat: 28, real: false, note: 'Home-cooked, no packaging to read -- rough estimate.' },
+      { name: 'Spaghetti bolognese', cal: 650, protein: 30, carb: 80, fat: 20, real: false, note: 'Home-cooked, no packaging to read -- rough estimate.' },
+      { name: 'Beef stew', cal: 550, protein: 35, carb: 50, fat: 22, real: false, note: 'Home-cooked, no packaging to read -- rough estimate.' },
+    ]},
+    { label: 'Snacks', items: [
+      { name: 'Nomadic Yoghurt & Oat Clusters', cal: 300, protein: 9, carb: 25, fat: 6, real: false, note: 'Sourced from a third-party database, not your own label yet -- replace once you photograph the real pot.' },
+      { name: 'Regular yoghurt', cal: 83, protein: 14.5, carb: 5.25, fat: 0.3, real: true },
+    ]},
+    { label: 'Extras', items: [
+      { name: 'Ketchup', cal: 10, protein: 0.2, carb: 1.8, fat: 0, real: true },
+      { name: 'Potato waffles (2)', cal: 196, protein: 1.6, carb: 26, fat: 8.8, real: true },
+    ]},
   ];
   function mealsKey() { return 'nt:meals:' + todayKey(); }
   function getMeals() { return loadJSON(mealsKey(), []); }
+  const fmtG = n => Math.round(n * 10) / 10;
   function renderFoodGrid() {
-    $('mealFoodGrid').innerHTML = FOODS.map((f, i) =>
-      '<button type="button" class="meal-food-btn" data-i="' + i + '">' + esc(f.name) + '</button>'
+    $('mealSections').innerHTML = MEAL_SECTIONS.map((section, si) =>
+      '<div class="meal-section"><div class="meal-section-label">' + esc(section.label) + '</div><div class="meal-food-grid">' +
+        section.items.map((item, ii) =>
+          '<button type="button" class="meal-food-btn" data-si="' + si + '" data-ii="' + ii + '"' +
+            (item.real ? '' : ' title="' + esc(item.note || 'Estimate') + '"') + '>' + esc(item.name) +
+            (item.real ? '' : '<span class="meal-food-est">est</span>') + '</button>'
+        ).join('') +
+      '</div></div>'
     ).join('');
     document.querySelectorAll('.meal-food-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const f = FOODS[parseInt(btn.dataset.i, 10)];
+        const item = MEAL_SECTIONS[parseInt(btn.dataset.si, 10)].items[parseInt(btn.dataset.ii, 10)];
         const meals = getMeals();
-        meals.push({ id: uid(), name: f.name, cal: f.cal, protein: f.protein, ts: Date.now() });
+        meals.push({ id: uid(), name: item.name, cal: item.cal, protein: item.protein, carb: item.carb, fat: item.fat, ts: Date.now() });
         saveJSON(mealsKey(), meals);
         renderMeals();
       });
@@ -360,13 +397,17 @@ body::after {
     const meals = getMeals();
     const list = $('mealList');
     list.innerHTML = meals.length
-      ? meals.map(m => '<div class="meal-item"><div class="meal-item-main"><div class="meal-item-name">' + esc(m.name) + '</div><div class="meal-item-macro">' + m.cal + ' cal · ' + m.protein + 'g protein</div></div><button type="button" class="meal-del" data-id="' + m.id + '">&times;</button></div>').join('')
+      ? meals.map(m => '<div class="meal-item"><div class="meal-item-main"><div class="meal-item-name">' + esc(m.name) + '</div><div class="meal-item-macro">' + Math.round(m.cal) + ' kcal · ' + fmtG(m.protein) + 'g P · ' + fmtG(m.carb) + 'g C · ' + fmtG(m.fat) + 'g F</div></div><button type="button" class="meal-del" data-id="' + m.id + '">&times;</button></div>').join('')
       : '<div class="empty-note">No meals logged today.</div>';
     list.querySelectorAll('.meal-del').forEach(btn => btn.addEventListener('click', () => deleteMeal(btn.dataset.id)));
     const totalCal = meals.reduce((s, m) => s + m.cal, 0);
     const totalProtein = meals.reduce((s, m) => s + m.protein, 0);
-    $('mealTotalCal').textContent = totalCal;
-    $('mealTotalProtein').textContent = totalProtein + 'g';
+    const totalCarb = meals.reduce((s, m) => s + (m.carb || 0), 0);
+    const totalFat = meals.reduce((s, m) => s + (m.fat || 0), 0);
+    $('mealTotalCal').textContent = Math.round(totalCal);
+    $('mealTotalProtein').textContent = fmtG(totalProtein) + 'g';
+    $('mealTotalCarb').textContent = fmtG(totalCarb) + 'g';
+    $('mealTotalFat').textContent = fmtG(totalFat) + 'g';
     renderProteinTarget(totalProtein);
   }
 
