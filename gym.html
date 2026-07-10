@@ -206,6 +206,10 @@
   .sheet-sub{color:var(--muted-strong);font-size:14px;line-height:1.5;margin-bottom:16px}
   .sheet-close{position:absolute;top:14px;right:14px;width:32px;height:32px;display:grid;place-items:center;background:rgba(255,255,255,.05);border:1px solid var(--rule-strong);border-radius:50%;color:var(--muted-strong);cursor:pointer;font-size:15px;line-height:1;transition:border-color .2s,color .2s}
   .sheet-close:hover{border-color:var(--mint);color:var(--fg)}
+  /* scrollable body for content that can exceed the sheet's max-height (e.g. the
+     History sheet on a lift with many logged sessions) -- eyebrow/title/close
+     button stay fixed above this, only the content below scrolls */
+  .sheet-scroll{max-height:calc(100vh - 210px);overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -6px;padding:0 6px 2px}
   .sheet-stats{display:flex;gap:18px;margin-top:8px}
   .sheet-stat .k{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
   .sheet-stat .v{font-size:20px;font-weight:600;margin-top:5px} .sheet-stat .v.gold{color:var(--gold)} .sheet-stat .v.up{color:var(--mint-cool)}
@@ -926,7 +930,12 @@
   // ── modal: info card + the Episode 1 history graph ──
   const modal = document.getElementById('modal');
   const sheet = document.getElementById('sheet');
-  function openSheet(html){ sheet.innerHTML = '<button class="sheet-close" aria-label="Close">&times;</button>' + html; sheet.querySelector('.sheet-close').onclick = closeSheet; modal.classList.add('on'); }
+  function openSheet(html){
+    sheet.innerHTML = '<button class="sheet-close" aria-label="Close">&times;</button>' + html;
+    sheet.querySelector('.sheet-close').onclick = closeSheet;
+    modal.classList.add('on');
+    sheet.scrollTop = 0; // every sheet (re)paint lands at the top, never a leftover scroll position
+  }
   function closeSheet(){ modal.classList.remove('on'); }
   modal.addEventListener('click', e => { if (e.target === modal) closeSheet(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
@@ -1328,13 +1337,17 @@
       openSheet(
         '<div class="sheet-eyebrow">History</div>' +
         '<div class="sheet-title">' + esc(lift.name) + '</div>' +
-        buildRangeTabs(range) +
-        buildChartSVG(sessions, unit) +
-        buildLatestPills(sessions, unit) +
-        buildHistoryStats(sessions, unit) +
-        buildHistoryTable(sessions, unit) +
-        '<button class="logSessionBtn" data-act="logSession" type="button">+ log a session</button>'
+        '<div class="sheet-scroll" id="historyBody">' +
+          buildRangeTabs(range) +
+          buildChartSVG(sessions, unit) +
+          buildLatestPills(sessions, unit) +
+          buildHistoryStats(sessions, unit) +
+          buildHistoryTable(sessions, unit) +
+          '<button class="logSessionBtn" data-act="logSession" type="button">+ log a session</button>' +
+        '</div>'
       );
+      const scrollBody = document.getElementById('historyBody');
+      if (scrollBody) scrollBody.scrollTop = 0; // always land on the chart, never wherever a previous range-tab tap left it
       sheet.querySelectorAll('.rangeTab').forEach(b => b.onclick = () => { range = b.dataset.range; paint(); });
       const logBtn = sheet.querySelector('[data-act="logSession"]');
       if (logBtn) logBtn.onclick = paintLogForm;
@@ -1343,7 +1356,7 @@
       openSheet(
         '<div class="sheet-eyebrow">Log a session</div>' +
         '<div class="sheet-title">' + esc(lift.name) + '</div>' +
-        buildLogSessionForm(lift)
+        '<div class="sheet-scroll">' + buildLogSessionForm(lift) + '</div>'
       );
       sheet.querySelector('[data-act="logCancel"]').onclick = paint;
       sheet.querySelector('[data-act="logSubmit"]').onclick = async () => {
