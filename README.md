@@ -14,8 +14,7 @@ Open any `.html` file directly in your browser — no build step, no install.
 
 | File | What it is |
 |---|---|
-| [index.html](index.html) | Goals tracker (Day Ring, Goal Ticker, To Do list) — the home page |
-| [health.html](health.html) | Supplement / daily stack tracker |
+| [index.html](index.html) | Goals tracker (Day Ring, Goal Ticker, To Do list), plus the Garmin readiness card and Your Day energy curve — the home page |
 | [po-water.html](po-water.html) | Water intake tracker |
 | [finance.html](finance.html) | Finances |
 | [gym.html](gym.html) | Progressive overload gym tracker |

@@ -5,9 +5,9 @@
 // It self-injects HTML + CSS. The topbar shows today's date and a
 // Body Battery indicator read from Supabase (the same 'td:garminLog'
 // key index.html's Garmin card writes to), and the bottom bar is the
-// six-tab site nav (Today/Football/Study/Gym/Nutrition/Finance),
-// each tab tinted its own colour so the active page is always obvious
-// at a glance.
+// five-tab site nav (Today/Football/Study/Gym/Nutrition), each tab
+// tinted its own colour so the active page is always obvious at a
+// glance. Finance is reached via a link from Today instead of a tab.
 // =============================================================
 (function () {
   'use strict';
@@ -90,8 +90,6 @@
 .tab-study      { --accent: #7DD3FC; --accent-bg: rgba(125, 211, 252, 0.14); }
 .tab-gym        { --accent: #F2A063; --accent-bg: rgba(242, 160, 99, 0.14); }
 .tab-nutrition  { --accent: #C8F060; --accent-bg: rgba(200, 240, 96, 0.14); }
-.tab-finance    { --accent: #D4AF37; --accent-bg: rgba(212, 175, 55, 0.14); }
-.tab-health     { --accent: #FF6B6B; --accent-bg: rgba(255, 107, 107, 0.14); }
 .bottombar-tab-icon {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
@@ -224,14 +222,6 @@ body.topbar-modal-open {
     <span class="bottombar-tab-icon">🥗</span>
     <span>Nutrition</span>
   </a>
-  <a href="finance.html" class="bottombar-tab tab-finance" data-page="finance">
-    <span class="bottombar-tab-icon">💰</span>
-    <span>Finance</span>
-  </a>
-  <a href="health.html" class="bottombar-tab tab-health" data-page="health">
-    <span class="bottombar-tab-icon">❤️</span>
-    <span>Health</span>
-  </a>
 </nav>
 `;
 
@@ -244,13 +234,13 @@ body.topbar-modal-open {
     const p = (window.location.pathname || '').toLowerCase();
     return p.endsWith('/finance.html') || p.endsWith('finance.html');
   }
-  // When the water tracker is iframed inside health.html, the embedded
-  // page shouldn't render its own chrome again.
+  // When a page is iframed (e.g. po-water.html, which can still be opened
+  // standalone), the embedded copy shouldn't render its own chrome again.
   function isEmbedded() {
     try { return window.self !== window.top; } catch (e) { return true; }
   }
   // The date + Body Battery top bar was removed site-wide -- Body Battery now
-  // lives on the Health page's Garmin card. The bottom nav below is unaffected.
+  // lives on Today's Garmin card. The bottom nav below is unaffected.
   function shouldShowTopbar() { return false; }
   function shouldShowBottombar() { return !isFinancePage() && !isEmbedded(); }
   function currentPageKey() {
@@ -259,8 +249,6 @@ body.topbar-modal-open {
     if (p.endsWith('football.html')) return 'football';
     if (p.endsWith('gym.html')) return 'gym';
     if (p.endsWith('nutrition.html')) return 'nutrition';
-    if (p.endsWith('finance.html')) return 'finance';
-    if (p.endsWith('health.html')) return 'health';
     return 'today'; // index.html, /, or anything else falls back to today
   }
 
