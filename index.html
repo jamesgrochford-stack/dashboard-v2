@@ -380,12 +380,12 @@ body::after {
     .gm-leg-num { margin-left:auto; color:var(--text-primary); font-weight:700; font-family:var(--font-mono); font-size:11px; }
     @media (max-width:480px) { .gm-stages-legend { grid-template-columns:repeat(2,1fr); } }
     /* stats */
-    .gm-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.05); }
+    .gm-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.05); }
     .gm-stat { position:relative; background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:12px; padding:12px 10px; text-align:center; }
     .gm-stat-label { font-size:10px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.12em; font-weight:700; margin-bottom:8px; }
     .gm-stat-val { font-size:22px; font-weight:700; color:var(--text-primary); line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
     .gm-stat-sub { font-size:10px; color:var(--text-tertiary); margin-top:5px; font-family:var(--font-mono); }
-    @media (max-width:480px) { .gm-stats { grid-template-columns:repeat(2,1fr); } .gm-stat-val { font-size:20px; } }
+    @media (max-width:480px) { .gm-stat-val { font-size:20px; } }
     /* biomarkers */
     .gm-bio { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
     .gm-bio-item { background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:12px; padding:11px 12px; text-align:center; }
@@ -431,7 +431,7 @@ body::after {
           <div class="gm-ring-center">
             <div id="gmRingNum" class="gm-ring-num">—</div>
             <div id="gmRingWord" class="gm-ring-word">—</div>
-            <div id="gmRingCap" class="gm-ring-cap">readiness</div>
+            <div id="gmRingCap" class="gm-ring-cap">body battery</div>
           </div>
         </div>
         <div id="gmStages" class="gm-stages" style="display:none">
@@ -452,7 +452,6 @@ body::after {
         <div class="gm-stats">
           <div class="gm-stat"><span class="gm-zone" id="gmZoneSleep"></span><div class="gm-stat-label">Sleep</div><div class="gm-stat-val" id="gmSleep">—</div><div class="gm-stat-sub" id="gmSleepSub">—</div></div>
           <div class="gm-stat"><span class="gm-zone" id="gmZoneBattery"></span><div class="gm-stat-label">Body Batt</div><div class="gm-stat-val" id="gmBattery">—</div><div class="gm-stat-sub" id="gmBatterySub">low–high</div></div>
-          <div class="gm-stat"><span class="gm-zone" id="gmZoneHrv"></span><div class="gm-stat-label">HRV</div><div class="gm-stat-val" id="gmHrv">—</div><div class="gm-stat-sub">ms</div></div>
           <div class="gm-stat"><span class="gm-zone" id="gmZoneRhr"></span><div class="gm-stat-label">RHR</div><div class="gm-stat-val" id="gmRhr">—</div><div class="gm-stat-sub">bpm</div></div>
         </div>
         <div class="gm-bio">
@@ -474,8 +473,8 @@ body::after {
     // Same public anon config the rest of the dashboard uses (window.DASH_* from
     // /api/config, else the shared fallback). Reading garmin_daily needs an
     // anon SELECT policy on that table (see README / plan).
-    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
-    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
+    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
 
     const num = (v) => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
     function zone(el, c) { if (!el) return; el.className = 'gm-zone'; if (c) el.classList.add('z-' + c); }
@@ -486,10 +485,9 @@ body::after {
     function readinessWord(v) { if (v >= 67) return 'Primed'; if (v >= 34) return 'Steady'; return 'Recover'; }
     function sleepScoreZone(s) { if (s == null) return null; if (s >= 80) return 'good'; if (s >= 60) return 'norm'; return 'warn'; }
     function batteryZone(v) { if (v == null) return null; if (v >= 75) return 'good'; if (v >= 40) return 'norm'; return 'warn'; }
-    function hrvZone(h) { if (h == null) return null; if (h >= 60) return 'good'; if (h >= 40) return 'norm'; return 'warn'; }
     function rhrZone(r) { if (r == null) return null; if (r <= 55) return 'good'; if (r <= 70) return 'norm'; return 'warn'; }
 
-    function verdict(score, cap, sleepScore, hrv, rhr) {
+    function verdict(score, cap, sleepScore, rhr) {
       if (score == null) return null;
       let cls = 'green', badge = 'GREEN',
           headline = 'Primed today. ' + (cap === 'readiness' ? 'Readiness is high' : 'Body battery is high') + ' — go for the hard session or the heavy task.';
@@ -497,7 +495,6 @@ body::after {
       else if (score < 34) { cls = 'red'; badge = 'RED'; headline = 'Recover. The body is asking for rest — light movement, mobility, an early night.'; }
       const reasons = [];
       if (sleepScore != null) reasons.push((sleepScore >= 80 ? '✓' : '·') + ' Sleep score ' + Math.round(sleepScore) + ' — ' + (sleepScore >= 80 ? 'you slept well.' : 'sub-par sleep.'));
-      if (hrv != null)        reasons.push((hrv >= 50 ? '✓' : '·') + ' HRV ' + Math.round(hrv) + 'ms — ' + (hrv >= 50 ? 'strong autonomic state.' : 'autonomic stress.'));
       if (rhr != null)        reasons.push((rhr <= 60 ? '✓' : '·') + ' RHR ' + Math.round(rhr) + 'bpm — ' + (rhr <= 60 ? 'well-conditioned.' : 'elevated.'));
       return { cls, badge, headline, reasons };
     }
@@ -507,10 +504,10 @@ body::after {
       $('gmBody').style.display = '';
       $('gmUpdated').textContent = row.date ? ('As of ' + row.date) : '';
 
-      // Ring: training_readiness, fallback body_battery_high
-      let ringVal = num(row.training_readiness);
-      let ringCap = 'readiness';
-      if (ringVal == null) { ringVal = num(row.body_battery_high); ringCap = 'body battery'; }
+      // Ring: body_battery_high (training_readiness is permanently unavailable
+      // on this hardware, so there's no fallback branch to take anymore)
+      let ringVal = num(row.body_battery_high);
+      let ringCap = 'body battery';
       const C = 565.48;
       if (ringVal != null) {
         const v = Math.max(0, Math.min(100, ringVal));
@@ -552,8 +549,6 @@ body::after {
         zone($('gmZoneBattery'), batteryZone(bbHigh));
       }
 
-      const hrv = num(row.hrv);
-      if (hrv != null) { $('gmHrv').textContent = Math.round(hrv); zone($('gmZoneHrv'), hrvZone(hrv)); }
       const rhr = num(row.resting_hr);
       if (rhr != null) { $('gmRhr').textContent = Math.round(rhr); zone($('gmZoneRhr'), rhrZone(rhr)); }
 
@@ -565,7 +560,7 @@ body::after {
       $('gmTrLoad').textContent = load != null ? Math.round(load) : '—';
 
       // Today's call
-      const vd = verdict(ringVal, ringCap, sleepScore, hrv, rhr);
+      const vd = verdict(ringVal, ringCap, sleepScore, rhr);
       if (vd) {
         $('gmVerdict').style.display = '';
         const badge = $('gmVerdictBadge');
@@ -700,8 +695,8 @@ body::after {
     const $ = (id) => document.getElementById(id);
     // Same public anon config the Garmin card uses. Reading garmin_daily needs
     // the anon SELECT policy already added for the Garmin card.
-    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
-    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
+    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
 
     const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
     const num = (v) => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
@@ -894,6 +889,177 @@ body::after {
         apply(data || []);
       } catch (e) {
         showState('Could not load Garmin data: ' + (e && e.message ? e.message : e), true);
+      }
+    }
+    loadData();
+    window.addEventListener('focus', loadData);
+  })();
+  </script>
+
+  <!-- ===== THIS WEEK'S TRAINING LOAD (reads garmin_activities via anon Supabase) ===== -->
+  <style>
+    .trainload-section { margin-bottom: 32px; }
+    .tl-card {
+      padding: 24px 22px 20px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 1px 0 0 rgba(255,255,255,0.06) inset, 0 12px 40px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.25);
+    }
+    .tl-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+    .tl-head-title { font-size:13px; font-weight:700; color:var(--text-primary); }
+    .tl-head-range { font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); }
+    .tl-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .tl-stat { background:rgba(255,255,255,0.025); border:1px solid var(--border); border-radius:12px; padding:12px 10px; text-align:center; }
+    .tl-stat-label { font-size:10px; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.12em; font-weight:700; margin-bottom:8px; }
+    .tl-stat-val { font-size:22px; font-weight:700; color:var(--text-primary); line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; }
+    @media (max-width:480px) { .tl-stat-val { font-size:20px; } }
+    .tl-breakdown { margin-top:14px; font-size:12.5px; color:var(--text-secondary); text-align:center; }
+    .tl-note { margin-top:12px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font-size:11.5px; color:var(--text-tertiary); line-height:1.5; }
+    .tl-empty { text-align:center; padding:30px 12px; font-size:13px; color:var(--text-tertiary); line-height:1.5; }
+    .tl-err { background:rgba(255,138,138,0.08); border:1px solid rgba(255,138,138,0.28); color:#FF8A8A; padding:10px 12px; border-radius:10px; font-size:11.5px; font-family:var(--font-mono); margin-bottom:14px; display:none; }
+  </style>
+  <div class="trainload-section">
+    <div class="section-title">This Week's Training Load</div>
+    <div class="tl-card">
+      <div id="tlErr" class="tl-err"></div>
+      <div id="tlLoading" class="tl-empty">Loading this week's sessions…</div>
+      <div id="tlBody" style="display:none">
+        <div class="tl-head">
+          <span class="tl-head-title">This Week</span>
+          <span class="tl-head-range" id="tlRange">—</span>
+        </div>
+        <div id="tlEmptyMsg" class="tl-empty" style="display:none">No sessions logged yet this week.</div>
+        <div id="tlContent">
+          <div class="tl-stats">
+            <div class="tl-stat"><div class="tl-stat-label">Sessions</div><div class="tl-stat-val" id="tlSessions">—</div></div>
+            <div class="tl-stat"><div class="tl-stat-label">Duration</div><div class="tl-stat-val" id="tlDuration">—</div></div>
+            <div class="tl-stat"><div class="tl-stat-label">Distance</div><div class="tl-stat-val" id="tlDistance">—</div></div>
+          </div>
+          <div class="tl-breakdown" id="tlBreakdown"></div>
+          <div id="tlNote" class="tl-note" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    // Same public anon config the Garmin card / Your Day use.
+    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
+    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
+
+    const num = (v) => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
+
+    // Fixed display order so the breakdown line doesn't reshuffle week to
+    // week; any future/unrecognized activityType falls back to itself.
+    const TYPE_ORDER = ['soccer', 'strength_training', 'lap_swimming', 'running'];
+    const TYPE_META = {
+      soccer: { label: 'football', emoji: '⚽' },
+      strength_training: { label: 'gym', emoji: '🏋️' },
+      lap_swimming: { label: 'swim', emoji: '🏊' },
+      running: { label: 'run', emoji: '🏃' },
+    };
+    function typeMeta(t) { return TYPE_META[t] || { label: t, emoji: '•' }; }
+
+    // Manual match entries (played without a watch) come back with calories
+    // and distance both zero AND no HR at all -- no watch-recorded session
+    // in real data has all three at once, so this triple is a reliable signal.
+    function isPartial(a) {
+      return (num(a.calories) || 0) === 0 && (num(a.distance_meters) || 0) === 0 && a.average_hr == null;
+    }
+
+    function fmtDuration(totalSeconds) {
+      const totalMin = Math.round(totalSeconds / 60);
+      const h = Math.floor(totalMin / 60), m = totalMin % 60;
+      return (h > 0 ? h + 'h ' : '') + m + 'm';
+    }
+    function fmtRange(monday, sunday) {
+      const opts = { month: 'short', day: 'numeric' };
+      return monday.toLocaleDateString('en-IE', opts) + ' – ' + sunday.toLocaleDateString('en-IE', opts);
+    }
+    // Monday-anchored week, matching the Week View Strip's own convention
+    // (WEEK_STRIP_ORDER = Mon..Sun) so this section agrees with it.
+    function mondayOf(d) {
+      const day = d.getDay(); // 0=Sun..6=Sat
+      const diff = (day === 0 ? -6 : 1 - day);
+      const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+      mon.setHours(0, 0, 0, 0);
+      return mon;
+    }
+
+    function render(activities) {
+      $('tlLoading').style.display = 'none';
+      $('tlBody').style.display = '';
+
+      const monday = mondayOf(new Date());
+      const nextMonday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7);
+      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+      $('tlRange').textContent = fmtRange(monday, sunday);
+
+      // start_time_local has no timezone suffix, so the browser parses it as
+      // local wall-clock time already -- comparing directly against locally
+      // computed Monday/Sunday boundaries needs no timezone conversion.
+      const weekRows = activities.filter((a) => {
+        const t = new Date(a.start_time_local);
+        return t >= monday && t < nextMonday;
+      });
+
+      if (!weekRows.length) {
+        $('tlContent').style.display = 'none';
+        $('tlEmptyMsg').style.display = '';
+        return;
+      }
+      $('tlEmptyMsg').style.display = 'none';
+      $('tlContent').style.display = '';
+
+      let totalDuration = 0, totalDistance = 0, partialCount = 0;
+      const counts = {};
+      weekRows.forEach((a) => {
+        totalDuration += num(a.duration_seconds) || 0;
+        totalDistance += num(a.distance_meters) || 0;
+        counts[a.activity_type] = (counts[a.activity_type] || 0) + 1;
+        if (isPartial(a)) partialCount++;
+      });
+
+      $('tlSessions').textContent = String(weekRows.length);
+      $('tlDuration').textContent = fmtDuration(totalDuration);
+      $('tlDistance').textContent = (totalDistance / 1000).toFixed(1) + ' km';
+
+      const otherTypes = Object.keys(counts).filter((t) => TYPE_ORDER.indexOf(t) === -1).sort();
+      const orderedTypes = TYPE_ORDER.concat(otherTypes);
+      const parts = orderedTypes
+        .filter((t) => counts[t])
+        .map((t) => { const meta = typeMeta(t); return meta.emoji + ' ' + counts[t] + ' ' + meta.label; });
+      $('tlBreakdown').textContent = parts.join(' · ');
+
+      if (partialCount > 0) {
+        $('tlNote').style.display = '';
+        $('tlNote').textContent = partialCount + (partialCount === 1 ? ' session' : ' sessions') +
+          ' this week ' + (partialCount === 1 ? 'was' : 'were') +
+          ' played without a watch — time counts toward this week’s total, but not toward distance.';
+      } else {
+        $('tlNote').style.display = 'none';
+      }
+    }
+
+    async function loadData() {
+      if (window.__TRAININGLOAD_MOCK__) { render(window.__TRAININGLOAD_MOCK__); return; }
+      try {
+        if (!window.supabase || !SUPABASE_URL) throw new Error('Supabase not configured');
+        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const { data, error } = await supa
+          .from('garmin_activities')
+          .select('activity_id,activity_name,activity_type,start_time_local,duration_seconds,distance_meters,calories,average_hr')
+          .order('start_time_local', { ascending: false })
+          .limit(60);
+        if (error) throw error;
+        render(data || []);
+      } catch (e) {
+        $('tlLoading').style.display = 'none';
+        const err = $('tlErr');
+        err.style.display = 'block';
+        err.textContent = 'Could not load training data: ' + (e && e.message ? e.message : e);
       }
     }
     loadData();
@@ -1609,8 +1775,8 @@ body::after {
     if (!window.supabase) return;
     try {
       const supa = window.supabase.createClient(
-        (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co',
-        (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c'
+        (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co',
+        (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-'
       );
       const { data, error } = await supa.from('app_state').select('data').eq('key', 'nutritionPage').maybeSingle();
       if (error || !data || !data.data) return;

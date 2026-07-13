@@ -1585,8 +1585,8 @@
   // that stays the offline-resilience fallback. This is a second, additive,
   // isolated write path: DOM updates instantly (unchanged), this pushes to
   // Supabase in the background, same idiom as everywhere else in the app.
-  const HEVY_SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
-  const HEVY_SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  const HEVY_SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
+  const HEVY_SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
   let hevySupa = null;
   function hevyClient(){
     if (!hevySupa && typeof window !== 'undefined' && window.supabase) hevySupa = window.supabase.createClient(HEVY_SUPABASE_URL, HEVY_SUPABASE_KEY);
