@@ -1585,10 +1585,17 @@
   // that stays the offline-resilience fallback. This is a second, additive,
   // isolated write path: DOM updates instantly (unchanged), this pushes to
   // Supabase in the background, same idiom as everywhere else in the app.
-  const HEVY_SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
-  const HEVY_SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
+  // No hardcoded fallback -- fail safely rather than silently syncing to
+  // production when /api/config didn't load (e.g. local static testing).
+  const HEVY_SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || '';
+  const HEVY_SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || '';
   let hevySupa = null;
+  let hevyWarned = false;
   function hevyClient(){
+    if (!HEVY_SUPABASE_URL || !HEVY_SUPABASE_KEY) {
+      if (!hevyWarned) { console.warn('[gym] Supabase not configured -- Hevy cloud sync disabled.'); hevyWarned = true; }
+      return null;
+    }
     if (!hevySupa && typeof window !== 'undefined' && window.supabase) hevySupa = window.supabase.createClient(HEVY_SUPABASE_URL, HEVY_SUPABASE_KEY);
     return hevySupa;
   }

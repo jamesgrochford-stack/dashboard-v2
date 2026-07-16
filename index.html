@@ -470,11 +470,12 @@ body::after {
   <script>
   (function () {
     const $ = (id) => document.getElementById(id);
-    // Same public anon config the rest of the dashboard uses (window.DASH_* from
-    // /api/config, else the shared fallback). Reading garmin_daily needs an
-    // anon SELECT policy on that table (see README / plan).
-    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
-    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
+    // Same public anon config the rest of the dashboard uses (window.DASH_*
+    // from /api/config). No hardcoded fallback -- fail safely instead of
+    // silently syncing to production when /api/config didn't load. Reading
+    // garmin_daily needs an anon SELECT policy on that table (see README).
+    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || '';
+    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || '';
 
     const num = (v) => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
     function zone(el, c) { if (!el) return; el.className = 'gm-zone'; if (c) el.classList.add('z-' + c); }
@@ -574,7 +575,10 @@ body::after {
     async function loadData() {
       if (window.__GARMIN_MOCK__) { paint(window.__GARMIN_MOCK__); return; }
       try {
-        if (!window.supabase || !SUPABASE_URL || SUPABASE_URL.indexOf('PASTE-') === 0) throw new Error('Supabase not configured');
+        if (!window.supabase || !SUPABASE_URL || SUPABASE_URL.indexOf('PASTE-') === 0) {
+          console.warn('[Garmin card] Supabase not configured -- skipping.');
+          throw new Error('Supabase not configured');
+        }
         const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const { data, error } = await supa
           .from('garmin_daily').select('*')
@@ -693,10 +697,11 @@ body::after {
   <script>
   (function () {
     const $ = (id) => document.getElementById(id);
-    // Same public anon config the Garmin card uses. Reading garmin_daily needs
-    // the anon SELECT policy already added for the Garmin card.
-    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
-    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
+    // Same public anon config the Garmin card uses -- no hardcoded fallback,
+    // see that block's comment. Reading garmin_daily needs the anon SELECT
+    // policy already added for the Garmin card.
+    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || '';
+    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || '';
 
     const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
     const num = (v) => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
@@ -879,7 +884,10 @@ body::after {
     async function loadData() {
       if (window.__YOURDAY_MOCK__) { apply(window.__YOURDAY_MOCK__); return; }
       try {
-        if (!window.supabase || !SUPABASE_URL || SUPABASE_URL.indexOf('PASTE-') === 0) throw new Error('Supabase not configured');
+        if (!window.supabase || !SUPABASE_URL || SUPABASE_URL.indexOf('PASTE-') === 0) {
+          console.warn('[Your Day] Supabase not configured -- skipping.');
+          throw new Error('Supabase not configured');
+        }
         const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const { data, error } = await supa
           .from('garmin_daily')
@@ -945,9 +953,9 @@ body::after {
   <script>
   (function () {
     const $ = (id) => document.getElementById(id);
-    // Same public anon config the Garmin card / Your Day use.
-    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
-    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
+    // Same public anon config the Garmin card / Your Day use -- no hardcoded fallback.
+    const SUPABASE_URL = (window.DASH_SUPABASE_URL) || '';
+    const SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || '';
 
     const num = (v) => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
 
@@ -1046,7 +1054,10 @@ body::after {
     async function loadData() {
       if (window.__TRAININGLOAD_MOCK__) { render(window.__TRAININGLOAD_MOCK__); return; }
       try {
-        if (!window.supabase || !SUPABASE_URL) throw new Error('Supabase not configured');
+        if (!window.supabase || !SUPABASE_URL) {
+          console.warn('[Training Load] Supabase not configured -- skipping.');
+          throw new Error('Supabase not configured');
+        }
         const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const { data, error } = await supa
           .from('garmin_activities')
@@ -1105,6 +1116,15 @@ body::after {
     <div>
       <div class="card-title" style="margin-bottom:8px; --title-accent:#67E8F9">&#128167; Fluids</div>
       <div class="fluid-card-num" id="fluidCardNum">&mdash;<span> today</span></div>
+    </div>
+    <span class="fluid-card-arrow">&rarr;</span>
+  </a>
+
+  <!-- Football — read-only status; logging happens on football.html -->
+  <a class="card accent-green fluid-card" href="football.html" id="footballCard">
+    <div>
+      <div class="card-title" style="margin-bottom:8px; --title-accent:#6BE3A4">&#9917; Football</div>
+      <div class="fluid-card-num" id="footballCardNum">&mdash;<span> today</span></div>
     </div>
     <span class="fluid-card-arrow">&rarr;</span>
   </a>
@@ -1299,7 +1319,9 @@ body::after {
       { time: '08:00', title: 'Wake' },
       { time: 'Prep', title: 'Match preparation' },
       { time: 'Travel', title: 'Travel to match' },
-      { time: 'Match', title: 'Match', expand: ACTION_RULE },
+      // Shows this week's editable 3 actions from football.html once loaded
+      // (fetchFootballStatus), falling back to the generic ACTION_RULE text.
+      { time: 'Match', title: 'Match', expandFn: matchActionsExpandHtml, isHtml: true },
       { time: 'Post-match', title: 'Post-match nutrition', expand: NUTRITION },
       { time: 'Home', title: 'Home' },
     ],
@@ -1358,7 +1380,10 @@ body::after {
           '<span class="sched-title">' + esc(title) + '</span>' +
           (hasExpand ? '<span class="sched-caret">▸</span>' : '') +
         '</div>' +
-        (hasExpand ? '<div class="sched-body">' + (item.isHtml ? item.expand : esc(item.expandFn ? item.expandFn() : item.expand)) + '</div>' : '');
+        (hasExpand ? '<div class="sched-body">' + (() => {
+          const raw = item.expandFn ? item.expandFn() : item.expand;
+          return item.isHtml ? raw : esc(raw);
+        })() + '</div>' : '');
       if (hasExpand) li.addEventListener('click', () => li.classList.toggle('open'));
       list.appendChild(li);
     });
@@ -1772,17 +1797,68 @@ body::after {
   async function fetchFluidSummary() {
     const local = readFluidLocal();
     renderFluidCard(local ? sumFluidMl(local) : null);
-    if (!window.supabase) return;
+    if (!window.supabase || !window.DASH_SUPABASE_URL || !window.DASH_SUPABASE_KEY) {
+      console.warn('[Fluids tile] Supabase not configured -- skipping cloud reconcile.');
+      return;
+    }
     try {
-      const supa = window.supabase.createClient(
-        (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co',
-        (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-'
-      );
+      const supa = window.supabase.createClient(window.DASH_SUPABASE_URL, window.DASH_SUPABASE_KEY);
       const { data, error } = await supa.from('app_state').select('data').eq('key', 'nutritionPage').maybeSingle();
       if (error || !data || !data.data) return;
       const entry = data.data['nt:fluid:' + todayKey()];
       renderFluidCard(entry ? sumFluidMl(entry) : 0);
     } catch (e) { /* offline — local value (if any) already rendered */ }
+  }
+
+  // ============================================================
+  // FOOTBALL STATUS — read-only cross-page peek at football.html's
+  // app_state blob (key='footballPage'), same pattern as the Fluids
+  // card above. Powers the football status tile and the Saturday
+  // schedule item's match-plan detail (today's editable 3 actions,
+  // set on football.html, instead of the generic ACTION_RULE text).
+  // ============================================================
+  let footballBlob = null; // data.data once loaded; null until the fetch resolves
+  function thisSaturdayKey() {
+    const now = new Date();
+    const diff = (6 - now.getDay() + 7) % 7; // days until (or 0 on) this week's Saturday
+    const sat = new Date(now); sat.setDate(now.getDate() + diff);
+    return dateKey(sat);
+  }
+  function matchActionsExpandHtml() {
+    const actions = footballBlob && footballBlob['fb:matchActions:' + thisSaturdayKey()];
+    const texts = ((actions && actions.texts) || []).filter(Boolean);
+    if (!texts.length) return esc(ACTION_RULE); // nothing set yet on football.html — fall back to the generic reminder
+    return 'Your 3 actions for this match:<ul>' + texts.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>';
+  }
+  function renderFootballTile() {
+    const el = $('footballCardNum');
+    if (!el) return;
+    if (!footballBlob) { el.innerHTML = '&mdash;<span> today</span>'; return; }
+    const sessions = footballBlob['fb:sessions'] || [];
+    const today = sessions.find(s => s.date === todayKey());
+    if (!today) { el.innerHTML = 'Not logged<span> yet</span>'; return; }
+    let detail;
+    if (today.type === 'Match') {
+      const n = [today.action1, today.action2, today.action3].filter(v => v === 'Y').length;
+      detail = '3-Action: ' + (n === 3 ? 'Executed' : n + '/3');
+    } else {
+      detail = today.confidence ? 'Confidence ' + today.confidence + '/5' : 'Logged';
+    }
+    el.innerHTML = (today.type === 'Match' ? 'Match' : 'Training') + ' logged &#10003;<span> &middot; ' + esc(detail) + '</span>';
+  }
+  async function fetchFootballStatus() {
+    renderFootballTile();
+    if (!window.supabase || !window.DASH_SUPABASE_URL || !window.DASH_SUPABASE_KEY) {
+      console.warn('[Football tile] Supabase not configured -- skipping cloud read.');
+      return;
+    }
+    try {
+      const supa = window.supabase.createClient(window.DASH_SUPABASE_URL, window.DASH_SUPABASE_KEY);
+      const { data, error } = await supa.from('app_state').select('data').eq('key', 'footballPage').maybeSingle();
+      footballBlob = (!error && data && data.data) ? data.data : {};
+      renderFootballTile();
+      renderSchedule(DAY_CONFIG[selectedScheduleDow]); // refresh in case today's row includes the match-plan detail
+    } catch (e) { /* offline — tile already shows the not-logged/dash state */ }
   }
 
   // ============================================================
@@ -1820,11 +1896,13 @@ body::after {
     renderStudy();
     renderHabits();
     fetchFluidSummary();
+    fetchFootballStatus();
     renderJournal();
   }
   renderAll();
   setInterval(renderDayBanner, 60 * 1000);
   setInterval(fetchFluidSummary, 2 * 60 * 1000);
+  setInterval(fetchFootballStatus, 2 * 60 * 1000);
   window.addEventListener('storage', renderAll);
   window.addEventListener('focus', fetchFluidSummary);
 })();

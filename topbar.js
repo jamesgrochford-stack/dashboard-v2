@@ -13,12 +13,11 @@
   'use strict';
 
   // -------- Supabase config (same project as the rest of the dashboard) --------
-  // For your audience's standalone, replace these with placeholders
-  // and have them paste their own values, just like the other pages.
-  // Prefer Vercel env vars (served via /api/config → window.DASH_*),
-  // otherwise fall back to these defaults.
-  const TOPBAR_SUPABASE_URL = (window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
-  const TOPBAR_SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
+  // Prefer Vercel env vars (served via /api/config → window.DASH_*). No
+  // hardcoded fallback -- fail safely rather than silently syncing to
+  // production when /api/config didn't load (e.g. local static testing).
+  const TOPBAR_SUPABASE_URL = (window.DASH_SUPABASE_URL) || '';
+  const TOPBAR_SUPABASE_KEY = (window.DASH_SUPABASE_KEY) || '';
 
   // -------- CSS --------
   const css = `
@@ -330,7 +329,10 @@ body.topbar-modal-open {
     if (localEntry && localEntry.bodyBattery != null) renderBattery(localEntry.bodyBattery);
     else renderBattery(null);
 
-    if (!window.supabase || !TOPBAR_SUPABASE_URL || !TOPBAR_SUPABASE_KEY) return;
+    if (!window.supabase || !TOPBAR_SUPABASE_URL || !TOPBAR_SUPABASE_KEY) {
+      console.warn('[topbar] Supabase not configured -- Body Battery sync disabled.');
+      return;
+    }
     if (TOPBAR_SUPABASE_URL.indexOf('PASTE-') === 0) return;
     try {
       const supa = window.supabase.createClient(TOPBAR_SUPABASE_URL, TOPBAR_SUPABASE_KEY);

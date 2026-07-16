@@ -13,10 +13,12 @@
 (function () {
   'use strict';
 
-  // Prefer Vercel env vars (served via /api/config → window.DASH_*),
-  // otherwise fall back to these defaults.
-  const SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || 'https://dkvwlwmcdtqrxckecwjm.supabase.co';
-  const SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || 'sb_publishable_owu2zajkoUEe5AFNurQbUw_jCf0srN-';
+  // Prefer Vercel env vars (served via /api/config → window.DASH_*). No
+  // hardcoded fallback here on purpose -- a page opened without /api/config
+  // (e.g. a plain local static-file server) must fail safely rather than
+  // silently syncing to the real production project.
+  const SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || '';
+  const SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || '';
 
   window.initCloudSync = function (config) {
     const appKey = config && config.appKey;
@@ -25,7 +27,10 @@
     const onApplied = config && config.onApplied;
     if (!appKey) return;
     if (!window.supabase) return;
-    if (!SUPABASE_URL || !SUPABASE_KEY) return;
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.warn('[sync] Supabase not configured (no window.DASH_SUPABASE_URL/KEY from /api/config) -- sync disabled for "' + appKey + '".');
+      return;
+    }
     if (SUPABASE_URL.indexOf('PASTE-') === 0 || SUPABASE_KEY.indexOf('PASTE-') === 0) return;
 
     let supa = null;

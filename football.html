@@ -120,18 +120,6 @@ body::after {
 .spark-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
 .spark-wrap svg { width: 100%; height: 50px; display: block; }
 
-/* ===== weekly training load ===== */
-.week-grid { display: flex; flex-direction: column; gap: 8px; }
-.week-day-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--text-tertiary); }
-.week-day-row.club { border-left-color: var(--blue); }
-.week-day-row.gym { border-left-color: var(--purple); }
-.week-day-row.rest { border-left-color: var(--text-tertiary); opacity: 0.6; }
-.week-day-row.match { border-left-color: var(--orange); }
-.week-day-name { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); width: 38px; flex: none; }
-.week-day-desc { flex: 1; font-size: 13px; color: var(--text-primary); }
-.week-day-tick { flex: none; font-size: 15px; color: var(--success); opacity: 0; transition: opacity 0.2s; }
-.week-day-tick.show { opacity: 1; }
-
 /* ===== fitness tests ===== */
 .ft-row { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .ft-row:last-child { border-bottom: none; padding-bottom: 0; }
@@ -158,22 +146,7 @@ body::after {
 .film-bar-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-primary); font-weight: 700; }
 .film-bar-label { font-size: 9.5px; color: var(--text-tertiary); text-align: center; line-height: 1.2; }
 
-/* ===== individual session planner ===== */
-.ind-item { display: flex; align-items: center; gap: 14px; padding: 13px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
-.ind-item:last-child { border-bottom: none; }
-.ind-item.done { opacity: 0.55; }
-.ind-check { flex: none; width: 24px; height: 24px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28); position: relative; }
-.ind-check.on { background: var(--success); border-color: var(--success); }
-.ind-check.on::after { content: ''; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
-.ind-main { flex: 1; }
-.ind-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.ind-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
-
-/* ===== post-match check ===== */
-.pmc-card { border-left: 4px solid var(--text-tertiary); transition: border-color 0.3s; }
-.pmc-card.complete { border-left-color: var(--success); }
-.pmc-badge { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 999px; }
-.pmc-badge.complete { background: rgba(107,227,164,0.15); color: var(--success); }
+/* ===== unified session log — match-extra fields, reuses the pmc-* classes ===== */
 .pmc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .pmc-row:last-child { border-bottom: none; }
 .pmc-row-label { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
@@ -185,7 +158,24 @@ body::after {
 .pmc-num { flex: none; width: 76px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: var(--font-mono); font-size: 14px; text-align: center; outline: none; }
 .pmc-num:focus { border-color: rgba(255,255,255,0.3); }
 
+/* ===== editable match actions (Activation card, match day) ===== */
+.matchact-row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.matchact-row:last-child { border-bottom: none; }
+.matchact-row input[type="text"] { flex: 1; }
+.matchact-check { flex: none; width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.28); position: relative; cursor: pointer; }
+.matchact-check.on { background: var(--orange); border-color: var(--orange); }
+.matchact-check.on::after { content: ''; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px; border: solid #0A0A0B; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+
+/* ===== session log: Garmin sub-row + ambiguous-match picker ===== */
+.session-garmin { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 5px; }
+.session-garmin.partial { color: var(--warning); }
+.session-garmin-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.session-garmin-pick button { font-family: var(--font-mono); font-size: 10.5px; padding: 5px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: var(--text-secondary); cursor: pointer; }
+.session-garmin-pick button:hover { border-color: rgba(255,255,255,0.3); color: var(--text-primary); }
+
 /* ===== activation -> outcome trend ===== */
+.streak-line { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 14px; }
+.streak-line b { color: var(--text-primary); }
 .trend-row-label { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .trend-row-label svg,
 .trend-wrap svg { width: 100%; height: 60px; display: block; }
@@ -211,15 +201,22 @@ body::after {
   </div>
   <div class="fb-head-sub" id="headDayType">—</div>
 
-  <!-- ACTIVATION CARD (conditional) -->
+  <!-- ACTIVATION CARD (conditional; training days show fixed toggles, match days show editable pre-match actions) -->
   <div class="card activation-card" id="activationCard" style="display:none">
     <div class="card-title"><span class="card-title-label" id="activationLabel">3-Action Rule</span></div>
     <div id="activationRows"></div>
   </div>
 
-  <!-- SESSION LOGGER -->
+  <!-- ACTIVATION -> OUTCOME TREND -->
   <div class="card">
-    <div class="card-title"><span class="card-title-label">Session Logger</span><span class="card-badge" id="sessionCountBadge">0 sessions</span></div>
+    <div class="card-title"><span class="card-title-label">Activation &rarr; Outcome Trend</span></div>
+    <div class="streak-line" id="streakLine"></div>
+    <div id="trendWrap"></div>
+  </div>
+
+  <!-- UNIFIED SESSION LOG (training + matches; merges the old Session Logger and Post-Match Check) -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-label">Session Log</span><span class="card-badge" id="sessionCountBadge">0 sessions</span></div>
     <div class="form-grid">
       <div class="fg"><label class="fl">Date</label><input class="fi" type="date" id="sDate"></div>
       <div class="fg"><label class="fl">Type</label>
@@ -236,52 +233,40 @@ body::after {
       <div class="fg"><label class="fl">Duration (min)</label><input class="fi" type="number" min="0" id="sDur" placeholder="60"></div>
       <div class="fg"><label class="fl">Confidence (1-5)</label><div class="star-row" id="sStars"></div></div>
     </div>
-    <div class="fg" style="margin-bottom:10px"><label class="fl">Notes</label><input class="fi" type="text" id="sNotes" placeholder="Focus areas, key moments…"></div>
-    <button type="button" class="btn-primary" id="sLogBtn">Log Session</button>
+    <div class="pmc-row" style="padding:9px 2px">
+      <span class="pmc-row-label">Activated early?</span>
+      <span class="pmc-seg" id="sActivated">
+        <button type="button" class="pmc-seg-btn" data-val="Y">Yes</button>
+        <button type="button" class="pmc-seg-btn" data-val="N">No</button>
+      </span>
+    </div>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="fg"><label class="fl">Went well</label><input class="fi" type="text" id="sWentWell" placeholder="One line…"></div>
+      <div class="fg"><label class="fl">To fix</label><input class="fi" type="text" id="sToFix" placeholder="One line…"></div>
+    </div>
+
+    <!-- Match-only extra fields (shown when Type = Match) -->
+    <div id="sMatchExtra" style="display:none;margin-top:6px">
+      <div id="sMatchActionRows"></div>
+      <div class="pmc-row">
+        <span class="pmc-row-label">Start or Sub</span>
+        <span class="pmc-seg" id="sStartSub">
+          <button type="button" class="pmc-seg-btn" data-val="start">Start</button>
+          <button type="button" class="pmc-seg-btn" data-val="sub">Sub</button>
+        </span>
+      </div>
+      <div class="pmc-row">
+        <span class="pmc-row-label">Minutes played</span>
+        <input type="number" min="0" max="130" class="pmc-num" id="sMinutes" placeholder="—">
+      </div>
+    </div>
+
+    <button type="button" class="btn-primary" id="sLogBtn" style="margin-top:12px">Log Session</button>
     <div class="spark-wrap" id="sparkWrap" style="display:none">
       <div class="spark-label">Activation Trend — confidence, last 10 sessions</div>
       <div id="sparkSvg"></div>
     </div>
     <div id="sessionList" style="margin-top:14px"></div>
-  </div>
-
-  <!-- POST-MATCH CHECK (conditional, match days) -->
-  <div class="card pmc-card" id="pmcCard" style="display:none">
-    <div class="card-title"><span class="card-title-label">Post-Match Check</span><span class="pmc-badge" id="pmcBadge">Incomplete</span></div>
-    <div id="pmcActionRows"></div>
-    <div class="pmc-row">
-      <span class="pmc-row-label">Confidence</span>
-      <div class="star-row" id="pmcStars"></div>
-    </div>
-    <div class="pmc-row">
-      <span class="pmc-row-label">Start or Sub</span>
-      <span class="pmc-seg" id="pmcStartSub">
-        <button type="button" class="pmc-seg-btn" data-val="start">Start</button>
-        <button type="button" class="pmc-seg-btn" data-val="sub">Sub</button>
-      </span>
-    </div>
-    <div class="pmc-row">
-      <span class="pmc-row-label">Minutes played</span>
-      <input type="number" min="0" max="130" class="pmc-num" id="pmcMinutes" placeholder="—">
-    </div>
-  </div>
-
-  <!-- ACTIVATION -> OUTCOME TREND -->
-  <div class="card">
-    <div class="card-title"><span class="card-title-label">Activation &rarr; Outcome Trend</span></div>
-    <div id="trendWrap"></div>
-  </div>
-
-  <!-- WEEKLY TRAINING LOAD -->
-  <div class="card">
-    <div class="card-title"><span class="card-title-label">Weekly Training Load</span></div>
-    <div class="week-grid" id="weekGrid"></div>
-  </div>
-
-  <!-- FITNESS TESTS -->
-  <div class="card">
-    <div class="card-title"><span class="card-title-label">Fitness Tests</span></div>
-    <div id="fitList"></div>
   </div>
 
   <!-- FILM STUDY -->
@@ -293,17 +278,22 @@ body::after {
           <option>Rodri</option><option>Declan Rice</option><option>Granit Xhaka</option><option>Ndidi</option><option>Other</option>
         </select>
       </div>
-      <div class="fg"><label class="fl">Notes</label><input class="fi" type="text" id="filmNotes" placeholder="Positioning, press triggers…"></div>
+      <div class="fg"><label class="fl">Focus question</label><input class="fi" type="text" id="filmFocus" placeholder="What are you watching for?"></div>
     </div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Positive finding</label><input class="fi" type="text" id="filmPositive" placeholder="What worked…"></div>
+      <div class="fg"><label class="fl">Fix identified</label><input class="fi" type="text" id="filmFix" placeholder="What to change…"></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label class="fl">Drill for next session</label><input class="fi" type="text" id="filmDrill" placeholder="Concrete rep to run…"></div>
     <button type="button" class="btn-primary" id="filmLogBtn">Log Film Session</button>
     <div id="filmList" style="margin-top:14px"></div>
     <div class="film-bars" id="filmBars"></div>
   </div>
 
-  <!-- INDIVIDUAL SESSION PLANNER -->
+  <!-- FITNESS TESTS -->
   <div class="card">
-    <div class="card-title"><span class="card-title-label">Individual Session Planner</span></div>
-    <div id="indRows"></div>
+    <div class="card-title"><span class="card-title-label">Fitness Tests</span></div>
+    <div id="fitList"></div>
   </div>
 
 </div>
@@ -330,6 +320,7 @@ body::after {
   const DOW_MON = 1, DOW_TUE = 2, DOW_WED = 3, DOW_THU = 4, DOW_FRI = 5, DOW_SAT = 6, DOW_SUN = 0;
   function dayType(dow) {
     if (dow === DOW_MON || dow === DOW_TUE || dow === DOW_THU) return 'Training Day';
+    if (dow === DOW_WED) return 'Gym Day';
     if (dow === DOW_SAT) return 'Match Day';
     return 'Rest Day';
   }
@@ -348,15 +339,16 @@ body::after {
     { id: 'duel', label: 'Win your first duel and set the tone' },
   ];
   function activationKey() { return 'fb:activation:' + todayKey(); }
-  function renderActivation() {
-    const dow = new Date().getDay();
-    const isTraining = dow === DOW_MON || dow === DOW_TUE || dow === DOW_THU;
-    const isMatch = dow === DOW_SAT;
-    const card = $('activationCard');
-    if (!isTraining && !isMatch) { card.style.display = 'none'; return; }
-    card.style.display = 'block';
-    card.classList.toggle('match', isMatch);
-    $('activationLabel').textContent = isMatch ? '3-Action Rule — Match Day' : '3-Action Rule — Pre-Session';
+  // Match-day pre-match actions are editable per date -- specific, not generic.
+  // Training days keep the fixed ACTIVATION_ITEMS list above, unchanged.
+  function matchActionsKey(dateStr) { return 'fb:matchActions:' + (dateStr || todayKey()); }
+  function getMatchActions(dateStr) { return loadJSON(matchActionsKey(dateStr), { texts: ['', '', ''], done: [false, false, false] }); }
+  function saveMatchActions(dateStr, patch) {
+    const next = Object.assign({}, getMatchActions(dateStr), patch);
+    saveJSON(matchActionsKey(dateStr), next);
+    return next;
+  }
+  function renderTrainingActivation() {
     const state = loadJSON(activationKey(), {});
     const wrap = $('activationRows');
     wrap.innerHTML = '';
@@ -369,19 +361,68 @@ body::after {
         const st = loadJSON(activationKey(), {});
         st[item.id] = !st[item.id];
         saveJSON(activationKey(), st); // instant local write; sync.js pushes to Supabase in the background
-        renderActivation();
+        renderTrainingActivation();
       });
       wrap.appendChild(row);
     });
   }
+  function renderMatchActionsCard() {
+    const data = getMatchActions(todayKey());
+    const wrap = $('activationRows');
+    wrap.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const row = document.createElement('div');
+      row.className = 'matchact-row';
+      row.innerHTML =
+        '<input type="text" class="fi" data-i="' + i + '" placeholder="Action ' + (i + 1) + ' — e.g. Call for the ball from the CB in first 3 minutes" value="' + esc(data.texts[i] || '') + '">' +
+        '<span class="matchact-check' + (data.done[i] ? ' on' : '') + '" data-i="' + i + '"></span>';
+      wrap.appendChild(row);
+    }
+    wrap.querySelectorAll('input[type="text"]').forEach(input => {
+      input.addEventListener('input', () => {
+        const i = +input.dataset.i;
+        const cur = getMatchActions(todayKey());
+        cur.texts[i] = input.value;
+        saveMatchActions(todayKey(), { texts: cur.texts });
+        renderSessions(); // the log form/list's compliance labels follow these texts live
+      });
+    });
+    wrap.querySelectorAll('.matchact-check').forEach(chk => {
+      chk.addEventListener('click', () => {
+        const i = +chk.dataset.i;
+        const cur = getMatchActions(todayKey());
+        cur.done[i] = !cur.done[i];
+        saveMatchActions(todayKey(), { done: cur.done });
+        renderMatchActionsCard();
+      });
+    });
+  }
+  function renderActivation() {
+    const dow = new Date().getDay();
+    const isTraining = dow === DOW_MON || dow === DOW_TUE || dow === DOW_THU;
+    const isMatch = dow === DOW_SAT;
+    const card = $('activationCard');
+    if (!isTraining && !isMatch) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    card.classList.toggle('match', isMatch);
+    $('activationLabel').textContent = isMatch ? '3-Action Rule — Match Day' : '3-Action Rule — Pre-Session';
+    if (isMatch) renderMatchActionsCard(); else renderTrainingActivation();
+  }
 
   // ============================================================
-  // SESSION LOGGER
+  // UNIFIED SESSION LOG — training + matches, one entry per session.
+  // Merges the old Session Logger and Post-Match Check: a manual layer
+  // (this section) plus a Garmin layer (auto-matched further below).
+  // Match-only fields (action1/2/3, mistakeProtocol, startOrSub, minutes)
+  // are composed in the same form and only saved when type === 'Match'.
   // ============================================================
   const SESSIONS_KEY = 'fb:sessions';
   function getSessions() { return loadJSON(SESSIONS_KEY, []); }
+  function saveSessions(sessions) { saveJSON(SESSIONS_KEY, sessions); }
   function uid() { return 'fb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   let sRating = 0;
+  let sActivatedVal;
+  let sMatchState = {}; // { action1, action2, action3, mistakeProtocol, startOrSub }
   function buildStars(container, onChange) {
     container.innerHTML = '';
     for (let i = 1; i <= 5; i++) {
@@ -396,23 +437,97 @@ body::after {
   }
   buildStars($('sStars'), (v) => { sRating = v; });
   $('sDate').value = todayKey();
+
+  $('sActivated').querySelectorAll('.pmc-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sActivatedVal = sActivatedVal === btn.dataset.val ? undefined : btn.dataset.val;
+      $('sActivated').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', sActivatedVal === b.dataset.val));
+    });
+  });
+
+  const MATCH_ACTION_IDS = ['action1', 'action2', 'action3'];
+  function renderMatchActionRows() {
+    // Labels come from that date's editable pre-match actions (goal #1),
+    // not a hardcoded script -- James grades himself against what he
+    // actually planned for this specific match.
+    const dateStr = $('sDate').value || todayKey();
+    const labels = getMatchActions(dateStr).texts;
+    const rows = MATCH_ACTION_IDS.map((id, i) => ({
+      id, label: labels[i] ? ('Action ' + (i + 1) + ' — ' + labels[i]) : ('Action ' + (i + 1) + ' (not set for this date)'),
+      val: sMatchState[id], opts: [['Y', 'Y'], ['N', 'N']],
+    })).concat([{ id: 'mistakeProtocol', label: 'Mistake protocol fired', val: sMatchState.mistakeProtocol, opts: [['Y', 'Y'], ['N', 'N'], ['NA', 'N/A']] }]);
+    const wrap = $('sMatchActionRows');
+    wrap.innerHTML = rows.map(r =>
+      '<div class="pmc-row"><span class="pmc-row-label">' + esc(r.label) + '</span><span class="pmc-seg">' +
+        r.opts.map(([val, lbl]) => {
+          const active = r.val === val;
+          const cls = active ? ' active' + (val === 'N' ? ' no' : val === 'NA' ? ' na' : '') : '';
+          return '<button type="button" class="pmc-seg-btn' + cls + '" data-field="' + r.id + '" data-val="' + val + '">' + lbl + '</button>';
+        }).join('') +
+      '</span></div>'
+    ).join('');
+    wrap.querySelectorAll('.pmc-seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const field = btn.dataset.field;
+        sMatchState[field] = sMatchState[field] === btn.dataset.val ? undefined : btn.dataset.val;
+        renderMatchActionRows();
+      });
+    });
+  }
+  $('sStartSub').querySelectorAll('.pmc-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sMatchState.startOrSub = sMatchState.startOrSub === btn.dataset.val ? undefined : btn.dataset.val;
+      $('sStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', sMatchState.startOrSub === b.dataset.val));
+    });
+  });
+  function resetMatchExtra() {
+    sMatchState = {};
+    renderMatchActionRows();
+    $('sStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.remove('active'));
+    $('sMinutes').value = '';
+  }
+  function syncMatchExtraVisibility() {
+    const isMatchType = $('sType').value === 'Match';
+    $('sMatchExtra').style.display = isMatchType ? 'block' : 'none';
+    if (isMatchType) renderMatchActionRows();
+  }
+  $('sType').addEventListener('change', syncMatchExtraVisibility);
+  $('sDate').addEventListener('change', () => { if ($('sType').value === 'Match') renderMatchActionRows(); });
+  syncMatchExtraVisibility();
+
   $('sLogBtn').addEventListener('click', () => {
     const date = $('sDate').value || todayKey();
     const type = $('sType').value;
     const dur = parseInt($('sDur').value, 10) || 0;
-    const notes = $('sNotes').value.trim();
+    const wentWell = $('sWentWell').value.trim();
+    const toFix = $('sToFix').value.trim();
     if (!dur) { alert('Enter a duration.'); return; }
+    const entry = {
+      id: uid(), date, type, duration: dur, confidence: sRating,
+      activatedEarly: sActivatedVal, wentWell, toFix, garminActivityId: null, ts: Date.now(),
+    };
+    if (type === 'Match') {
+      entry.action1 = sMatchState.action1;
+      entry.action2 = sMatchState.action2;
+      entry.action3 = sMatchState.action3;
+      entry.mistakeProtocol = sMatchState.mistakeProtocol;
+      entry.startOrSub = sMatchState.startOrSub;
+      const rawMin = $('sMinutes').value;
+      entry.minutes = rawMin === '' ? undefined : Math.max(0, Math.min(130, parseInt(rawMin, 10) || 0));
+    }
     const sessions = getSessions();
-    sessions.unshift({ id: uid(), date, type, duration: dur, confidence: sRating, notes, ts: Date.now() });
-    saveJSON(SESSIONS_KEY, sessions);
-    $('sDur').value = ''; $('sNotes').value = ''; $('sDate').value = todayKey();
+    sessions.unshift(entry);
+    saveSessions(sessions);
+    $('sDur').value = ''; $('sWentWell').value = ''; $('sToFix').value = ''; $('sDate').value = todayKey();
     sRating = 0; paintStars($('sStars'), 0);
-    renderSessions(); renderWeekGrid();
+    sActivatedVal = undefined; $('sActivated').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.remove('active'));
+    resetMatchExtra();
+    renderSessions(); renderTrendChart();
   });
   function deleteSession(id) {
     const sessions = getSessions().filter(s => s.id !== id);
-    saveJSON(SESSIONS_KEY, sessions);
-    renderSessions(); renderWeekGrid();
+    saveSessions(sessions);
+    renderSessions(); renderTrendChart();
   }
   function buildSparkSVG(values) {
     const W = 300, H = 50, pad = 6;
@@ -436,134 +551,99 @@ body::after {
     if (!recent.length) { list.innerHTML = '<div class="empty-note">No sessions logged yet.</div>'; return; }
     list.innerHTML = recent.map(s => {
       const stars = s.confidence ? '<div class="session-stars">' + '★'.repeat(s.confidence) + '☆'.repeat(5 - s.confidence) + '</div>' : '';
+      const matchBits = s.type === 'Match'
+        ? '<div class="session-notes">3-Action: ' + [s.action1, s.action2, s.action3].filter(v => v === 'Y').length + '/3' +
+          (s.startOrSub ? ' · ' + esc(s.startOrSub) : '') + (s.minutes != null ? ' · ' + s.minutes + ' min played' : '') + '</div>'
+        : '';
       return '<div class="session-item">' +
         '<div class="session-top"><span class="session-type">' + esc(s.type) + '</span>' +
         '<span style="display:flex;align-items:center;gap:10px"><span class="session-dur">' + s.duration + ' min</span>' +
         '<button type="button" class="session-del" data-id="' + s.id + '">&times;</button></span></div>' +
-        (s.notes ? '<div class="session-notes">' + esc(s.notes) + '</div>' : '') +
+        (s.activatedEarly ? '<div class="session-notes">Activated early: ' + (s.activatedEarly === 'Y' ? 'Yes' : 'No') + '</div>' : '') +
+        (s.wentWell ? '<div class="session-notes">Went well: ' + esc(s.wentWell) + '</div>' : '') +
+        (s.toFix ? '<div class="session-notes">To fix: ' + esc(s.toFix) + '</div>' : '') +
+        matchBits +
         stars +
+        renderSessionGarminRow(s) +
         '<div class="session-date">' + esc(s.date) + '</div>' +
       '</div>';
     }).join('');
     list.querySelectorAll('.session-del').forEach(btn => btn.addEventListener('click', () => deleteSession(btn.dataset.id)));
-  }
-
-  // ============================================================
-  // POST-MATCH CHECK — Saturdays only. Fast Y/N/N-A toggles + reused
-  // confidence stars, no free text. Every field is optional on its own;
-  // the card border/badge just nudge toward finishing all of them.
-  // Stored one object per date: fb:postMatchCheck:{date}
-  // ============================================================
-  const PMC_ACTIONS = [
-    { id: 'action1', label: 'Action 1 — Communicate early' },
-    { id: 'action2', label: 'Action 2 — Demand the ball' },
-    { id: 'action3', label: 'Action 3 — Win first duel' },
-  ];
-  function postMatchKey(dateStr) { return 'fb:postMatchCheck:' + (dateStr || todayKey()); }
-  function getPostMatchCheck(dateStr) { return loadJSON(postMatchKey(dateStr), {}); }
-  function savePostMatchCheck(dateStr, patch) {
-    const next = Object.assign({}, getPostMatchCheck(dateStr), patch);
-    saveJSON(postMatchKey(dateStr), next); // instant local write; sync.js pushes to Supabase in the background
-    return next;
-  }
-  function pmcIsComplete(d) {
-    return !!(d.action1 && d.action2 && d.action3 && d.mistakeProtocol && d.confidence > 0 && d.startOrSub && d.minutes !== undefined && d.minutes !== null);
-  }
-  function updatePmcBadge() {
-    const complete = pmcIsComplete(getPostMatchCheck());
-    $('pmcCard').classList.toggle('complete', complete);
-    $('pmcBadge').textContent = complete ? 'Complete' : 'Incomplete';
-    $('pmcBadge').classList.toggle('complete', complete);
-  }
-  function renderPmcActionRows() {
-    const data = getPostMatchCheck();
-    const rows = PMC_ACTIONS.map(a => ({ id: a.id, label: a.label, val: data[a.id], opts: [['Y', 'Y'], ['N', 'N']] }))
-      .concat([{ id: 'mistakeProtocol', label: 'Mistake protocol fired', val: data.mistakeProtocol, opts: [['Y', 'Y'], ['N', 'N'], ['NA', 'N/A']] }]);
-    const wrap = $('pmcActionRows');
-    wrap.innerHTML = rows.map(r =>
-      '<div class="pmc-row"><span class="pmc-row-label">' + esc(r.label) + '</span><span class="pmc-seg">' +
-        r.opts.map(([val, lbl]) => {
-          const active = r.val === val;
-          const cls = active ? ' active' + (val === 'N' ? ' no' : val === 'NA' ? ' na' : '') : '';
-          return '<button type="button" class="pmc-seg-btn' + cls + '" data-field="' + r.id + '" data-val="' + val + '">' + lbl + '</button>';
-        }).join('') +
-      '</span></div>'
-    ).join('');
-    wrap.querySelectorAll('.pmc-seg-btn').forEach(btn => {
+    list.querySelectorAll('.garmin-pick-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const field = btn.dataset.field;
-        const cur = getPostMatchCheck();
-        const next = cur[field] === btn.dataset.val ? undefined : btn.dataset.val; // tap again to clear
-        savePostMatchCheck(todayKey(), { [field]: next });
-        renderPmcActionRows();
-        updatePmcBadge();
-        renderTrendChart();
+        const sessions2 = getSessions();
+        const s = sessions2.find(x => x.id === btn.dataset.sessionId);
+        if (s) { s.garminActivityId = +btn.dataset.activityId; saveSessions(sessions2); renderSessions(); }
       });
     });
   }
-  $('pmcStartSub').querySelectorAll('.pmc-seg-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cur = getPostMatchCheck();
-      const next = cur.startOrSub === btn.dataset.val ? undefined : btn.dataset.val;
-      savePostMatchCheck(todayKey(), { startOrSub: next });
-      $('pmcStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', next === b.dataset.val));
-      updatePmcBadge();
-      renderTrendChart();
-    });
-  });
-  $('pmcMinutes').addEventListener('input', () => {
-    const raw = $('pmcMinutes').value;
-    const val = raw === '' ? undefined : Math.max(0, Math.min(130, parseInt(raw, 10) || 0));
-    savePostMatchCheck(todayKey(), { minutes: val });
-    updatePmcBadge();
-    renderTrendChart();
-  });
-  function renderPostMatchCheck() {
-    const isMatch = new Date().getDay() === DOW_SAT;
-    const card = $('pmcCard');
-    if (!isMatch) { card.style.display = 'none'; return; }
-    card.style.display = 'block';
-    const data = getPostMatchCheck();
-    renderPmcActionRows();
-    buildStars($('pmcStars'), (v) => { savePostMatchCheck(todayKey(), { confidence: v }); updatePmcBadge(); renderTrendChart(); });
-    paintStars($('pmcStars'), data.confidence || 0);
-    $('pmcStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', data.startOrSub === b.dataset.val));
-    $('pmcMinutes').value = data.minutes != null ? data.minutes : '';
-    updatePmcBadge();
-  }
 
   // ============================================================
-  // ACTIVATION -> OUTCOME TREND — reads every fb:postMatchCheck:* entry
-  // across the season. Rendered as small multiples (one axis each,
-  // sharing the same match-date x-axis) rather than one dual-axis
-  // chart, since compliance %, confidence and minutes are different
-  // scales. Compliance counts a field compliant when action1/2/3 = Y,
-  // or mistakeProtocol is Y or N/A (no mistake happened is not a failure);
-  // an unanswered field counts as not compliant that match.
+  // ONE-TIME MIGRATION — fold any pre-existing fb:postMatchCheck:{date}
+  // records (from before this redesign) into fb:sessions so the season's
+  // trend-chart history survives the schema change. Runs once, guarded
+  // by fb:migratedPmcV1. Old fb:postMatchCheck:* keys are left in place,
+  // just no longer read by anything.
   // ============================================================
-  function computeMatchTrend() {
-    const out = [];
+  function migratePostMatchChecksOnce() {
+    if (loadJSON('fb:migratedPmcV1', false)) return;
+    const sessions = getSessions();
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k || k.indexOf('fb:postMatchCheck:') !== 0) continue;
-      const d = loadJSON(k, null);
-      if (!d) continue;
+      const pmc = loadJSON(k, null);
+      if (!pmc) continue;
+      const date = k.slice('fb:postMatchCheck:'.length);
+      const fields = { action1: pmc.action1, action2: pmc.action2, action3: pmc.action3, mistakeProtocol: pmc.mistakeProtocol, startOrSub: pmc.startOrSub, minutes: pmc.minutes };
+      const existing = sessions.find(s => s.date === date && s.type === 'Match');
+      if (existing) {
+        Object.assign(existing, fields);
+        if (!(existing.confidence > 0) && pmc.confidence > 0) existing.confidence = pmc.confidence;
+      } else {
+        sessions.push(Object.assign({ id: uid(), date, type: 'Match', duration: 0, confidence: pmc.confidence || 0, wentWell: '', toFix: '', garminActivityId: null, ts: Date.now() }, fields));
+      }
+    }
+    sessions.sort((a, b) => b.ts - a.ts);
+    saveSessions(sessions);
+    saveJSON('fb:migratedPmcV1', true);
+  }
+
+  // ============================================================
+  // ACTIVATION -> OUTCOME TREND — reads every unified session log entry
+  // with type === 'Match' (folded in from the old per-date Post-Match
+  // Check via the migration above). Rendered as small multiples (one
+  // axis each, sharing the same match-date x-axis) rather than one
+  // dual-axis chart, since compliance %, confidence and minutes are
+  // different scales. Compliance counts a field compliant when
+  // action1/2/3 = Y, or mistakeProtocol is Y or N/A (no mistake happened
+  // is not a failure); an unanswered field counts as not compliant.
+  // ============================================================
+  function computeMatchTrend() {
+    const out = getSessions().filter(s => s.type === 'Match').map(d => {
       const complianceCount =
         (d.action1 === 'Y' ? 1 : 0) +
         (d.action2 === 'Y' ? 1 : 0) +
         (d.action3 === 'Y' ? 1 : 0) +
         ((d.mistakeProtocol === 'Y' || d.mistakeProtocol === 'NA') ? 1 : 0);
-      out.push({
-        date: k.slice('fb:postMatchCheck:'.length),
+      return {
+        date: d.date,
         complianceCount,
         compliancePct: Math.round((complianceCount / 4) * 100),
         confidence: d.confidence || 0,
         minutes: d.minutes != null ? d.minutes : 0,
         startOrSub: d.startOrSub || null,
-      });
-    }
+        executed3: d.action1 === 'Y' && d.action2 === 'Y' && d.action3 === 'Y',
+      };
+    });
     out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     return out;
+  }
+  function updateStreakLine(matches) {
+    const el = $('streakLine');
+    if (!matches.length) { el.innerHTML = ''; return; }
+    const last5 = matches.slice(-5);
+    const executed = last5.filter(m => m.executed3).length;
+    el.innerHTML = '3-Action Plan executed: <b>' + executed + ' of last ' + last5.length + '</b> match' + (last5.length === 1 ? '' : 'es');
   }
   function trendDotColor(val, good, warn) {
     if (val >= good) return '#6BE3A4';
@@ -600,8 +680,9 @@ body::after {
   function renderTrendChart() {
     const wrap = $('trendWrap');
     const matches = computeMatchTrend();
+    updateStreakLine(matches);
     if (matches.length < 3) {
-      wrap.innerHTML = '<div class="empty-note">Log at least 3 Post-Match Checks to see the activation &rarr; outcome trend.</div>';
+      wrap.innerHTML = '<div class="empty-note">Log at least 3 matches in the Session Log to see the activation &rarr; outcome trend.</div>';
       return;
     }
     const recent = matches.slice(-10);
@@ -614,33 +695,6 @@ body::after {
       '<div class="trend-row-label" style="margin-top:12px">Minutes played <span class="trend-legend"><span class="dot start"></span>Start<span class="dot sub"></span>Sub</span></div>' +
       buildTrendBarSVG(recent) +
       '<div class="trend-dates">' + dateLabels.map(d => '<span>' + esc(d) + '</span>').join('') + '</div>';
-  }
-
-  // ============================================================
-  // WEEKLY TRAINING LOAD — Mon..Sat, ticks when a session was logged that day
-  // ============================================================
-  const WEEK_PLAN = [
-    { name: 'MON', desc: 'Club Training 18:00–19:30', cls: 'club' },
-    { name: 'TUE', desc: 'Club Training 07:30–09:00', cls: 'club' },
-    { name: 'WED', desc: 'Gym only', cls: 'gym' },
-    { name: 'THU', desc: 'Club Training 07:30–09:00', cls: 'club' },
-    { name: 'FRI', desc: 'Rest', cls: 'rest' },
-    { name: 'SAT', desc: 'Match', cls: 'match' },
-  ];
-  function renderWeekGrid() {
-    const monday = mondayOf(new Date());
-    const sessions = getSessions();
-    const grid = $('weekGrid');
-    grid.innerHTML = '';
-    WEEK_PLAN.forEach((d, i) => {
-      const date = addDays(monday, i);
-      const dStr = dateKey(date);
-      const logged = sessions.some(s => s.date === dStr);
-      const row = document.createElement('div');
-      row.className = 'week-day-row ' + d.cls;
-      row.innerHTML = '<span class="week-day-name">' + d.name + '</span><span class="week-day-desc">' + esc(d.desc) + '</span>' + (logged ? '<span class="week-day-tick show">✓</span>' : '');
-      grid.appendChild(row);
-    });
   }
 
   // ============================================================
@@ -691,18 +745,23 @@ body::after {
   }
 
   // ============================================================
-  // FILM STUDY TRACKER
+  // FILM STUDY LOG — focus question set before watching, then a
+  // positive finding, a fix identified, and a drill for next session:
+  // closes the loop instead of a single free-text notes field.
   // ============================================================
   const FILM_KEY = 'fb:film';
   const FILM_PLAYERS = ['Rodri', 'Declan Rice', 'Granit Xhaka', 'Ndidi', 'Other'];
   function getFilm() { return loadJSON(FILM_KEY, []); }
   $('filmLogBtn').addEventListener('click', () => {
     const player = $('filmPlayer').value;
-    const notes = $('filmNotes').value.trim();
+    const focusQuestion = $('filmFocus').value.trim();
+    const positiveFinding = $('filmPositive').value.trim();
+    const fixIdentified = $('filmFix').value.trim();
+    const drillForNext = $('filmDrill').value.trim();
     const logs = getFilm();
-    logs.unshift({ id: uid(), player, notes, date: todayKey(), ts: Date.now() });
+    logs.unshift({ id: uid(), player, focusQuestion, positiveFinding, fixIdentified, drillForNext, date: todayKey(), ts: Date.now() });
     saveJSON(FILM_KEY, logs);
-    $('filmNotes').value = '';
+    $('filmFocus').value = ''; $('filmPositive').value = ''; $('filmFix').value = ''; $('filmDrill').value = '';
     renderFilm();
   });
   function deleteFilm(id) {
@@ -717,7 +776,15 @@ body::after {
     $('filmCountBadge').textContent = thisWeek.length + ' this week';
     const list = $('filmList');
     list.innerHTML = thisWeek.length
-      ? thisWeek.map(l => '<div class="film-item"><div class="film-item-main"><div class="film-item-player">' + esc(l.player) + '</div>' + (l.notes ? '<div class="film-item-notes">' + esc(l.notes) + '</div>' : '') + '</div><span class="film-item-date">' + esc(l.date) + '</span><button type="button" class="session-del" data-id="' + l.id + '">&times;</button></div>').join('')
+      ? thisWeek.map(l => {
+          const lines = [
+            l.focusQuestion ? 'Focus: ' + esc(l.focusQuestion) : '',
+            l.positiveFinding ? 'Worked: ' + esc(l.positiveFinding) : '',
+            l.fixIdentified ? 'Fix: ' + esc(l.fixIdentified) : '',
+            l.drillForNext ? 'Next drill: ' + esc(l.drillForNext) : '',
+          ].filter(Boolean).map(t => '<div class="film-item-notes">' + t + '</div>').join('');
+          return '<div class="film-item"><div class="film-item-main"><div class="film-item-player">' + esc(l.player) + '</div>' + lines + '</div><span class="film-item-date">' + esc(l.date) + '</span><button type="button" class="session-del" data-id="' + l.id + '">&times;</button></div>';
+        }).join('')
       : '<div class="empty-note">No film sessions logged this week.</div>';
     list.querySelectorAll('.session-del').forEach(btn => btn.addEventListener('click', () => deleteFilm(btn.dataset.id)));
     const bars = $('filmBars');
@@ -730,33 +797,81 @@ body::after {
   }
 
   // ============================================================
-  // INDIVIDUAL SESSION PLANNER — resets daily
+  // GARMIN LAYER — auto-matched from garmin_activities (real Garmin
+  // Connect data: duration, distance, avg/max HR, calories). Fetched
+  // once per page load (same query shape as index.html's Training Load
+  // section), then joined client-side by date + type onto each session
+  // log entry. No per-activity Supabase calls.
   // ============================================================
-  const IND_SESSIONS = [
-    { id: 'backgarden', title: 'Backgarden Technical', sub: '30 min — touches, ball mastery, passing wall' },
-    { id: 'localPitch', title: 'Local Pitch with Brother', sub: 'Passing patterns, shooting, crossing' },
-    { id: 'soloFitness', title: 'Solo Fitness Run', sub: '' },
-  ];
-  function individualKey() { return 'fb:individual:' + todayKey(); }
-  function renderIndividual() {
-    const state = loadJSON(individualKey(), {});
-    const wrap = $('indRows');
-    wrap.innerHTML = '';
-    IND_SESSIONS.forEach(item => {
-      const on = !!state[item.id];
-      const row = document.createElement('div');
-      row.className = 'ind-item' + (on ? ' done' : '');
-      row.innerHTML =
-        '<span class="ind-check' + (on ? ' on' : '') + '"></span>' +
-        '<div class="ind-main"><div class="ind-title">' + esc(item.title) + '</div>' + (item.sub ? '<div class="ind-sub">' + esc(item.sub) + '</div>' : '') + '</div>';
-      row.addEventListener('click', () => {
-        const st = loadJSON(individualKey(), {});
-        st[item.id] = !st[item.id];
-        saveJSON(individualKey(), st);
-        renderIndividual();
-      });
-      wrap.appendChild(row);
-    });
+  // No hardcoded fallback literal here (unlike index.html) -- /api/config
+  // is already loaded at the top of this file and populates these on every
+  // real deployment; loadGarminActivities() below just no-ops if they're
+  // ever empty (e.g. opened locally with no Vercel env vars configured).
+  const SUPABASE_URL = window.DASH_SUPABASE_URL || '';
+  const SUPABASE_KEY = window.DASH_SUPABASE_KEY || '';
+  let garminActivities = [];
+  function garminDateOf(row) { return (row.start_time_local || '').slice(0, 10); }
+  function garminCandidatesFor(session) {
+    const date = session.date;
+    if (session.type === 'Club Training' || session.type === 'Match') {
+      return garminActivities.filter(a => garminDateOf(a) === date && a.activity_type === 'soccer');
+    }
+    if (session.type === 'Individual Physical') {
+      return garminActivities.filter(a => garminDateOf(a) === date);
+    }
+    return []; // Individual Technical / Film Study never have a matching physical Garmin activity
+  }
+  function isPartialGarmin(a) {
+    // Manual match entries: no watch worn during play -- 0 calories/distance, null HR.
+    return !a.calories && !a.distance_meters && a.average_hr == null;
+  }
+  function garminSummary(a) {
+    const bits = [];
+    if (a.duration_seconds) bits.push(Math.round(a.duration_seconds / 60) + ' min');
+    if (a.distance_meters) bits.push((a.distance_meters / 1000).toFixed(1) + ' km');
+    if (a.average_hr != null) bits.push('avg ' + Math.round(a.average_hr) + (a.max_hr != null ? ' / max ' + Math.round(a.max_hr) : '') + ' bpm');
+    return bits.join(' · ');
+  }
+  function renderSessionGarminRow(s) {
+    if (s.garminActivityId) {
+      const a = garminActivities.find(x => x.activity_id === s.garminActivityId);
+      if (a) return '<div class="session-garmin' + (isPartialGarmin(a) ? ' partial' : '') + '">Garmin: ' + (garminSummary(a) || 'manual entry, no HR data') + '</div>';
+    }
+    const candidates = garminCandidatesFor(s);
+    if (!candidates.length) {
+      if (s.type === 'Individual Technical' || s.type === 'Film Study') return '';
+      return '<div class="session-garmin">No Garmin data for this date</div>';
+    }
+    if (candidates.length === 1) {
+      const a = candidates[0];
+      return '<div class="session-garmin' + (isPartialGarmin(a) ? ' partial' : '') + '">Garmin: ' + (garminSummary(a) || 'manual entry, no HR data') + '</div>';
+    }
+    // Same-day multiple candidates (e.g. training + match both logged) -- ask once, then remember.
+    return '<div class="session-garmin">Multiple Garmin sessions this date — which one?' +
+      '<div class="session-garmin-pick">' + candidates.map(a =>
+        '<button type="button" class="garmin-pick-btn" data-session-id="' + s.id + '" data-activity-id="' + a.activity_id + '">' +
+          esc((a.start_time_local || '').slice(11, 16)) + ' · ' + esc(garminSummary(a) || 'no HR data') +
+        '</button>'
+      ).join('') + '</div></div>';
+  }
+  async function loadGarminActivities() {
+    try {
+      if (!window.supabase || !SUPABASE_URL) {
+        console.warn('[Garmin layer] Supabase not configured -- skipping.');
+        return;
+      }
+      const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      const { data, error } = await supa
+        .from('garmin_activities')
+        .select('activity_id,activity_type,start_time_local,duration_seconds,distance_meters,average_hr,max_hr,calories')
+        .order('start_time_local', { ascending: false })
+        .limit(60);
+      if (error) throw error;
+      garminActivities = data || [];
+      renderSessions();
+    } catch (e) {
+      // Garmin layer is a nice-to-have enrichment; the manual log stands on its own if this fails.
+    }
   }
 
   // ---------- boot ----------
@@ -764,15 +879,14 @@ body::after {
     renderHeader();
     renderActivation();
     renderSessions();
-    renderPostMatchCheck();
     renderTrendChart();
-    renderWeekGrid();
     renderFitTests();
     renderFilm();
-    renderIndividual();
   }
+  migratePostMatchChecksOnce();
   renderAll();
-  setInterval(renderAll, 60 * 1000); // catches midnight rollover for activation + individual planner
+  loadGarminActivities();
+  setInterval(renderAll, 60 * 1000); // catches midnight rollover for activation
   window.addEventListener('storage', renderAll);
 })();
 </script>

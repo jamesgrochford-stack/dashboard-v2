@@ -169,6 +169,8 @@ body::after {
       <span class="goal-horizon" style="background:rgba(107,227,164,0.14);color:var(--success)">Long-term</span>
     </div>
     <p class="goal-desc">Play at professional or semi-professional level as a CDM. Treaty United U20s is the current platform &mdash; perform, progress, get noticed.</p>
+    <div class="goal-progress-row"><span id="g1ComplianceNow">&mdash;</span><span>3-Action compliance</span></div>
+    <div class="prog-track"><div class="prog-fill" id="g1ComplianceFill" style="width:0%;background:linear-gradient(90deg,var(--blue),var(--success))"></div></div>
     <div id="gm1"></div>
   </div>
 
@@ -365,6 +367,30 @@ body::after {
     }
   }
 
+  // ---------- football 3-action compliance (cross-page read of
+  // football.html's app_state blob, same pattern as index.html's football
+  // tile -- season-long %, not just the last-5-match streak shown there) ----------
+  function renderCompliance(pct, compliant, total) {
+    $('g1ComplianceNow').textContent = total ? (pct + '% (' + compliant + '/' + total + ')') : 'No matches logged yet';
+    $('g1ComplianceFill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+  }
+  async function fetchFootballCompliance() {
+    if (!window.supabase || !window.DASH_SUPABASE_URL || !window.DASH_SUPABASE_KEY) {
+      console.warn('[Goals: football compliance] Supabase not configured -- skipping.');
+      return;
+    }
+    try {
+      const supa = window.supabase.createClient(window.DASH_SUPABASE_URL, window.DASH_SUPABASE_KEY);
+      const { data, error } = await supa.from('app_state').select('data').eq('key', 'footballPage').maybeSingle();
+      if (error || !data || !data.data) return;
+      const sessions = data.data['fb:sessions'] || [];
+      const matches = sessions.filter(s => s.type === 'Match');
+      const compliant = matches.filter(s => s.action1 === 'Y' && s.action2 === 'Y' && s.action3 === 'Y').length;
+      const pct = matches.length ? Math.round((compliant / matches.length) * 100) : 0;
+      renderCompliance(pct, compliant, matches.length);
+    } catch (e) { /* offline — dash placeholder stands */ }
+  }
+
   function renderAll() {
     renderMilestones('gm1');
     renderMilestones('gm5');
@@ -372,6 +398,7 @@ body::after {
     renderPoints();
   }
   renderAll();
+  fetchFootballCompliance();
   window.addEventListener('storage', renderAll);
 })();
 </script>
