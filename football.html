@@ -84,6 +84,8 @@ body::after {
 
 /* ===== activation card ===== */
 .activation-card { border-left: 4px solid var(--success); }
+.activation-card.rest { border-left-color: var(--text-tertiary); }
+.activation-card.rest .card-title-label { color: var(--text-tertiary); }
 .activation-card.match { border-left-color: var(--orange); background: linear-gradient(135deg, rgba(242,160,99,0.10), rgba(255,255,255,0.04)); padding: 26px; }
 .activation-card.match .card-title-label { color: var(--orange); font-size: 12px; }
 .activation-card.match .act-item-title { font-size: 16px; }
@@ -397,16 +399,32 @@ body::after {
       });
     });
   }
+  function renderRestDayActivation(dow) {
+    const wrap = $('activationRows');
+    const msg = dow === DOW_WED
+      ? 'Gym day — no pre-session activation plan needed today.'
+      : 'Rest day — no activation plan today. Recover and reset.';
+    wrap.innerHTML = '<div class="empty-note">' + esc(msg) + '</div>';
+  }
   function renderActivation() {
     const dow = new Date().getDay();
     const isTraining = dow === DOW_MON || dow === DOW_TUE || dow === DOW_THU;
     const isMatch = dow === DOW_SAT;
+    const isRest = !isTraining && !isMatch;
     const card = $('activationCard');
-    if (!isTraining && !isMatch) { card.style.display = 'none'; return; }
     card.style.display = 'block';
     card.classList.toggle('match', isMatch);
-    $('activationLabel').textContent = isMatch ? '3-Action Rule — Match Day' : '3-Action Rule — Pre-Session';
-    if (isMatch) renderMatchActionsCard(); else renderTrainingActivation();
+    card.classList.toggle('rest', isRest);
+    if (isMatch) {
+      $('activationLabel').textContent = '3-Action Rule — Match Day';
+      renderMatchActionsCard();
+    } else if (isTraining) {
+      $('activationLabel').textContent = '3-Action Rule — Pre-Session';
+      renderTrainingActivation();
+    } else {
+      $('activationLabel').textContent = dow === DOW_WED ? '3-Action Rule — Gym Day' : '3-Action Rule — Rest Day';
+      renderRestDayActivation(dow);
+    }
   }
 
   // ============================================================
@@ -788,12 +806,18 @@ body::after {
       : '<div class="empty-note">No film sessions logged this week.</div>';
     list.querySelectorAll('.session-del').forEach(btn => btn.addEventListener('click', () => deleteFilm(btn.dataset.id)));
     const bars = $('filmBars');
-    const max = Math.max(1, ...FILM_PLAYERS.map(p => thisWeek.filter(l => l.player === p).length));
-    bars.innerHTML = FILM_PLAYERS.map(p => {
-      const count = thisWeek.filter(l => l.player === p).length;
-      const pct = Math.round((count / max) * 100);
-      return '<div class="film-bar-col"><span class="film-bar-count">' + count + '</span><div class="film-bar" style="height:' + Math.max(2, pct) + '%"></div><span class="film-bar-label">' + esc(p) + '</span></div>';
-    }).join('');
+    if (thisWeek.length < 3) {
+      // Not enough data yet for a per-player breakdown to mean anything --
+      // same "log at least 3" gate as the Activation trend chart.
+      bars.innerHTML = '';
+    } else {
+      const max = Math.max(1, ...FILM_PLAYERS.map(p => thisWeek.filter(l => l.player === p).length));
+      bars.innerHTML = FILM_PLAYERS.map(p => {
+        const count = thisWeek.filter(l => l.player === p).length;
+        const pct = Math.round((count / max) * 100);
+        return '<div class="film-bar-col"><span class="film-bar-count">' + count + '</span><div class="film-bar" style="height:' + Math.max(2, pct) + '%"></div><span class="film-bar-label">' + esc(p) + '</span></div>';
+      }).join('');
+    }
   }
 
   // ============================================================
