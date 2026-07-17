@@ -55,16 +55,7 @@ body::after {
 
 .page { max-width: 760px; margin: 0 auto; }
 
-.fb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
-.dash-title {
-  margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
-}
-.fb-head-date { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-tertiary); white-space: nowrap; }
 .fb-head-sub { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 20px; }
-@media (max-width: 480px) { .dash-title { font-size: 22px; } }
 
 /* ===== shared card ===== */
 .card {
@@ -197,10 +188,6 @@ body::after {
 <body>
 <div class="page">
 
-  <div class="fb-head">
-    <h1 class="dash-title">Football</h1>
-    <div class="fb-head-date" id="headDate">—</div>
-  </div>
   <div class="fb-head-sub" id="headDayType">—</div>
 
   <!-- ACTIVATION CARD (conditional; training days show fixed toggles, match days show editable pre-match actions) -->
@@ -274,13 +261,20 @@ body::after {
   <!-- FILM STUDY -->
   <div class="card">
     <div class="card-title"><span class="card-title-label">Film Study</span><span class="card-badge" id="filmCountBadge">0 this week</span></div>
+    <div class="pmc-row" style="padding:9px 2px">
+      <span class="pmc-row-label">Session type</span>
+      <span class="pmc-seg" id="filmType">
+        <button type="button" class="pmc-seg-btn" data-val="reference">Reference Player</button>
+        <button type="button" class="pmc-seg-btn" data-val="own">Own Game</button>
+      </span>
+    </div>
     <div class="form-grid">
-      <div class="fg"><label class="fl">Player studied</label>
+      <div class="fg" id="filmPlayerWrap"><label class="fl">Player studied</label>
         <select class="fi" id="filmPlayer">
           <option>Rodri</option><option>Declan Rice</option><option>Granit Xhaka</option><option>Ndidi</option><option>Other</option>
         </select>
       </div>
-      <div class="fg"><label class="fl">Focus question</label><input class="fi" type="text" id="filmFocus" placeholder="What are you watching for?"></div>
+      <div class="fg" id="filmFocusWrap"><label class="fl">Focus question</label><input class="fi" type="text" id="filmFocus" placeholder="What are you watching for?"></div>
     </div>
     <div class="form-grid">
       <div class="fg"><label class="fl">Positive finding</label><input class="fi" type="text" id="filmPositive" placeholder="What worked…"></div>
@@ -327,9 +321,7 @@ body::after {
     return 'Rest Day';
   }
   function renderHeader() {
-    const now = new Date();
-    $('headDate').textContent = now.toLocaleDateString('en-IE', { weekday: 'long', month: 'short', day: 'numeric' });
-    $('headDayType').textContent = dayType(now.getDay());
+    $('headDayType').textContent = dayType(new Date().getDay());
   }
 
   // ============================================================
@@ -770,14 +762,40 @@ body::after {
   const FILM_KEY = 'fb:film';
   const FILM_PLAYERS = ['Rodri', 'Declan Rice', 'Granit Xhaka', 'Ndidi', 'Other'];
   function getFilm() { return loadJSON(FILM_KEY, []); }
+
+  // Own Game reviews have no reference player to attribute -- the player
+  // dropdown hides and the focus-question placeholder shifts accordingly.
+  // Legacy entries (logged before this field existed) have no sessionType
+  // at all; treated as 'reference' everywhere below for backward compat.
+  let filmSessionType = 'reference';
+  function paintFilmTypeButtons() {
+    $('filmType').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', b.dataset.val === filmSessionType));
+  }
+  function syncFilmTypeVisibility() {
+    const isOwn = filmSessionType === 'own';
+    $('filmPlayerWrap').style.display = isOwn ? 'none' : '';
+    $('filmFocusWrap').style.gridColumn = isOwn ? '1 / -1' : '';
+    $('filmFocus').placeholder = isOwn ? 'What are you reviewing from this game?' : 'What are you watching for?';
+  }
+  $('filmType').querySelectorAll('.pmc-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      filmSessionType = btn.dataset.val;
+      paintFilmTypeButtons();
+      syncFilmTypeVisibility();
+    });
+  });
+  paintFilmTypeButtons();
+  syncFilmTypeVisibility();
+
   $('filmLogBtn').addEventListener('click', () => {
-    const player = $('filmPlayer').value;
+    const sessionType = filmSessionType;
+    const player = sessionType === 'own' ? null : $('filmPlayer').value;
     const focusQuestion = $('filmFocus').value.trim();
     const positiveFinding = $('filmPositive').value.trim();
     const fixIdentified = $('filmFix').value.trim();
     const drillForNext = $('filmDrill').value.trim();
     const logs = getFilm();
-    logs.unshift({ id: uid(), player, focusQuestion, positiveFinding, fixIdentified, drillForNext, date: todayKey(), ts: Date.now() });
+    logs.unshift({ id: uid(), sessionType, player, focusQuestion, positiveFinding, fixIdentified, drillForNext, date: todayKey(), ts: Date.now() });
     saveJSON(FILM_KEY, logs);
     $('filmFocus').value = ''; $('filmPositive').value = ''; $('filmFix').value = ''; $('filmDrill').value = '';
     renderFilm();
@@ -791,6 +809,7 @@ body::after {
     const monday = mondayOf(new Date());
     const monday0 = new Date(monday); monday0.setHours(0, 0, 0, 0);
     const thisWeek = logs.filter(l => l.ts >= monday0.getTime());
+    const thisWeekRef = thisWeek.filter(l => l.sessionType !== 'own'); // reference-player entries only (legacy entries count as reference)
     $('filmCountBadge').textContent = thisWeek.length + ' this week';
     const list = $('filmList');
     list.innerHTML = thisWeek.length
@@ -801,19 +820,21 @@ body::after {
             l.fixIdentified ? 'Fix: ' + esc(l.fixIdentified) : '',
             l.drillForNext ? 'Next drill: ' + esc(l.drillForNext) : '',
           ].filter(Boolean).map(t => '<div class="film-item-notes">' + t + '</div>').join('');
-          return '<div class="film-item"><div class="film-item-main"><div class="film-item-player">' + esc(l.player) + '</div>' + lines + '</div><span class="film-item-date">' + esc(l.date) + '</span><button type="button" class="session-del" data-id="' + l.id + '">&times;</button></div>';
+          return '<div class="film-item"><div class="film-item-main"><div class="film-item-player">' + esc(l.sessionType === 'own' ? 'Own Game' : l.player) + '</div>' + lines + '</div><span class="film-item-date">' + esc(l.date) + '</span><button type="button" class="session-del" data-id="' + l.id + '">&times;</button></div>';
         }).join('')
       : '<div class="empty-note">No film sessions logged this week.</div>';
     list.querySelectorAll('.session-del').forEach(btn => btn.addEventListener('click', () => deleteFilm(btn.dataset.id)));
     const bars = $('filmBars');
-    if (thisWeek.length < 3) {
-      // Not enough data yet for a per-player breakdown to mean anything --
-      // same "log at least 3" gate as the Activation trend chart.
+    if (thisWeekRef.length < 3) {
+      // Not enough reference-player data yet for a per-player breakdown to
+      // mean anything -- same "log at least 3" gate as the Activation trend
+      // chart. Gated on reference-only count, not total, so a week of pure
+      // Own Game reviews doesn't trigger an all-zero chart.
       bars.innerHTML = '';
     } else {
-      const max = Math.max(1, ...FILM_PLAYERS.map(p => thisWeek.filter(l => l.player === p).length));
+      const max = Math.max(1, ...FILM_PLAYERS.map(p => thisWeekRef.filter(l => l.player === p).length));
       bars.innerHTML = FILM_PLAYERS.map(p => {
-        const count = thisWeek.filter(l => l.player === p).length;
+        const count = thisWeekRef.filter(l => l.player === p).length;
         const pct = Math.round((count / max) * 100);
         return '<div class="film-bar-col"><span class="film-bar-count">' + count + '</span><div class="film-bar" style="height:' + Math.max(2, pct) + '%"></div><span class="film-bar-label">' + esc(p) + '</span></div>';
       }).join('');
