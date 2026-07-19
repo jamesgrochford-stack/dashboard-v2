@@ -211,16 +211,22 @@ body::after {
       <div class="fg"><label class="fl">Type</label>
         <select class="fi" id="sType">
           <option>Club Training</option>
-          <option>Individual Technical</option>
-          <option>Individual Physical</option>
-          <option>Film Study</option>
+          <option>Individual Session</option>
           <option>Match</option>
         </select>
       </div>
     </div>
+    <div class="pmc-row" id="sIndividualSubRow" style="display:none;padding:9px 2px">
+      <span class="pmc-row-label">With</span>
+      <span class="pmc-seg" id="sIndividualSub">
+        <button type="button" class="pmc-seg-btn" data-val="solo">Solo</button>
+        <button type="button" class="pmc-seg-btn" data-val="friends">With Friends</button>
+        <button type="button" class="pmc-seg-btn" data-val="brother">With Brother</button>
+      </span>
+    </div>
     <div class="form-grid">
-      <div class="fg"><label class="fl">Duration (min)</label><input class="fi" type="number" min="0" id="sDur" placeholder="60"></div>
-      <div class="fg"><label class="fl">Confidence (1-5)</label><div class="star-row" id="sStars"></div></div>
+      <div class="fg" id="sDurWrap"><label class="fl">Duration (min)</label><input class="fi" type="number" min="0" id="sDur" placeholder="60"></div>
+      <div class="fg" id="sConfWrap"><label class="fl">Confidence (1-5)</label><div class="star-row" id="sStars"></div></div>
     </div>
     <div class="pmc-row" style="padding:9px 2px">
       <span class="pmc-row-label">Activated early?</span>
@@ -236,6 +242,20 @@ body::after {
 
     <!-- Match-only extra fields (shown when Type = Match) -->
     <div id="sMatchExtra" style="display:none;margin-top:6px">
+      <div class="pmc-row">
+        <span class="pmc-row-label">Match type</span>
+        <span class="pmc-seg" id="sMatchType">
+          <button type="button" class="pmc-seg-btn" data-val="League">League</button>
+          <button type="button" class="pmc-seg-btn" data-val="Cup">Cup</button>
+          <button type="button" class="pmc-seg-btn" data-val="Friendly">Friendly</button>
+        </span>
+      </div>
+      <div class="fg" style="margin:10px 0"><label class="fl">Position</label>
+        <select class="fi" id="sPosition">
+          <option value="">—</option>
+          <option>CDM</option><option>CB</option><option>RB</option><option>Other</option>
+        </select>
+      </div>
       <div id="sMatchActionRows"></div>
       <div class="pmc-row">
         <span class="pmc-row-label">Start or Sub</span>
@@ -490,40 +510,83 @@ body::after {
       $('sStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', sMatchState.startOrSub === b.dataset.val));
     });
   });
+  let sMatchTypeVal;
+  $('sMatchType').querySelectorAll('.pmc-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sMatchTypeVal = sMatchTypeVal === btn.dataset.val ? undefined : btn.dataset.val;
+      $('sMatchType').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', sMatchTypeVal === b.dataset.val));
+    });
+  });
+  let sIndividualSubVal;
+  $('sIndividualSub').querySelectorAll('.pmc-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sIndividualSubVal = sIndividualSubVal === btn.dataset.val ? undefined : btn.dataset.val;
+      $('sIndividualSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.toggle('active', sIndividualSubVal === b.dataset.val));
+    });
+  });
   function resetMatchExtra() {
     sMatchState = {};
     renderMatchActionRows();
     $('sStartSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.remove('active'));
     $('sMinutes').value = '';
+    $('sPosition').value = '';
+    sMatchTypeVal = undefined;
+    $('sMatchType').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.remove('active'));
   }
-  function syncMatchExtraVisibility() {
-    const isMatchType = $('sType').value === 'Match';
-    $('sMatchExtra').style.display = isMatchType ? 'block' : 'none';
-    if (isMatchType) renderMatchActionRows();
+  function resetIndividualSub() {
+    sIndividualSubVal = undefined;
+    $('sIndividualSub').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.remove('active'));
   }
-  $('sType').addEventListener('change', syncMatchExtraVisibility);
+  // Duration is hidden on Match (Minutes Played below is the only time
+  // field needed there -- deliberately NOT auto-filled from the Garmin row,
+  // since Garmin's recorded duration includes ~30min of warmup James adds
+  // manually and would silently insert the wrong number).
+  function syncTypeVisibility() {
+    const type = $('sType').value;
+    const isMatch = type === 'Match';
+    const isIndividual = type === 'Individual Session';
+    $('sMatchExtra').style.display = isMatch ? 'block' : 'none';
+    if (isMatch) renderMatchActionRows();
+    $('sDurWrap').style.display = isMatch ? 'none' : '';
+    $('sConfWrap').style.gridColumn = isMatch ? '1 / -1' : '';
+    $('sIndividualSubRow').style.display = isIndividual ? 'flex' : 'none';
+  }
+  $('sType').addEventListener('change', syncTypeVisibility);
   $('sDate').addEventListener('change', () => { if ($('sType').value === 'Match') renderMatchActionRows(); });
-  syncMatchExtraVisibility();
+  syncTypeVisibility();
 
   $('sLogBtn').addEventListener('click', () => {
     const date = $('sDate').value || todayKey();
     const type = $('sType').value;
-    const dur = parseInt($('sDur').value, 10) || 0;
+    const isMatch = type === 'Match';
     const wentWell = $('sWentWell').value.trim();
     const toFix = $('sToFix').value.trim();
-    if (!dur) { alert('Enter a duration.'); return; }
+
+    let duration;
+    if (isMatch) {
+      const rawMin = $('sMinutes').value;
+      if (rawMin === '') { alert('Enter minutes played.'); return; }
+      duration = Math.max(0, Math.min(130, parseInt(rawMin, 10) || 0));
+    } else {
+      duration = parseInt($('sDur').value, 10) || 0;
+      if (!duration) { alert('Enter a duration.'); return; }
+    }
+
     const entry = {
-      id: uid(), date, type, duration: dur, confidence: sRating,
+      id: uid(), date, type, duration, confidence: sRating,
       activatedEarly: sActivatedVal, wentWell, toFix, garminActivityId: null, ts: Date.now(),
     };
-    if (type === 'Match') {
+    if (isMatch) {
       entry.action1 = sMatchState.action1;
       entry.action2 = sMatchState.action2;
       entry.action3 = sMatchState.action3;
       entry.mistakeProtocol = sMatchState.mistakeProtocol;
       entry.startOrSub = sMatchState.startOrSub;
-      const rawMin = $('sMinutes').value;
-      entry.minutes = rawMin === '' ? undefined : Math.max(0, Math.min(130, parseInt(rawMin, 10) || 0));
+      entry.minutes = duration; // same manually-entered value as duration for matches -- see comment above
+      entry.position = $('sPosition').value || undefined;
+      entry.matchType = sMatchTypeVal;
+    } else if (type === 'Individual Session') {
+      entry.individualSubType = sIndividualSubVal;
     }
     const sessions = getSessions();
     sessions.unshift(entry);
@@ -532,6 +595,7 @@ body::after {
     sRating = 0; paintStars($('sStars'), 0);
     sActivatedVal = undefined; $('sActivated').querySelectorAll('.pmc-seg-btn').forEach(b => b.classList.remove('active'));
     resetMatchExtra();
+    resetIndividualSub();
     renderSessions(); renderTrendChart();
   });
   function deleteSession(id) {
@@ -561,9 +625,19 @@ body::after {
     if (!recent.length) { list.innerHTML = '<div class="empty-note">No sessions logged yet.</div>'; return; }
     list.innerHTML = recent.map(s => {
       const stars = s.confidence ? '<div class="session-stars">' + '★'.repeat(s.confidence) + '☆'.repeat(5 - s.confidence) + '</div>' : '';
+      // The header number below is minutes played for Match entries (duration
+      // mirrors minutes there -- see the submit handler), so this line doesn't
+      // repeat it; it covers match type/position/compliance/start-sub instead.
       const matchBits = s.type === 'Match'
-        ? '<div class="session-notes">3-Action: ' + [s.action1, s.action2, s.action3].filter(v => v === 'Y').length + '/3' +
-          (s.startOrSub ? ' · ' + esc(s.startOrSub) : '') + (s.minutes != null ? ' · ' + s.minutes + ' min played' : '') + '</div>'
+        ? '<div class="session-notes">' + [
+            s.matchType,
+            s.position,
+            '3-Action: ' + [s.action1, s.action2, s.action3].filter(v => v === 'Y').length + '/3',
+            s.startOrSub,
+          ].filter(Boolean).map(esc).join(' · ') + '</div>'
+        : '';
+      const individualBits = s.type === 'Individual Session' && s.individualSubType
+        ? '<div class="session-notes">' + esc({ solo: 'Solo', friends: 'With Friends', brother: 'With Brother' }[s.individualSubType] || s.individualSubType) + '</div>'
         : '';
       return '<div class="session-item">' +
         '<div class="session-top"><span class="session-type">' + esc(s.type) + '</span>' +
@@ -573,6 +647,7 @@ body::after {
         (s.wentWell ? '<div class="session-notes">Went well: ' + esc(s.wentWell) + '</div>' : '') +
         (s.toFix ? '<div class="session-notes">To fix: ' + esc(s.toFix) + '</div>' : '') +
         matchBits +
+        individualBits +
         stars +
         renderSessionGarminRow(s) +
         '<div class="session-date">' + esc(s.date) + '</div>' +
@@ -610,7 +685,7 @@ body::after {
         Object.assign(existing, fields);
         if (!(existing.confidence > 0) && pmc.confidence > 0) existing.confidence = pmc.confidence;
       } else {
-        sessions.push(Object.assign({ id: uid(), date, type: 'Match', duration: 0, confidence: pmc.confidence || 0, wentWell: '', toFix: '', garminActivityId: null, ts: Date.now() }, fields));
+        sessions.push(Object.assign({ id: uid(), date, type: 'Match', duration: pmc.minutes || 0, confidence: pmc.confidence || 0, wentWell: '', toFix: '', garminActivityId: null, ts: Date.now() }, fields));
       }
     }
     sessions.sort((a, b) => b.ts - a.ts);
@@ -861,7 +936,9 @@ body::after {
     if (session.type === 'Club Training' || session.type === 'Match') {
       return garminActivities.filter(a => garminDateOf(a) === date && a.activity_type === 'soccer');
     }
-    if (session.type === 'Individual Physical') {
+    // 'Individual Session' is the current type value; 'Individual Physical'
+    // is kept for backward compat with entries logged before that merge.
+    if (session.type === 'Individual Session' || session.type === 'Individual Physical') {
       return garminActivities.filter(a => garminDateOf(a) === date);
     }
     return []; // Individual Technical / Film Study never have a matching physical Garmin activity
