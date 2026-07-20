@@ -88,6 +88,10 @@ body::after {
   transition: opacity 0.2s, background 0.2s;
 }
 .study-session.done { opacity: 0.5; background: rgba(107,227,164,0.04); }
+.study-session.missed { border-left-color: var(--danger); }
+.study-session.upcoming { opacity: 0.4; }
+.study-missed-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--danger); text-transform: uppercase; align-self: center; margin-right: auto; }
+.study-upcoming-label { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--text-tertiary); text-transform: uppercase; margin-top: 8px; }
 .study-session-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .study-subject { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .study-badge { display: inline-block; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text-secondary); margin-left: 8px; }
@@ -110,6 +114,18 @@ body::after {
 .week-grid-dot.done { background: var(--success); opacity: 1; box-shadow: 0 0 6px rgba(107,227,164,0.5); }
 .week-grid-dot.missed { background: var(--danger); opacity: 0.85; }
 .week-grid-empty { font-size: 10px; color: var(--text-tertiary); }
+.week-grid-dot-single { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--text-tertiary); opacity: 0.3; }
+.week-grid-dot-single.done { background: var(--success); opacity: 1; box-shadow: 0 0 6px rgba(107,227,164,0.5); }
+.week-grid-dot-single.partial { background: var(--warning); opacity: 1; }
+.week-grid-dot-single.missed { background: var(--danger); opacity: 0.85; }
+.week-grid-dot-single.upcoming { opacity: 0.3; }
+.week-grid-dot-single.none { opacity: 0.15; }
+
+/* ===== week toggle (navigate weeks 1-10; reuses .day-nav* layout) ===== */
+.week-toggle-status { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-tertiary); text-transform: uppercase; }
+.week-toggle-status.is-past { color: var(--danger); }
+.week-toggle-status.is-upcoming { color: var(--text-tertiary); }
+.week-toggle-status.is-current { color: var(--success); }
 
 /* ===== irish floating sessions ===== */
 .irish-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); }
@@ -256,6 +272,14 @@ body::after {
   <!-- TODAY'S STUDY -->
   <div class="card">
     <div class="card-title"><span class="card-title-label">Today's Study</span><span class="week-badge" id="studyWeekBadge">WEEK — OF 10</span></div>
+    <div class="day-nav" id="weekToggle">
+      <button type="button" class="day-nav-btn" id="weekPrevBtn">‹</button>
+      <div>
+        <div class="day-nav-label" id="weekToggleLabel">WEEK — OF 10</div>
+        <div class="week-toggle-status" id="weekToggleStatus">—</div>
+      </div>
+      <button type="button" class="day-nav-btn" id="weekNextBtn">›</button>
+    </div>
     <div class="day-nav" id="dayNav" style="display:none">
       <button type="button" class="day-nav-btn" id="dayPrev">‹</button>
       <div>
@@ -311,34 +335,6 @@ body::after {
     </div>
   </div>
 
-  <!-- SUBJECT OS -->
-  <div class="card">
-    <div class="card-title"><span class="card-title-label">Subject OS</span></div>
-    <div id="subjectCards"></div>
-  </div>
-
-  <!-- AAC PROJECT: CHEMISTRY -->
-  <div class="card">
-    <div class="card-title"><span class="card-title-label">Chemistry AAC</span></div>
-    <div class="aacp-sub-label">Summer Research Checklist <span class="aacp-progress-badge" id="aacProgress-chemistry">0/5</span></div>
-    <div id="aacChecklist-chemistry"></div>
-    <div class="aacp-divider"></div>
-    <div class="aacp-sub-label">6th-Year Deadline Tracker</div>
-    <div id="aacPhases-chemistry"></div>
-    <div class="aacp-deadline-row" id="aacDeadlineRow-chemistry"></div>
-  </div>
-
-  <!-- AAC PROJECT: PHYSICS -->
-  <div class="card">
-    <div class="card-title"><span class="card-title-label">Physics AAC</span></div>
-    <div class="aacp-sub-label">Summer Research Checklist <span class="aacp-progress-badge" id="aacProgress-physics">0/5</span></div>
-    <div id="aacChecklist-physics"></div>
-    <div class="aacp-divider"></div>
-    <div class="aacp-sub-label">6th-Year Deadline Tracker</div>
-    <div id="aacPhases-physics"></div>
-    <div class="aacp-deadline-row" id="aacDeadlineRow-physics"></div>
-  </div>
-
   <!-- STREAKS -->
   <div class="card">
     <div class="card-title"><span class="card-title-label">Streaks</span></div>
@@ -384,199 +380,313 @@ body::after {
   // ============================================================
   const schedule = {
     1: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L1 — Horizontal UAM', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L1 — Horizontal UAM', duration: 50, chapter: 'Ch1' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 1 — Revaluation of Fixed Assets. Grinds360 book p.27 + video lessons.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 1 — Revaluation of Fixed Assets. Grinds360 book p.27 + video lessons.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L2 — Vertical UAM (Free-fall)', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L2 — Vertical UAM (Free-fall)', duration: 50, chapter: 'Ch1' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50 }
       ],
       thu: [
-        { subject: 'PE', type: 'Session 1', detail: 'Type A — Analysing Performance, Safe Practice, Role of Coach. Grinds360 3A/3B/3C.', duration: 60, color: 'green' },
-        { subject: 'PE-PAP', type: 'PAP', detail: 'Read SEC PAP guidelines (curriculumonline.ie) — 45 min', duration: 45, color: 'green' }
+        { subject: 'PE', type: 'Session 1', detail: 'Type A — Analysing Performance, Safe Practice, Role of Coach. Grinds360 3A/3B/3C.', duration: 60 },
+        { subject: 'PE', type: 'PAP', detail: 'Read SEC PAP guidelines (curriculumonline.ie) — 45 min', duration: 45 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L3 — Successive Times and Distances', duration: 50, color: 'accent' },
-        { subject: 'Physics', type: 'Session 1', detail: 'LC Section A format familiarisation. Download 2023/2022/2019 papers. Build Section A template card.', duration: 55, color: 'purple' }
-      ]
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L3 — Successive Times and Distances', duration: 50, chapter: 'Ch1' },
+        { subject: 'Physics', type: 'Project 1', detail: 'LC Section A format familiarisation. Download 2023/2022/2019 papers. Build Section A template card.', duration: 55 }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     2: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L4 — Catch-up Problems', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L4 — Catch-up Problems', duration: 50, chapter: 'Ch1' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 2 — Suspense + Control Accounts. Grinds360 book p.131 + p.135. Suspense recorded grind.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 2 — Suspense + Control Accounts. Grinds360 book p.131 + p.135. Suspense recorded grind.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L5 — Bodies Moving in Opposite Directions', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L5 — Bodies Moving in Opposite Directions', duration: 50, chapter: 'Ch1' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 2 — Unseen Suspense or Control Account past paper question. Cold. Verify if 84% was real.', duration: 50, color: 'amber' },
-        { subject: 'PE-PAP', type: 'PAP', detail: 'Watch PAP Masterclasses 1+2 on Grinds360 (at 1.75x)', duration: 45, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 2 — Unseen Suspense or Control Account past paper question. Cold. Verify if 84% was real.', duration: 50 },
+        { subject: 'PE', type: 'PAP', detail: 'Watch PAP Masterclasses 1+2 on Grinds360 (at 1.75x)', duration: 45 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L6 — Velocity-Time Graphs. Take the full session — most nuanced UAM lesson.', duration: 50, color: 'accent' },
-        { subject: 'Physics', type: 'Project 1', detail: 'Read official AAC Physics in Practice guidelines. Download from examinations.ie. Note assessment criteria.', duration: 30, color: 'purple' }
-      ]
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L6 — Velocity-Time Graphs. Take the full session — most nuanced UAM lesson.', duration: 50, chapter: 'Ch1' },
+        { subject: 'Physics', type: 'Project 2', detail: 'Read official AAC Physics in Practice guidelines. Download from examinations.ie. Note assessment criteria.', duration: 30 }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     3: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L7 — Dimensional Analysis (short lesson)', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch1 L7 — Dimensional Analysis (short lesson)', duration: 50, chapter: 'Ch1' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 3 — Club Accounts rebuild. Grinds360 book p.108 + Club Accounts recorded grind (69 min).', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 3 — Club Accounts rebuild. Grinds360 book p.108 + Club Accounts recorded grind (69 min).', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: UAM — 2 Old LC Questions timed, marked against scheme. Below 70% on both → do a third.', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session — alternating Friday/Wednesday', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: UAM — 2 Old LC Questions timed, marked against scheme. Below 70% on both → do a third.', duration: 50, chapter: 'Ch1' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 3 — 2019 Q6 Club Accounts. 45-minute timer. Do not watch Grinds360 solution first.', duration: 50, color: 'amber' },
-        { subject: 'PE-PAP', type: 'PAP', detail: 'PAP Masterclass 3. Decide activity (gym recommended), confirm with PE teacher.', duration: 45, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 3 — 2019 Q6 Club Accounts. 45-minute timer. Do not watch Grinds360 solution first.', duration: 50 },
+        { subject: 'PE', type: 'PAP', detail: 'PAP Masterclass 3. Decide activity (gym recommended), confirm with PE teacher.', duration: 45 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L1 — Basic Vectors', duration: 50, color: 'accent' },
-        { subject: 'Irish', type: 'Float', detail: 'Irish Session 1 (if not done): Essay Phrases + Topic Selection. ~50 min. Must happen before S2 and S6.', duration: 50, color: 'red' }
-      ]
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L1 — Basic Vectors', duration: 50, chapter: 'Ch2' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish Session 1 — Essay Phrases + Topic Selection. ~50 min. Must happen before S2 and S6.', duration: 50, irishSession: 1 }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     4: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L2 — Components of a Vector and Dot Product', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L2 — Components of a Vector and Dot Product', duration: 50, chapter: 'Ch2' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 4 — Service Firms rebuild. Grinds360 book p.112 + Loan Workings + Investment Workings + Service Accounts grind.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 4 — Service Firms rebuild. Grinds360 book p.112 + Loan Workings + Investment Workings + Service Accounts grind.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L3 — i and j Vectors. TWO exercises (Ex3 + Ex4) — both must be completed.', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch2 L3 — i and j Vectors. TWO exercises (Ex3 + Ex4) — both must be completed.', duration: 50, chapter: 'Ch2' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 4 — 2020 Q7 Service Firm. 45-minute timer. Score vs 53% class result = measure of summer progress.', duration: 50, color: 'amber' },
-        { subject: 'PE-PAP', type: 'PAP', detail: 'Complete Stage 1 performance analysis. Run all tests. Compile Hevy + Garmin data.', duration: 60, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 4 — 2020 Q7 Service Firm. 45-minute timer. Score vs 53% class result = measure of summer progress.', duration: 50 },
+        { subject: 'PE', type: 'PAP', detail: 'Complete Stage 1 performance analysis. Run all tests. Compile Hevy + Garmin data.', duration: 60 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Vectors — 2 Old LC Questions timed. Below 70% → check i/j notation from L3 before proceeding.', duration: 50, color: 'accent' },
-        { subject: 'Physics', type: 'Project 2', detail: 'Confirm AAC topic (leading: Phase Change Materials). Draft research question naming IV, DV, context.', duration: 30, color: 'purple' }
-      ]
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Vectors — 2 Old LC Questions timed. Below 70% → check i/j notation from L3 before proceeding.', duration: 50, chapter: 'Ch2' },
+        { subject: 'Physics', type: 'Project 3', detail: 'Confirm AAC topic (leading: Phase Change Materials). Draft research question naming IV, DV, context.', duration: 30 }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     5: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L1 — Applying equations of motion in x and y directions', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L1 — Applying equations of motion in x and y directions', duration: 50, chapter: 'Ch3' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 5 — Q1 Sole Trader Final Accounts: structure. Grinds360 book p.39 + Quick Guide to Q1 + Week 1 Final Accounts grind.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 5 — Q1 Sole Trader Final Accounts: structure. Grinds360 book p.39 + Quick Guide to Q1 + Week 1 Final Accounts grind.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L2 — Proving general rules (range and max height from first principles)', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L2 — Proving general rules (range and max height from first principles)', duration: 50, chapter: 'Ch3' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 5 — First Q1 Sole Trader attempt. 54-minute timer. Studyclix. Identify every adjustment type missed.', duration: 54, color: 'amber' },
-        { subject: 'PE', type: 'Session 3', detail: 'Type A — Physical Activity Participation and Promoting Pathways (5A + 5B). Grinds360 + 2–3 Studyclix Qs.', duration: 50, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 5 — First Q1 Sole Trader attempt. 54-minute timer. Studyclix. Identify every adjustment type missed.', duration: 54 },
+        { subject: 'PE', type: 'Session 3', detail: 'Type A — Physical Activity Participation and Promoting Pathways (5A + 5B). Grinds360 + 2–3 Studyclix Qs.', duration: 50 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L3 — Finding Angles', duration: 50, color: 'accent' },
-        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S2, S3, S4, or S5 depending on what’s been done. Check sequence constraints.', duration: 55, color: 'red' }
-      ]
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L3 — Finding Angles', duration: 50, chapter: 'Ch3' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S2, S3, S4, or S5 depending on what has been done. Check sequence constraints.', duration: 55, irishSession: null }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     6: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L4 — i and j Vector Approach. New territory — take the full session.', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L4 — i and j Vector Approach. New territory — take the full session.', duration: 50, chapter: 'Ch3' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 6 — Q1 Sole Trader: adjustments in depth. Depreciation adjustment lessons + Week 2 Final Accounts grind.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 6 — Q1 Sole Trader: adjustments in depth. Depreciation adjustment lessons + Week 2 Final Accounts grind.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L5 — Projectiles and Elasticity', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch3 L5 — Projectiles and Elasticity', duration: 50, chapter: 'Ch3' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 6 — Second Q1 Sole Trader (different year). 54-minute timer.', duration: 54, color: 'amber' },
-        { subject: 'PE', type: 'Session 4', detail: 'Type A — Ethics and Fair Play (Ch 6). Grinds360 ethics videos + 2–3 written practice answers.', duration: 55, color: 'green' },
-        { subject: 'PE-PAP', type: 'PAP', detail: 'Design Stage 3 training programme targeting all 4 SMART goals.', duration: 45, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 6 — Second Q1 Sole Trader (different year). 54-minute timer.', duration: 54 },
+        { subject: 'PE', type: 'Session 4', detail: 'Type A — Ethics and Fair Play (Ch 6). Grinds360 ethics videos + 2–3 written practice answers.', duration: 55 },
+        { subject: 'PE', type: 'PAP', detail: 'Design Stage 3 training programme targeting all 4 SMART goals.', duration: 45 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Projectiles — 2 Old LC Questions timed. If L5 ran long Wed, push checkpoint to Mon Wk7.', duration: 50, color: 'accent' },
-        { subject: 'Physics', type: 'Project 3', detail: 'Background reading on confirmed PCM topic. Wikipedia level. Notes: phenomenon, physics principles, prior measurements.', duration: 30, color: 'purple' }
-      ]
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Projectiles — 2 Old LC Questions timed. If L5 ran long Wed, push checkpoint to Mon Wk7.', duration: 50, chapter: 'Ch3' },
+        { subject: 'Physics', type: 'Project 4', detail: 'Background reading on confirmed PCM topic. Wikipedia level. Notes: phenomenon, physics principles, prior measurements.', duration: 30 }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     7: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch4 L2 — Connected Particles. (Ch4 L1 may be here if Wk6 checkpoint was pushed)', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch4 L2 — Connected Particles. (Ch4 L1 may be here if Wk6 checkpoint was pushed)', duration: 50, chapter: 'Ch4' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 7 — Company Final Accounts. Grinds360 Company section + Q1 Company video. Note: share capital, debentures, corp tax, dividends.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 7 — Company Final Accounts. Grinds360 Company section + Q1 Company video. Note: share capital, debentures, corp tax, dividends.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch4 L3 Pulleys + Newton’s Laws checkpoint — budget full 50 min (Pulleys + checkpoint is tight).', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch4 L3 Pulleys + Newton\'s Laws checkpoint — budget full 50 min.', duration: 50, chapter: 'Ch4' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 7 — Q1 Company from 2022, 2023, or 2024. 54-minute timer.', duration: 54, color: 'amber' },
-        { subject: 'PE', type: 'Session 5', detail: 'Type B — Section 1 timed practice. 50 min timed. Mark + categorise every dropped mark.', duration: 55, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 7 — Q1 Company from 2022, 2023, or 2024. 54-minute timer.', duration: 54 },
+        { subject: 'PE', type: 'Session 5', detail: 'Type B — Section 1 timed practice. 50 min timed. Mark + categorise every dropped mark.', duration: 55 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch6 L1 — Work and Energy', duration: 50, color: 'accent' },
-        { subject: 'Irish', type: 'Float', detail: 'Irish float session — use whichever session has not been done. Check S1→S2→S6 sequence constraint.', duration: 55, color: 'red' }
-      ]
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch6 L1 — Work and Energy', duration: 50, chapter: 'Ch6' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — use whichever session has not been done. Check S1→S2→S6 sequence constraint.', duration: 55, irishSession: null }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     8: {
-      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch6 L2 Conservation Laws + Work & Energy checkpoint immediately after.', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch6 L2 Conservation Laws + Work & Energy checkpoint immediately after.', duration: 50, chapter: 'Ch6' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 8 — Q1 consolidation. Re-read error log Wks 5–7. Find 3 most-missed adjustment types, re-read book sections. Watch 2024 Q1 Suspense & Bank Rec workings.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 8 — Q1 consolidation. Re-read error log Wks 5–7. Find 3 most-missed adjustment types, re-read book sections.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L1 — Equations of Circular Motion. New conceptual territory — go slowly.', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L1 — Equations of Circular Motion. New conceptual territory — go slowly.', duration: 50, chapter: 'Ch7' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — Wednesday slot', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 8 — Q1 from unused year. Choose A or B on the day as in the exam.', duration: 54, color: 'amber' },
-        { subject: 'PE', type: 'Session 6', detail: 'Type B — Section 2 case study (40 min) + Section 3 long questions (50 min). Mark both against scheme.', duration: 90, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 8 — Q1 from unused year. Choose A or B on the day as in the exam.', duration: 54 },
+        { subject: 'PE', type: 'Session 6', detail: 'Type B — Section 2 case study (40 min) + Section 3 long questions (50 min). Mark both against scheme.', duration: 90 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L2 — Horizontal Circular Motion', duration: 50, color: 'accent' },
-        { subject: 'Physics', type: 'Project 4', detail: 'Outline methodology: what to measure, how, equipment needed, number of trials, data recording format.', duration: 30, color: 'purple' }
-      ]
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch7 L2 — Horizontal Circular Motion', duration: 50, chapter: 'Ch7' },
+        { subject: 'Physics', type: 'Project 5', detail: 'Outline methodology: what to measure, how, equipment needed, number of trials, data recording format.', duration: 30 }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     9: {
-      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch7 L3 Vertical Circular Motion + Circular Motion checkpoint — 2 LC questions.', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ CHECKPOINT: Ch7 L3 Vertical Circular Motion + Circular Motion checkpoint — 2 LC questions.', duration: 50, chapter: 'Ch7' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 9 — Q5 Interpretation of Accounts. Grinds360 book p.125 + Interpretation grind (70 min) + Writing to a Shareholder (71 min).', duration: 90, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 9 — Q5 Interpretation of Accounts. Grinds360 book p.125 + Interpretation grind (70 min) + Writing to a Shareholder (71 min).', duration: 90 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L1 — Direct Collisions', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L1 — Direct Collisions', duration: 50, chapter: 'Ch8' },
+        { subject: 'Chemistry', type: 'Application', detail: 'Chemistry application/past paper session', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 9 — Q5 from 2023 or 2024. 45-minute timer. Calculate all ratios + full written commentary.', duration: 45, color: 'amber' },
-        { subject: 'PE', type: 'PAP Run', detail: 'Stage 3 programme running. Log in Hevy. Write one reflection per goal (ongoing).', duration: 45, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 9 — Q5 from 2023 or 2024. 45-minute timer. Calculate all ratios + full written commentary.', duration: 45 },
+        { subject: 'PE', type: 'PAP', detail: 'Stage 3 programme running. Log in Hevy. Write one reflection per goal (ongoing).', duration: 45 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L2 — More than one collision', duration: 50, color: 'accent' },
-        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S5 or S6 (S6 requires S1 + S3 done first). Final sessions before September.', duration: 60, color: 'red' }
-      ]
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L2 — More than one collision', duration: 50, chapter: 'Ch8' },
+        { subject: 'Irish', type: 'Float', detail: 'Irish float session — S5 or S6 (S6 requires S1 + S3 done first). Final sessions before September.', duration: 60, irishSession: null }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     },
     10: {
-      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L3 — Collisions with Strings', duration: 50, color: 'accent' }],
+      mon: [{ subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L3 — Collisions with Strings', duration: 50, chapter: 'Ch8' }],
       tue: [
-        { subject: 'Accounting', type: 'Understand', detail: 'Week 10 — Review. Read full error log and all topic checklists. Write one-page handover note to self for September.', duration: 50, color: 'amber' },
-        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10, color: 'grey' }
+        { subject: 'Accounting', type: 'Understand', detail: 'Week 10 — Review. Read full error log and all topic checklists. Write one-page handover note to self for September.', duration: 50 },
+        { subject: 'Anki', type: 'Maintenance', detail: 'Physics rotation — 10 min', duration: 10 }
       ],
       wed: [
-        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L4 — Oblique Collisions. Hardest lesson all summer. Video + notes only — exercises on a separate day if needed.', duration: 50, color: 'accent' },
-        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — final week', duration: 50, color: 'blue' }
+        { subject: 'Applied Maths', type: 'Lesson', detail: 'Ch8 L4 — Oblique Collisions. Hardest lesson all summer. Video + notes only — exercises on a separate day if needed.', duration: 50, chapter: 'Ch8' },
+        { subject: 'Chemistry', type: 'Theory', detail: 'Chemistry theory session — final week', duration: 50 }
       ],
       thu: [
-        { subject: 'Accounting', type: 'Attempt', detail: 'Week 10 — Second Q5 attempt (different year). 45-minute timer. Baseline for 6th year.', duration: 45, color: 'amber' },
-        { subject: 'PE', type: 'Session 7', detail: '✓ CHECKPOINT: Full 100-min exam conditions. Section 1 (50 min) → Section 2 (40 min) → begin S3. Mark all. Compare to Sessions 5 and 6.', duration: 100, color: 'green' },
-        { subject: 'PE-PAP', type: 'PAP', detail: 'Draft Stage 4 concluding analysis (interim — programme continues into 6th year).', duration: 45, color: 'green' }
+        { subject: 'Accounting', type: 'Attempt', detail: 'Week 10 — Second Q5 attempt (different year). 45-minute timer. Baseline for 6th year.', duration: 45 },
+        { subject: 'PE', type: 'Session 7', detail: '✓ CHECKPOINT: Full 100-min exam conditions. Section 1 (50 min) → Section 2 (40 min) → begin S3. Mark all.', duration: 100 },
+        { subject: 'PE', type: 'PAP', detail: 'Draft Stage 4 concluding analysis (interim — programme continues into 6th year).', duration: 45 }
       ],
       fri: [
-        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ FINAL CHECKPOINT: Collisions — 2 Old LC Questions. Course complete. Log final lesson count.', duration: 50, color: 'accent' },
-        { subject: 'Physics', type: 'Project 5', detail: 'September readiness review. Consolidate all Physics project sessions into one-page summary for supervisor.', duration: 30, color: 'purple' }
-      ]
+        { subject: 'Applied Maths', type: 'Checkpoint', detail: '✓ FINAL CHECKPOINT: Collisions — 2 Old LC Questions. Course complete. Log final lesson count.', duration: 50, chapter: 'Ch8' },
+        { subject: 'Physics', type: 'Project 6', detail: 'September readiness review. Consolidate all Physics project sessions into one-page summary for supervisor.', duration: 30 }
+      ],
+      sat: [],
+      sun: [{ subject: 'Anki', type: 'Maintenance', detail: 'PE rotation — 10 min only', duration: 10 }]
     }
-  };$
-  const SUBJECT_COLOR_HEX = { accent: '#c8f060', amber: '#f0a040', blue: '#60b4f0', purple: '#b08af0', green: '#60d090', red: '#ff6b6b', grey: '#888888' };
+  };
+  const SUBJECT_COLOR_HEX = { 'Applied Maths': '#c8f060', 'Accounting': '#f0a040', 'Chemistry': '#60b4f0', 'Physics': '#b08af0', 'PE': '#60d090', 'Irish': '#ff6b6b', 'Anki': '#888888' };
+
+  // ============================================================
+  // COMPLETION LOG — single source of truth for session completions,
+  // shared with index.html via a dedicated Supabase sync registration
+  // (see bottom of file, appKey='completionLog'). Not sd:/td:-prefixed
+  // on purpose -- both pages need to read/write the exact same row.
+  // Entry shape: { id, date, week, day, subject, type, detail, scheduledDate }
+  // ============================================================
+  function getCompletionLog() { return loadJSON('completionLog', []); }
+  function saveCompletionLog(log) { saveJSON('completionLog', log); }
+  function clUid() { return 'cl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function findSchedSession(week, day, idx) {
+    const weekPlan = schedule[week];
+    const list = weekPlan && weekPlan[day];
+    return (list && list[idx]) || null;
+  }
+  function isSessionLogged(scheduledDate, subject, type, detail) {
+    return getCompletionLog().some(e => e.scheduledDate === scheduledDate && e.subject === subject && e.type === type && e.detail === detail);
+  }
+  function logSession(week, day, session, scheduledDate, doneDateStr) {
+    const log = getCompletionLog();
+    log.push({
+      id: clUid(), date: doneDateStr || scheduledDate, week, day,
+      subject: session.subject, type: session.type, detail: session.detail,
+      scheduledDate,
+    });
+    saveCompletionLog(log);
+  }
+  function unlogSession(scheduledDate, subject, type, detail) {
+    saveCompletionLog(getCompletionLog().filter(e => !(e.scheduledDate === scheduledDate && e.subject === subject && e.type === type && e.detail === detail)));
+  }
+
+  // ---------- one-time migration from the old per-page sd:/td:studyDone
+  // maps + the old manual sd:amCounter, guarded so it only ever runs once.
+  // Where both sd: and td: have an entry for the same date+index and they
+  // disagree, OR wins (true beats false) -- losing a real completed
+  // session is worse than one stale re-click. ----------
+  function migrateStudyDoneOnce() {
+    if (loadJSON('completionLogMigratedV1', false)) return;
+    const log = getCompletionLog();
+    const seen = new Set(log.map(e => e.scheduledDate + '|' + e.subject + '|' + e.type + '|' + e.detail));
+    const DAY_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+    function importPrefix(prefix) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k.indexOf(prefix) !== 0) continue;
+        const dStr = k.slice(prefix.length);
+        const doneMap = loadJSON(k, null);
+        if (!doneMap) continue;
+        const d = new Date(dStr + 'T00:00:00');
+        const week = Math.floor((startOfDay(d) - SUMMER_START) / 86400000 / 7) + 1;
+        const day = DAY_NAMES[d.getDay()];
+        Object.keys(doneMap).forEach(idxStr => {
+          if (!doneMap[idxStr]) return;
+          const session = findSchedSession(week, day, parseInt(idxStr, 10));
+          if (!session) return;
+          const key = dStr + '|' + session.subject + '|' + session.type + '|' + session.detail;
+          if (seen.has(key)) return;
+          seen.add(key);
+          log.push({ id: clUid(), date: dStr, week, day, subject: session.subject, type: session.type, detail: session.detail, scheduledDate: dStr });
+        });
+      }
+    }
+    importPrefix('sd:studyDone:');
+    importPrefix('td:studyDone:');
+
+    // Seed Applied Maths progress from the old manual counter so switching
+    // to a derived count doesn't make real logged progress vanish.
+    const oldAmCount = loadJSON('sd:amCounter', 0);
+    let amAlreadyLogged = log.filter(e => e.subject === 'Applied Maths').length;
+    if (oldAmCount > amAlreadyLogged) {
+      const amSessions = [];
+      for (let w = 1; w <= 10; w++) {
+        ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(day => {
+          (schedule[w][day] || []).forEach(s => { if (s.subject === 'Applied Maths') amSessions.push({ week: w, day, s }); });
+        });
+      }
+      let need = oldAmCount - amAlreadyLogged;
+      for (const { week, day, s } of amSessions) {
+        if (need <= 0) break;
+        const dStr = dateKey(addDays(weekMonday(week), DAY_NAMES.indexOf(day) - 1));
+        const key = dStr + '|' + s.subject + '|' + s.type + '|' + s.detail;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        log.push({ id: clUid(), date: dStr, week, day, subject: s.subject, type: s.type, detail: s.detail, scheduledDate: dStr });
+        need--;
+      }
+    }
+
+    saveCompletionLog(log);
+    saveJSON('completionLogMigratedV1', true);
+  }
+
   function badgeFor(type) {
     const map = { Lesson: 'LESSON', Checkpoint: '✓ CHECK', Understand: 'UNDERSTAND', Attempt: 'ATTEMPT', 'Type A': 'THEORY', 'Type B': 'EXAM PRACTICE', PAP: 'PAP', Theory: 'THEORY', Application: 'PAST PAPER', Float: 'IRISH', Maintenance: 'ANKI', 'PAP Run': 'PAP' };
     if (map[type]) return map[type];
@@ -590,10 +700,32 @@ body::after {
     if (!wp) return [];
     return wp[dayKey] || [];
   }
-  function studyDoneKey(dStr) { return 'sd:studyDone:' + dStr; }
+  const DOW_NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  function todayKey() { return dateKey(new Date()); }
 
   // ============================================================
-  // TODAY'S STUDY PANEL (dominant) — day navigator across Mon–Fri
+  // WEEK TOGGLE — navigate weeks 1-10, independent of the day-nav
+  // below (which browses Mon-Fri *within* whichever week is selected).
+  // Defaults to the real current week.
+  // ============================================================
+  let selectedWeek = getSummerWeek();
+  function renderWeekToggle() {
+    const cur = getSummerWeek();
+    $('weekPrevBtn').disabled = selectedWeek <= 1;
+    $('weekNextBtn').disabled = selectedWeek >= SUMMER_END_WEEK;
+    $('weekToggleLabel').textContent = 'WEEK ' + selectedWeek + ' OF ' + SUMMER_END_WEEK;
+    const statusEl = $('weekToggleStatus');
+    if (selectedWeek === cur) { statusEl.textContent = 'CURRENT'; statusEl.className = 'week-toggle-status is-current'; }
+    else if (selectedWeek < cur) { statusEl.textContent = 'PAST'; statusEl.className = 'week-toggle-status is-past'; }
+    else { statusEl.textContent = 'UPCOMING'; statusEl.className = 'week-toggle-status is-upcoming'; }
+  }
+  $('weekPrevBtn').addEventListener('click', () => { if (selectedWeek > 1) { selectedWeek--; selectedIdxSafe(); renderStudyPanel(); renderWeekGrid(); renderWeekToggle(); } });
+  $('weekNextBtn').addEventListener('click', () => { if (selectedWeek < SUMMER_END_WEEK) { selectedWeek++; selectedIdxSafe(); renderStudyPanel(); renderWeekGrid(); renderWeekToggle(); } });
+  function selectedIdxSafe() { if (selectedIdx < 0 || selectedIdx > 4) selectedIdx = 0; }
+
+  // ============================================================
+  // TODAY'S STUDY PANEL (dominant) — day navigator across Mon–Fri,
+  // within whichever week the toggle above has selected.
   // ============================================================
   const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
   const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -602,18 +734,24 @@ body::after {
     return (dow >= 1 && dow <= 5) ? dow - 1 : 0;
   })();
   function renderStudyPanel() {
-    const week = getSummerWeek();
-    $('studyWeekBadge').textContent = week < 1 ? 'PRE-SUMMER' : (week > SUMMER_END_WEEK ? 'PLAN COMPLETE' : ('WEEK ' + week + ' OF ' + SUMMER_END_WEEK));
+    const cur = getSummerWeek();
+    const week = selectedWeek;
+    const isCurrentWeek = week === cur;
+    const isFutureWeek = week > cur;
+    $('studyWeekBadge').textContent = cur < 1 ? 'PRE-SUMMER' : (cur > SUMMER_END_WEEK ? 'PLAN COMPLETE' : ('WEEK ' + week + ' OF ' + SUMMER_END_WEEK));
     const todayDow = new Date().getDay();
     const nav = $('dayNav');
     const wrap = $('studySessions');
-    if (week < 1) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Pre-summer — plan starts 23 Jun 2026.</div>'; return; }
-    if (week > SUMMER_END_WEEK) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Summer plan complete — return to school.</div>'; return; }
-    if (todayDow === 6) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Match Day — Zero Study</div>'; return; }
-    if (todayDow === 0) {
+    if (cur < 1 && isCurrentWeek) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Pre-summer — plan starts 22 Jun 2026.</div>'; return; }
+    if (cur > SUMMER_END_WEEK && isCurrentWeek) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Summer complete — school starts soon.</div>'; return; }
+    // Match Day / Anki-only Sunday only apply to browsing the actual current
+    // week on its actual current day -- past/future weeks always show the
+    // full Mon-Fri day-nav regardless of what today happens to be.
+    if (isCurrentWeek && todayDow === 6) { nav.style.display = 'none'; wrap.innerHTML = '<div class="study-empty">Match Day — Zero Study</div>'; return; }
+    if (isCurrentWeek && todayDow === 0) {
       nav.style.display = 'none';
       wrap.innerHTML = '';
-      renderSessionCards(wrap, sessionsFor(week, 'sun'), dateKey(new Date()));
+      renderSessionCards(wrap, sessionsFor(week, 'sun'), dateKey(new Date()), week, 'sun', isFutureWeek);
       return;
     }
     nav.style.display = 'flex';
@@ -626,35 +764,41 @@ body::after {
     wrap.innerHTML = '';
     const sessions = sessionsFor(week, dKey);
     if (!sessions.length) { wrap.innerHTML = '<div class="study-empty">Nothing scheduled.</div>'; return; }
-    renderSessionCards(wrap, sessions, dateKey(date));
+    renderSessionCards(wrap, sessions, dateKey(date), week, dKey, isFutureWeek);
   }
-  function renderSessionCards(wrap, sessions, dStr) {
-    const done = loadJSON(studyDoneKey(dStr), {});
-    sessions.forEach((s, i) => {
-      const isDone = !!done[i];
+  function renderSessionCards(wrap, sessions, dStr, week, dayKey, readonly) {
+    const todayStr = todayKey();
+    sessions.forEach(s => {
+      const isDone = isSessionLogged(dStr, s.subject, s.type, s.detail);
+      const isMissed = !isDone && !readonly && dStr < todayStr;
       const row = document.createElement('div');
-      row.className = 'study-session' + (isDone ? ' done' : '');
-      row.style.borderLeftColor = SUBJECT_COLOR_HEX[s.color] || '#888';
+      row.className = 'study-session' + (isDone ? ' done' : '') + (isMissed ? ' missed' : '') + (readonly ? ' upcoming' : '');
+      row.style.borderLeftColor = SUBJECT_COLOR_HEX[s.subject] || '#888';
       row.innerHTML =
         '<div class="study-session-top">' +
           '<span><span class="study-subject">' + esc(s.subject) + '</span><span class="study-badge">' + esc(badgeFor(s.type)) + '</span></span>' +
           '<span class="study-dur">' + s.duration + ' min</span>' +
         '</div>' +
         '<div class="study-detail collapsed">' + esc(s.detail) + '</div>' +
-        '<div class="study-actions">' +
-          '<button type="button" class="study-btn done-btn' + (isDone ? ' is-active' : '') + '">Mark Done</button>' +
-          '<button type="button" class="study-btn undo-btn">Undo</button>' +
-        '</div>';
+        (readonly
+          ? '<div class="study-upcoming-label">UPCOMING</div>'
+          : ('<div class="study-actions">' +
+              (isMissed ? '<span class="study-missed-label">MISSED</span>' : '') +
+              '<button type="button" class="study-btn done-btn' + (isDone ? ' is-active' : '') + '">Mark Done</button>' +
+              '<button type="button" class="study-btn undo-btn">Undo</button>' +
+            '</div>'));
       const detailEl = row.querySelector('.study-detail');
       detailEl.addEventListener('click', () => detailEl.classList.toggle('collapsed'));
-      row.querySelector('.done-btn').addEventListener('click', () => {
-        const d = loadJSON(studyDoneKey(dStr), {}); d[i] = true; saveJSON(studyDoneKey(dStr), d);
-        renderStudyPanel(); renderWeekGrid();
-      });
-      row.querySelector('.undo-btn').addEventListener('click', () => {
-        const d = loadJSON(studyDoneKey(dStr), {}); d[i] = false; saveJSON(studyDoneKey(dStr), d);
-        renderStudyPanel(); renderWeekGrid();
-      });
+      if (!readonly) {
+        row.querySelector('.done-btn').addEventListener('click', () => {
+          logSession(week, dayKey, s, dStr, todayKey());
+          renderStudyPanel(); renderWeekGrid();
+        });
+        row.querySelector('.undo-btn').addEventListener('click', () => {
+          unlogSession(dStr, s.subject, s.type, s.detail);
+          renderStudyPanel(); renderWeekGrid();
+        });
+      }
       wrap.appendChild(row);
     });
   }
@@ -662,10 +806,11 @@ body::after {
   $('dayNext').addEventListener('click', () => { if (selectedIdx < 4) { selectedIdx++; renderStudyPanel(); } });
 
   // ============================================================
-  // WEEKLY COMPLETION GRID
+  // WEEKLY COMPLETION GRID — one aggregate dot per day (green = all
+  // done, amber = some done, red = nothing done + past, grey = future).
   // ============================================================
   function renderWeekGrid() {
-    const week = getSummerWeek();
+    const week = selectedWeek;
     const grid = $('weekGrid');
     grid.innerHTML = '';
     if (week < 1 || week > SUMMER_END_WEEK) { grid.innerHTML = '<div class="week-grid-empty">No active week.</div>'; return; }
@@ -676,21 +821,23 @@ body::after {
       const isToday = date0.getTime() === today0.getTime();
       const isPast = date0.getTime() < today0.getTime();
       const sessions = sessionsFor(week, dk);
-      const done = loadJSON(studyDoneKey(dateKey(date)), {});
+      const dStr = dateKey(date);
+      const doneCount = sessions.filter(s => isSessionLogged(dStr, s.subject, s.type, s.detail)).length;
+      let dotClass;
+      if (!sessions.length) dotClass = 'none';
+      else if (doneCount === sessions.length) dotClass = 'done';
+      else if (doneCount > 0) dotClass = 'partial';
+      else dotClass = isPast ? 'missed' : 'upcoming';
       const col = document.createElement('div');
       col.className = 'week-grid-col' + (isToday ? ' is-today' : '');
-      const dots = sessions.map((s, i2) => {
-        const isDone = !!done[i2];
-        const cls = isDone ? 'done' : (isPast ? 'missed' : '');
-        return '<span class="week-grid-dot ' + cls + '"></span>';
-      }).join('');
-      col.innerHTML = '<div class="week-grid-day">' + WEEKDAY_LABELS[i].slice(0, 3) + '</div><div class="week-grid-dots">' + (dots || '<span class="week-grid-empty">—</span>') + '</div>';
+      col.innerHTML = '<div class="week-grid-day">' + WEEKDAY_LABELS[i].slice(0, 3) + '</div><span class="week-grid-dot-single ' + dotClass + '"></span>';
       grid.appendChild(col);
     });
   }
 
   // ============================================================
-  // IRISH FLOATING SESSIONS
+  // IRISH FLOATING SESSIONS — completion read from completionLog
+  // (subject:'Irish', irishSession:<id>), locks re-evaluate live.
   // ============================================================
   const IRISH_SESSIONS = [
     { id: 's1', title: 'S1 — Essay phrases and topic selection', duration: 50 },
@@ -700,14 +847,13 @@ body::after {
     { id: 's5', title: 'S5 — Poetry exam technique', duration: 50 },
     { id: 's6', title: 'S6 — Second essay consolidation', duration: 60, requires: ['s1', 's3'] },
   ];
-  function getIrish() { return loadJSON('sd:irish', {}); }
+  function isIrishDone(id) { return getCompletionLog().some(e => e.subject === 'Irish' && e.irishSession === id); }
   function renderIrish() {
-    const state = getIrish();
     const wrap = $('irishRows');
     wrap.innerHTML = '';
     IRISH_SESSIONS.forEach(s => {
-      const done = !!state[s.id];
-      const lockedBy = (s.requires || []).filter(r => !state[r]);
+      const done = isIrishDone(s.id);
+      const lockedBy = (s.requires || []).filter(r => !isIrishDone(r));
       const locked = lockedBy.length > 0 && !done;
       const row = document.createElement('div');
       row.className = 'irish-row' + (locked ? ' locked' : '');
@@ -723,55 +869,98 @@ body::after {
         '</div>';
       if (!locked) {
         row.querySelector('.done-btn').addEventListener('click', () => {
-          const st = getIrish(); st[s.id] = true; saveJSON('sd:irish', st); renderIrish();
+          if (isIrishDone(s.id)) return;
+          const log = getCompletionLog();
+          log.push({ id: clUid(), date: todayKey(), week: getSummerWeek(), day: DOW_NAMES[new Date().getDay()], subject: 'Irish', type: 'Float', detail: s.title, irishSession: s.id, scheduledDate: todayKey() });
+          saveCompletionLog(log);
+          renderIrish();
         });
       }
       row.querySelector('.undo-btn').addEventListener('click', () => {
-        const st = getIrish(); st[s.id] = false; saveJSON('sd:irish', st); renderIrish();
+        saveCompletionLog(getCompletionLog().filter(e => !(e.subject === 'Irish' && e.irishSession === s.id)));
+        renderIrish();
       });
       wrap.appendChild(row);
     });
   }
 
   // ============================================================
-  // APPLIED MATHS COUNTER
+  // APPLIED MATHS COUNTER — count + chapter breakdown derived from
+  // completionLog. The +/- buttons remain as a manual-override
+  // fallback (for sessions logged outside the dashboard), adding/
+  // removing a tagged 'Manual' completionLog entry rather than a
+  // separate counter, so the single-log principle still holds.
   // ============================================================
   const AM_CHAPTERS = [
-    { name: 'Ch1 — UAM', lessons: 7 },
-    { name: 'Ch2 — Vectors', lessons: 3 },
-    { name: 'Ch3 — Projectiles', lessons: 5 },
-    { name: 'Ch4 — Newton’s Laws', lessons: 3 },
-    { name: 'Ch6 — Work and Energy', lessons: 2 },
-    { name: 'Ch7 — Circular Motion', lessons: 3 },
-    { name: 'Ch8 — Collisions', lessons: 4 },
+    { key: 'Ch1', name: 'Ch1 — UAM', lessons: 7 },
+    { key: 'Ch2', name: 'Ch2 — Vectors', lessons: 3 },
+    { key: 'Ch3', name: 'Ch3 — Projectiles', lessons: 5 },
+    { key: 'Ch4', name: 'Ch4 — Newton’s Laws', lessons: 3 },
+    { key: 'Ch6', name: 'Ch6 — Work and Energy', lessons: 2 },
+    { key: 'Ch7', name: 'Ch7 — Circular Motion', lessons: 3 },
+    { key: 'Ch8', name: 'Ch8 — Collisions', lessons: 4 },
   ];
   const AM_TARGET = 27;
+  function chapterForEntry(entry) {
+    const list = (schedule[entry.week] && schedule[entry.week][entry.day]) || [];
+    const match = list.find(s => s.subject === entry.subject && s.type === entry.type && s.detail === entry.detail);
+    return match ? match.chapter : null;
+  }
+  function computeAmProgress() {
+    const amEntries = getCompletionLog().filter(e => e.subject === 'Applied Maths');
+    const realEntries = amEntries.filter(e => e.type !== 'Manual');
+    let manualLeft = amEntries.length - realEntries.length;
+    const perChapterReal = {};
+    realEntries.forEach(e => {
+      const ch = chapterForEntry(e);
+      if (ch) perChapterReal[ch] = (perChapterReal[ch] || 0) + 1;
+    });
+    const chapterCounts = {};
+    AM_CHAPTERS.forEach(ch => {
+      const real = Math.min(ch.lessons, perChapterReal[ch.key] || 0);
+      let extra = 0;
+      if (manualLeft > 0 && real < ch.lessons) {
+        extra = Math.min(manualLeft, ch.lessons - real);
+        manualLeft -= extra;
+      }
+      chapterCounts[ch.key] = real + extra;
+    });
+    return { total: amEntries.length, chapterCounts };
+  }
   function renderAM() {
-    const count = loadJSON('sd:amCounter', 0);
-    $('amCount').textContent = count;
-    let cum = 0;
-    let currentSet = false;
+    const { total, chapterCounts } = computeAmProgress();
+    $('amCount').textContent = total;
     const wrap = $('amChapters');
     wrap.innerHTML = '';
+    let currentSet = false;
     AM_CHAPTERS.forEach(ch => {
-      const prevCum = cum;
-      cum += ch.lessons;
-      const complete = count >= cum;
-      const isCurrent = !currentSet && count < cum;
+      const count = chapterCounts[ch.key] || 0;
+      const complete = count >= ch.lessons;
+      const isCurrent = !currentSet && count < ch.lessons;
       if (isCurrent) currentSet = true;
       const row = document.createElement('div');
       row.className = 'am-chapter-row' + (isCurrent ? ' current' : '') + (complete ? ' complete' : '');
-      row.innerHTML = '<span>' + esc(ch.name) + '</span><span class="am-chapter-count">' + Math.max(0, Math.min(ch.lessons, count - prevCum)) + ' / ' + ch.lessons + '</span>';
+      row.innerHTML = '<span>' + esc(ch.name) + '</span><span class="am-chapter-count">' + count + ' / ' + ch.lessons + '</span>';
       wrap.appendChild(row);
     });
   }
   $('amPlus').addEventListener('click', () => {
-    const c = Math.min(AM_TARGET, loadJSON('sd:amCounter', 0) + 1);
-    saveJSON('sd:amCounter', c); renderAM();
+    if (computeAmProgress().total >= AM_TARGET) return;
+    const log = getCompletionLog();
+    log.push({ id: clUid(), date: todayKey(), week: getSummerWeek(), day: DOW_NAMES[new Date().getDay()], subject: 'Applied Maths', type: 'Manual', detail: 'Manual override', scheduledDate: todayKey() });
+    saveCompletionLog(log);
+    renderAM();
   });
   $('amMinus').addEventListener('click', () => {
-    const c = Math.max(0, loadJSON('sd:amCounter', 0) - 1);
-    saveJSON('sd:amCounter', c); renderAM();
+    const log = getCompletionLog();
+    let idx = -1;
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i].subject === 'Applied Maths' && log[i].type === 'Manual') { idx = i; break; }
+    }
+    if (idx === -1) return; // nothing to undo via the fallback -- remove real sessions via their own Undo button instead
+    log.splice(idx, 1);
+    saveCompletionLog(log);
+    renderAM();
   });
 
   // ============================================================
@@ -808,13 +997,24 @@ body::after {
   // still one Supabase row — no new key introduced.
   // ============================================================
   const LOCKED_SUBJECTS = ['maths', 'irish', 'physics', 'pe'];
-  const DEFAULT_TARGETS = { chemistry: 'H1', accounting: 'H1', english: 'H7', appliedMaths: 'H1', french: 'H5' };
+  // French target matches its own current grade (H7) on purpose -- it's
+  // Duolingo maintenance only, never actively pushed, so there's no real
+  // points gap to show. English target is a floor (H7), already exceeded
+  // by the real current grade (H3) -- see DEPRIORITIZED_NOTE below for how
+  // both render as a note instead of a "points on the table" figure.
+  const DEFAULT_TARGETS = { chemistry: 'H1', accounting: 'H1', english: 'H7', appliedMaths: 'H1', french: 'H7' };
   const GAP_TAGS = {
     chemistry: 'Application gap, not content',
     accounting: 'Execution under time pressure, not knowledge',
     english: 'Deliberately unstudied — H7 floor is the target, not H1',
     appliedMaths: 'Coverage/volume — course completion, not difficulty',
-    french: 'Coverage/volume — rebuilding from Junior Cert baseline',
+    french: 'Maintenance only — not actively targeted',
+  };
+  const DEPRIORITIZED_NOTE = {
+    english: (r) => r.curPts > r.tgtPts
+      ? '+' + (r.curPts - r.tgtPts) + ' points of buffer above the H7 floor. No push planned above the current grade.'
+      : 'Deliberately not prioritised — H7 is a floor, not a target. No push planned above the current grade.',
+    french: () => 'Maintenance only — not actively targeted.',
   };
   function getTargets() { return Object.assign({}, DEFAULT_TARGETS, getGrades().targets || {}); }
   function saveTarget(id, grade) {
@@ -847,7 +1047,7 @@ body::after {
       row.innerHTML = '<span class="pts-row-name">' + esc(s.name) + '</span><select>' + opts + '</select>';
       row.querySelector('select').addEventListener('change', (e) => {
         const g = getGrades(); g[s.id] = e.target.value; saveJSON('sd:points', g);
-        renderPointsSummary(); renderLocked(); renderMarginal(); renderSubjectCards();
+        renderPointsSummary(); renderLocked(); renderMarginal();
       });
       wrap.appendChild(row);
     });
@@ -889,9 +1089,9 @@ body::after {
     const rest = rows.filter(r => r.id !== 'english').sort((a, b) => b.onTable - a.onTable);
     function rowHtml(r) {
       const counting = countingIds.indexOf(r.id) !== -1;
-      const isEnglish = r.id === 'english';
+      const deprioritized = DEPRIORITIZED_NOTE[r.id];
       const optsHtml = (selected) => gradeOpts.map(g => '<option value="' + g + '"' + (g === selected ? ' selected' : '') + '>' + g + '</option>').join('');
-      return '<div class="pts-marg-row' + (isEnglish ? ' deprioritised' : '') + '">' +
+      return '<div class="pts-marg-row' + (deprioritized ? ' deprioritised' : '') + '">' +
         '<div class="pts-marg-top"><span class="pts-marg-name">' + esc(r.name) + '</span>' +
         '<span class="pts-marg-badge ' + (counting ? 'counting' : 'bench') + '">' + (counting ? 'Counting' : 'Bench') + '</span></div>' +
         '<div class="pts-marg-tag">' + esc(r.tag) + '</div>' +
@@ -900,8 +1100,8 @@ body::after {
           '<div class="pts-marg-arrow">&rarr;</div>' +
           '<div class="pts-marg-g"><label>Target</label><select data-role="target" data-id="' + r.id + '">' + optsHtml(r.tgtGrade) + '</select><span class="pts-marg-pts">' + r.tgtPts + ' pts</span></div>' +
         '</div>' +
-        (isEnglish
-          ? '<div class="pts-marg-note">Deliberately not prioritised — H7 is a floor, not a target. No push planned above the current grade.</div>'
+        (deprioritized
+          ? '<div class="pts-marg-note">' + esc(deprioritized(r)) + '</div>'
           : '<div class="pts-marg-ontable">+' + r.onTable + ' points on the table</div>') +
       '</div>';
     }
@@ -909,7 +1109,7 @@ body::after {
     $('ptsMarginal').querySelectorAll('select[data-role="current"]').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const g = getGrades(); g[sel.dataset.id] = e.target.value; saveJSON('sd:points', g);
-        renderPointsSummary(); renderLocked(); renderMarginal(); renderPointsRows(); renderSubjectCards();
+        renderPointsSummary(); renderLocked(); renderMarginal(); renderPointsRows();
       });
     });
     $('ptsMarginal').querySelectorAll('select[data-role="target"]').forEach(sel => {
@@ -922,272 +1122,51 @@ body::after {
   });
 
   // ============================================================
-  // SUBJECT OS — confidence RAG + topic checklist w/ lightweight SRS
-  // ============================================================
-  const SRS_INTERVALS = [1, 3, 7, 14, 30, 60]; // days, by level
-  function getConfidence() { return loadJSON('sd:confidence', {}); }
-  function getTopicState() { return loadJSON('sd:topics', {}); }
-  function getCustomTopics() { return loadJSON('sd:customTopics', {}); }
-  function allTopicsFor(subj) { return subj.topics.concat(getCustomTopics()[subj.id] || []); }
-  function srsStatus(entry) {
-    if (!entry || !entry.due) return { label: 'Not reviewed', cls: 'new' };
-    const today0 = startOfDay(new Date());
-    const due0 = startOfDay(new Date(entry.due));
-    const days = Math.round((due0 - today0) / (1000 * 60 * 60 * 24));
-    if (days < 0) return { label: 'Overdue ' + (-days) + 'd', cls: 'overdue' };
-    if (days === 0) return { label: 'Due today', cls: 'due' };
-    return { label: 'Next in ' + days + 'd', cls: 'ahead' };
-  }
-  function reviewTopic(subjId, topicName) {
-    const all = getTopicState();
-    all[subjId] = all[subjId] || {};
-    const cur = all[subjId][topicName] || { level: -1 };
-    const level = Math.min(SRS_INTERVALS.length - 1, cur.level + 1);
-    const due = addDays(new Date(), SRS_INTERVALS[level]);
-    all[subjId][topicName] = { level, due: dateKey(due) };
-    saveJSON('sd:topics', all);
-  }
-  const subjOpenState = {};
-  function renderSubjectCards() {
-    const grades = getGrades();
-    const conf = getConfidence();
-    const topicState = getTopicState();
-    const wrap = $('subjectCards');
-    wrap.innerHTML = '';
-    SUBJECTS.forEach(s => {
-      const card = document.createElement('div');
-      card.className = 'subj-card' + (subjOpenState[s.id] ? ' open' : '');
-      const topics = allTopicsFor(s);
-      const subjConf = conf[s.id] || null;
-      const topicRows = topics.map(t => {
-        const st = srsStatus((topicState[s.id] || {})[t]);
-        return '<div class="topic-row"><span class="topic-name">' + esc(t) + '</span><button type="button" class="topic-srs ' + st.cls + '" data-topic="' + esc(t) + '">' + esc(st.label) + '</button></div>';
-      }).join('') || '<div class="study-empty">No topics yet — add one below.</div>';
-      card.innerHTML =
-        '<div class="subj-head">' +
-          '<span class="subj-dot" style="background:' + s.color + '"></span>' +
-          '<span class="subj-name">' + esc(s.name) + '</span>' +
-          '<span class="subj-grade">' + esc(grades[s.id] || '—') + '</span>' +
-          '<span class="subj-caret">▸</span>' +
-        '</div>' +
-        '<div class="subj-body">' +
-          '<div class="subj-rag">' +
-            '<button type="button" class="rag-red' + (subjConf === 'red' ? ' active' : '') + '" data-c="red">Red</button>' +
-            '<button type="button" class="rag-amber' + (subjConf === 'amber' ? ' active' : '') + '" data-c="amber">Amber</button>' +
-            '<button type="button" class="rag-green' + (subjConf === 'green' ? ' active' : '') + '" data-c="green">Green</button>' +
-          '</div>' +
-          '<div class="subj-topics">' + topicRows + '</div>' +
-          '<div class="topic-add"><input type="text" placeholder="Add topic" maxlength="60"><button type="button">Add</button></div>' +
-        '</div>';
-      card.querySelector('.subj-head').addEventListener('click', () => {
-        subjOpenState[s.id] = !subjOpenState[s.id];
-        renderSubjectCards();
-      });
-      card.querySelectorAll('.subj-rag button').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const c = getConfidence();
-          c[s.id] = (c[s.id] === btn.dataset.c) ? null : btn.dataset.c;
-          saveJSON('sd:confidence', c);
-          renderSubjectCards();
-        });
-      });
-      card.querySelectorAll('.topic-srs').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          reviewTopic(s.id, btn.dataset.topic);
-          renderSubjectCards();
-        });
-      });
-      const addInput = card.querySelector('.topic-add input');
-      const addBtn = card.querySelector('.topic-add button');
-      const doAdd = () => {
-        const name = addInput.value.trim();
-        if (!name) return;
-        const custom = getCustomTopics();
-        custom[s.id] = custom[s.id] || [];
-        custom[s.id].push(name);
-        saveJSON('sd:customTopics', custom);
-        renderSubjectCards();
-      };
-      addBtn.addEventListener('click', (e) => { e.stopPropagation(); doAdd(); });
-      addInput.addEventListener('click', (e) => e.stopPropagation());
-      addInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
-      wrap.appendChild(card);
-    });
-  }
-
-  // ============================================================
-  // AAC PROJECT TRACKER — Summer Research Checklist + 6th-Year Deadline
-  // Tracker, one card per subject. Stored under sd:aacProject:{subject}.
-  // ============================================================
-  function parseISODate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
-  const AAC_SUBJECTS = {
-    chemistry: {
-      checklist: [
-        { id: 'guidelines', label: 'Read the LC Chemistry AAC guidelines on examinations.ie' },
-        { id: 'bgReading1', label: 'Background reading: lactic acid in exercise physiology' },
-        { id: 'bgReading2', label: 'Background reading: acid-base titration and buffer chemistry' },
-        { id: 'researchQuestion', label: 'Draft a specific research question' },
-        { id: 'equipment', label: 'List equipment needed' },
-      ],
-      // Seeded from james_chemistry_plan_v3.html: guidelines confirmed read, and a
-      // working research question is already drafted there. Everything else (the
-      // two background-reading areas, equipment) isn't yet — left unchecked.
-      defaults: { guidelines: true, bgReading1: false, bgReading2: false, researchQuestion: true, equipment: false },
-    },
-    physics: {
-      checklist: [
-        { id: 'guidelines', label: 'Read the LC Physics AAC guidelines on examinations.ie' },
-        { id: 'bgReading1', label: 'Background reading: phase change materials and thermal storage principles' },
-        { id: 'bgReading2', label: 'Background reading: heat transfer equations relevant to the Python model' },
-        { id: 'researchQuestion', label: 'Draft a specific research question' },
-        { id: 'equipment', label: 'List equipment needed' },
-      ],
-      // james_physics_plan_reference_v2.md: "Current state: Untouched beyond an
-      // introductory chat" — nothing confirmed done yet, so nothing pre-checked.
-      defaults: { guidelines: false, bgReading1: false, bgReading2: false, researchQuestion: false, equipment: false },
-    },
-  };
-  const AAC_PHASES = [
-    { id: 'sept', label: 'September — Methodology signed off, first trials run', windowEnd: new Date(2026, 8, 30) },
-    { id: 'octNov', label: 'October–November — Data collection complete', windowEnd: new Date(2026, 10, 30) },
-    { id: 'dec', label: 'December — First full draft written', windowEnd: new Date(2026, 11, 31) },
-    { id: 'submission', label: 'Submission — Final polish and submission', windowEnd: null },
-  ];
-  const AAC_STATUS_OPTS = [['not-started', 'Not started'], ['in-progress', 'In progress'], ['done', 'Done']];
-
-  function aacKey(subject) { return 'sd:aacProject:' + subject; }
-  function getAacProject(subject) {
-    const existing = loadJSON(aacKey(subject), null);
-    if (existing) return existing;
-    const seeded = { checklist: Object.assign({}, AAC_SUBJECTS[subject].defaults), phases: {}, deadline: null };
-    saveJSON(aacKey(subject), seeded);
-    return seeded;
-  }
-  function saveAacProject(subject, patch) {
-    const next = Object.assign({}, getAacProject(subject), patch);
-    saveJSON(aacKey(subject), next); // instant local write; sync.js pushes to Supabase in the background
-    return next;
-  }
-  function renderAacChecklist(subject) {
-    const def = AAC_SUBJECTS[subject];
-    const data = getAacProject(subject);
-    const wrap = $('aacChecklist-' + subject);
-    const doneCount = def.checklist.filter(item => data.checklist[item.id]).length;
-    wrap.innerHTML = def.checklist.map(item => {
-      const on = !!data.checklist[item.id];
-      return '<div class="aacp-check-row' + (on ? ' done' : '') + '" data-id="' + item.id + '">' +
-        '<span class="aacp-check' + (on ? ' on' : '') + '"></span>' +
-        '<span class="aacp-check-label">' + esc(item.label) + '</span>' +
-      '</div>';
-    }).join('');
-    wrap.querySelectorAll('.aacp-check-row').forEach(row => {
-      row.addEventListener('click', () => {
-        const cur = getAacProject(subject);
-        cur.checklist[row.dataset.id] = !cur.checklist[row.dataset.id];
-        saveAacProject(subject, { checklist: cur.checklist });
-        renderAacChecklist(subject);
-      });
-    });
-    const badge = $('aacProgress-' + subject);
-    badge.textContent = doneCount + '/' + def.checklist.length;
-    badge.classList.toggle('full', doneCount === def.checklist.length);
-  }
-  function aacPaceStatus(phase, status, deadline) {
-    if (status === 'done') return 'done';
-    const windowEnd = phase.id === 'submission' ? (deadline ? parseISODate(deadline) : null) : phase.windowEnd;
-    if (windowEnd && new Date() > windowEnd) return 'behind';
-    return 'ok';
-  }
-  function renderAacPhases(subject) {
-    const data = getAacProject(subject);
-    const wrap = $('aacPhases-' + subject);
-    wrap.innerHTML = AAC_PHASES.map(phase => {
-      const status = data.phases[phase.id] || 'not-started';
-      const pace = aacPaceStatus(phase, status, data.deadline);
-      const paceLabel = pace === 'done' ? 'Done' : pace === 'behind' ? 'Behind' : 'On pace';
-      return '<div class="aacp-phase-row">' +
-        '<div class="aacp-phase-top"><span class="aacp-phase-label">' + esc(phase.label) + '</span>' +
-        '<span class="aacp-pace-badge ' + pace + '">' + paceLabel + '</span></div>' +
-        '<div class="aacp-status-seg" data-phase="' + phase.id + '">' +
-          AAC_STATUS_OPTS.map(([val, lbl]) => '<button type="button" class="aacp-status-btn' + (status === val ? (val === 'in-progress' ? ' active progress' : ' active') : '') + '" data-val="' + val + '">' + lbl + '</button>').join('') +
-        '</div>' +
-      '</div>';
-    }).join('');
-    wrap.querySelectorAll('.aacp-status-seg').forEach(seg => {
-      seg.querySelectorAll('.aacp-status-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const cur = getAacProject(subject);
-          cur.phases[seg.dataset.phase] = btn.dataset.val;
-          saveAacProject(subject, { phases: cur.phases });
-          renderAacPhases(subject);
-        });
-      });
-    });
-  }
-  function renderAacDeadline(subject) {
-    const data = getAacProject(subject);
-    const wrap = $('aacDeadlineRow-' + subject);
-    if (data.deadline) {
-      const days = Math.round((parseISODate(data.deadline) - startOfDay(new Date())) / (1000 * 60 * 60 * 24));
-      const daysText = days > 0 ? days + ' day' + (days === 1 ? '' : 's') + ' remaining'
-        : days === 0 ? 'Due today'
-        : (-days) + ' day' + (days === -1 ? '' : 's') + ' overdue';
-      wrap.innerHTML =
-        '<div class="aacp-deadline-countdown" id="aacDeadlineDisplay-' + subject + '"><b>' + esc(daysText) + '</b>Submission deadline: ' + esc(data.deadline) + ' &mdash; tap to change</div>' +
-        '<div class="aacp-deadline-edit" id="aacDeadlineEdit-' + subject + '"><input type="date" id="aacDeadlineInput-' + subject + '" value="' + esc(data.deadline) + '"><button type="button" id="aacDeadlineSave-' + subject + '">Save</button></div>';
-    } else {
-      wrap.innerHTML =
-        '<div class="aacp-deadline-placeholder" id="aacDeadlineDisplay-' + subject + '">~January 2027 &mdash; not yet confirmed, tap to set exact date</div>' +
-        '<div class="aacp-deadline-edit" id="aacDeadlineEdit-' + subject + '"><input type="date" id="aacDeadlineInput-' + subject + '"><button type="button" id="aacDeadlineSave-' + subject + '">Save</button></div>';
-    }
-    $('aacDeadlineDisplay-' + subject).addEventListener('click', () => {
-      $('aacDeadlineEdit-' + subject).classList.toggle('show');
-    });
-    $('aacDeadlineSave-' + subject).addEventListener('click', () => {
-      const val = $('aacDeadlineInput-' + subject).value;
-      if (!val) return;
-      saveAacProject(subject, { deadline: val });
-      renderAacDeadline(subject);
-      renderAacPhases(subject); // submission phase's pace check depends on the deadline
-    });
-  }
-  function renderAacProject(subject) {
-    renderAacChecklist(subject);
-    renderAacPhases(subject);
-    renderAacDeadline(subject);
-  }
-
-  // ============================================================
   // STREAKS
   // ============================================================
+  // Study Days is auto-calculated from completionLog (consecutive days with
+  // at least one non-Anki entry) -- no manual tap needed. Duolingo/Anki stay
+  // manual since those happen outside the dashboard.
   const STREAKS = [
-    { id: 'duolingo', label: 'Duolingo' },
-    { id: 'anki', label: 'Anki' },
-    { id: 'studyDays', label: 'Study Days' },
+    { id: 'duolingo', label: 'Duolingo', manual: true },
+    { id: 'anki', label: 'Anki', manual: true },
+    { id: 'studyDays', label: 'Study Days', manual: false },
   ];
   function getStreaks() { return loadJSON('sd:streaks', {}); }
+  function computeStudyDaysStreak() {
+    const log = getCompletionLog();
+    let streak = 0;
+    let d = startOfDay(new Date());
+    while (log.some(e => e.date === dateKey(d) && e.subject !== 'Anki')) {
+      streak++;
+      d = addDays(d, -1);
+    }
+    return streak;
+  }
   function renderStreaks() {
     const state = getStreaks();
     const wrap = $('streaksRow');
     wrap.innerHTML = '';
     STREAKS.forEach(s => {
-      const val = state[s.id] || 0;
+      const val = s.manual ? (state[s.id] || 0) : computeStudyDaysStreak();
       const item = document.createElement('div');
       item.className = 'streak-item';
       item.innerHTML =
         '<div class="streak-label">' + esc(s.label) + '</div>' +
         '<div class="streak-val">' + val + '</div>' +
-        '<div class="streak-btns"><button type="button" data-d="-1">&minus;</button><button type="button" data-d="1">+</button></div>';
-      item.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const st = getStreaks();
-          st[s.id] = Math.max(0, (st[s.id] || 0) + parseInt(btn.dataset.d, 10));
-          saveJSON('sd:streaks', st);
-          renderStreaks();
+        (s.manual
+          ? '<div class="streak-btns"><button type="button" data-d="-1">&minus;</button><button type="button" data-d="1">+</button></div>'
+          : '<div class="streak-label" style="opacity:.5;margin-top:8px">auto</div>');
+      if (s.manual) {
+        item.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const st = getStreaks();
+            st[s.id] = Math.max(0, (st[s.id] || 0) + parseInt(btn.dataset.d, 10));
+            saveJSON('sd:streaks', st);
+            renderStreaks();
+          });
         });
-      });
+      }
       wrap.appendChild(item);
     });
   }
@@ -1195,17 +1174,20 @@ body::after {
   // ---------- boot ----------
   function renderAll() {
     renderHeader();
+    renderWeekToggle();
     renderStudyPanel();
     renderWeekGrid();
     renderIrish();
     renderAM();
     renderPointsRows();
-    renderSubjectCards();
-    renderAacProject('chemistry');
-    renderAacProject('physics');
     renderStreaks();
   }
   renderAll();
+  // Short delay so the completionLog cloud pull (async, see bottom of file)
+  // has a chance to resolve before migration runs against local state --
+  // reduces (doesn't fully eliminate) the odds of two devices independently
+  // migrating the same old sd:/td:studyDone data before syncing with each other.
+  setTimeout(() => { migrateStudyDoneOnce(); renderAll(); }, 1500);
   setInterval(renderHeader, 60 * 1000);
   window.addEventListener('storage', renderAll);
 })();
@@ -1217,6 +1199,19 @@ document.addEventListener('DOMContentLoaded', function () {
   initCloudSync({
     appKey: 'studyPage',
     syncedPrefixes: ['sd:'],
+    onApplied: function () {
+      window.dispatchEvent(new Event('storage'));
+    }
+  });
+  // Dedicated registration for the shared completionLog key -- deliberately
+  // NOT under the sd: prefix. It's read/written from both study.html and
+  // index.html, so it needs its own Supabase row (key='completionLog') that
+  // both pages' sync instances independently push/pull, rather than living
+  // inside either page's own sd:/td: blob where only one side would ever
+  // push it.
+  initCloudSync({
+    appKey: 'completionLog',
+    syncedKeys: ['completionLog', 'completionLogMigratedV1'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }
