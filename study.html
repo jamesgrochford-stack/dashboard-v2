@@ -621,9 +621,59 @@ body::after {
     });
     saveCompletionLog(log);
   }
-  function unlogSession(scheduledDate, subject, type, detail) {
-    saveCompletionLog(getCompletionLog().filter(e => !(e.scheduledDate === scheduledDate && e.subject === subject && e.type === type && e.detail === detail)));
+  // ---------- deletion tombstones ----------
+  // A stale/out-of-order cloud sync response could otherwise resurrect an
+  // entry the user just removed (see mergeCompletionLog below). Recording
+  // removed ids here, synced alongside the log, lets the merge permanently
+  // exclude them regardless of what a delayed remote snapshot still contains.
+  function getDeletedIds() { return loadJSON('completionLogDeletedIds', []); }
+  function tombstone(ids) {
+    if (!ids.length) return;
+    const set = new Set(getDeletedIds());
+    ids.forEach(id => set.add(id));
+    saveJSON('completionLogDeletedIds', Array.from(set));
   }
+  function removeLogEntries(predicate) {
+    const log = getCompletionLog();
+    const removedIds = log.filter(predicate).map(e => e.id);
+    if (!removedIds.length) return;
+    saveCompletionLog(log.filter(e => !predicate(e)));
+    tombstone(removedIds);
+  }
+  function unlogSession(scheduledDate, subject, type, detail) {
+    removeLogEntries(e => e.scheduledDate === scheduledDate && e.subject === subject && e.type === type && e.detail === detail);
+  }
+  // ---------- merge-safe cloud reconciliation for completionLog ----------
+  // sync.js's default reconciliation blindly overwrites on every pull/realtime
+  // event -- fine for slow-moving settings blobs, but completionLog gets
+  // written in quick discrete bursts (tap Mark Done, immediately navigate),
+  // right in the window where this page's own pull may still be in flight.
+  // A stale response arriving after a fresher local write must never be able
+  // to silently drop it, so entries are unioned by id (already unique and
+  // immutable-once-written) rather than replaced, with tombstones subtracted
+  // afterward so real deletions still stick.
+  function unionById(a, b) {
+    const seen = new Set();
+    const out = [];
+    (a || []).concat(b || []).forEach(e => {
+      if (!e || !e.id || seen.has(e.id)) return;
+      seen.add(e.id);
+      out.push(e);
+    });
+    return out;
+  }
+  function mergeCompletionLog(localVal, remoteVal) {
+    const deleted = new Set(getDeletedIds());
+    return unionById(localVal, remoteVal).filter(e => !deleted.has(e.id));
+  }
+  function mergeDeletedIds(localVal, remoteVal) {
+    return Array.from(new Set((localVal || []).concat(remoteVal || [])));
+  }
+  // Exposed on window: the initCloudSync registration for this key lives in
+  // a separate <script> block below (outside this IIFE), same cross-block
+  // pattern as window.initCloudSync itself.
+  window.mergeCompletionLog = mergeCompletionLog;
+  window.mergeDeletedIds = mergeDeletedIds;
 
   // ---------- one-time migration from the old per-page sd:/td:studyDone
   // maps + the old manual sd:amCounter, guarded so it only ever runs once.
@@ -877,7 +927,7 @@ body::after {
         });
       }
       row.querySelector('.undo-btn').addEventListener('click', () => {
-        saveCompletionLog(getCompletionLog().filter(e => !(e.subject === 'Irish' && e.irishSession === s.id)));
+        removeLogEntries(e => e.subject === 'Irish' && e.irishSession === s.id);
         renderIrish();
       });
       wrap.appendChild(row);
@@ -953,13 +1003,12 @@ body::after {
   });
   $('amMinus').addEventListener('click', () => {
     const log = getCompletionLog();
-    let idx = -1;
+    let target = null;
     for (let i = log.length - 1; i >= 0; i--) {
-      if (log[i].subject === 'Applied Maths' && log[i].type === 'Manual') { idx = i; break; }
+      if (log[i].subject === 'Applied Maths' && log[i].type === 'Manual') { target = log[i]; break; }
     }
-    if (idx === -1) return; // nothing to undo via the fallback -- remove real sessions via their own Undo button instead
-    log.splice(idx, 1);
-    saveCompletionLog(log);
+    if (!target) return; // nothing to undo via the fallback -- remove real sessions via their own Undo button instead
+    removeLogEntries(e => e.id === target.id);
     renderAM();
   });
 
@@ -1211,7 +1260,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // push it.
   initCloudSync({
     appKey: 'completionLog',
-    syncedKeys: ['completionLog', 'completionLogMigratedV1'],
+    syncedKeys: ['completionLog', 'completionLogMigratedV1', 'completionLogDeletedIds'],
+    merge: {
+      completionLog: mergeCompletionLog,
+      completionLogDeletedIds: mergeDeletedIds,
+    },
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }

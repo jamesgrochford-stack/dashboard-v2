@@ -25,6 +25,11 @@
     const syncedKeys = (config && config.syncedKeys) || [];
     const syncedPrefixes = (config && config.syncedPrefixes) || [];
     const onApplied = config && config.onApplied;
+    // Optional per-key merge hook: { [key]: (localVal, remoteVal) => mergedVal }.
+    // When present for a key, applyRemote() uses the merged result instead of
+    // blindly overwriting with the remote value. Every caller that doesn't
+    // pass this gets byte-identical behavior to before -- opt-in only.
+    const mergeFns = (config && config.merge) || {};
     if (!appKey) return;
     if (!window.supabase) return;
     if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -79,21 +84,37 @@
       if (!remote || typeof remote !== 'object') return false;
       suppressSync = true;
       let changed = false;
+      let needsRepush = false;
       try {
         for (const k of Object.keys(remote)) {
           if (!matches(k)) continue;
-          const incoming = JSON.stringify(remote[k]);
           const local = localStorage.getItem(k);
+          let incoming;
+          if (typeof mergeFns[k] === 'function') {
+            let localVal = null;
+            try { localVal = local == null ? null : JSON.parse(local); } catch (e) {}
+            let merged;
+            try { merged = mergeFns[k](localVal, remote[k]); } catch (e) { merged = remote[k]; }
+            incoming = JSON.stringify(merged);
+            // If the merge produced something beyond what remote alone had
+            // (i.e. local held data remote didn't know about yet), the
+            // merged result needs to go back up so other devices get it too.
+            if (incoming !== JSON.stringify(remote[k])) needsRepush = true;
+          } else {
+            incoming = JSON.stringify(remote[k]);
+          }
           if (local !== incoming) {
             try { origSet(k, incoming); changed = true; } catch (e) {}
           }
         }
         for (const k of listAllKeys()) {
           if (!(k in remote)) {
+            if (typeof mergeFns[k] === 'function') { needsRepush = true; continue; }
             try { origRemove(k); changed = true; } catch (e) {}
           }
         }
       } finally { suppressSync = false; }
+      if (needsRepush) schedulePush();
       if (changed && typeof onApplied === 'function') {
         try { onApplied(); } catch (e) {}
       }
@@ -167,6 +188,12 @@
 
     window.addEventListener('beforeunload', flushOnUnload);
     window.addEventListener('pagehide', flushOnUnload);
+    // beforeunload/pagehide are known-unreliable on mobile Safari / PWA
+    // home-screen contexts -- visibilitychange is the recommended, more
+    // reliable signal for "the user is backgrounding or closing this".
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushOnUnload();
+    });
     window.addEventListener('storage', (e) => {
       if (e.key && matches(e.key)) schedulePush();
     });

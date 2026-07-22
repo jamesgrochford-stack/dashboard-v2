@@ -1648,9 +1648,44 @@ body::after {
     });
     saveCompletionLog(log);
   }
-  function unlogSession(scheduledDate, subject, type, detail) {
-    saveCompletionLog(getCompletionLog().filter(e => !(e.scheduledDate === scheduledDate && e.subject === subject && e.type === type && e.detail === detail)));
+  // ---------- deletion tombstones (see matching comment in study.html) ----------
+  function getDeletedIds() { return loadJSON('completionLogDeletedIds', []); }
+  function tombstone(ids) {
+    if (!ids.length) return;
+    const set = new Set(getDeletedIds());
+    ids.forEach(id => set.add(id));
+    saveJSON('completionLogDeletedIds', Array.from(set));
   }
+  function removeLogEntries(predicate) {
+    const log = getCompletionLog();
+    const removedIds = log.filter(predicate).map(e => e.id);
+    if (!removedIds.length) return;
+    saveCompletionLog(log.filter(e => !predicate(e)));
+    tombstone(removedIds);
+  }
+  function unlogSession(scheduledDate, subject, type, detail) {
+    removeLogEntries(e => e.scheduledDate === scheduledDate && e.subject === subject && e.type === type && e.detail === detail);
+  }
+  // ---------- merge-safe cloud reconciliation for completionLog (see matching comment in study.html) ----------
+  function unionById(a, b) {
+    const seen = new Set();
+    const out = [];
+    (a || []).concat(b || []).forEach(e => {
+      if (!e || !e.id || seen.has(e.id)) return;
+      seen.add(e.id);
+      out.push(e);
+    });
+    return out;
+  }
+  function mergeCompletionLog(localVal, remoteVal) {
+    const deleted = new Set(getDeletedIds());
+    return unionById(localVal, remoteVal).filter(e => !deleted.has(e.id));
+  }
+  function mergeDeletedIds(localVal, remoteVal) {
+    return Array.from(new Set((localVal || []).concat(remoteVal || [])));
+  }
+  window.mergeCompletionLog = mergeCompletionLog;
+  window.mergeDeletedIds = mergeDeletedIds;
 
   // ---------- one-time migration from the old per-page sd:/td:studyDone
   // maps + the old manual sd:amCounter, guarded so it only ever runs once.
@@ -2096,7 +2131,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // td: blob, so Mark Done works identically from either page.
   initCloudSync({
     appKey: 'completionLog',
-    syncedKeys: ['completionLog', 'completionLogMigratedV1'],
+    syncedKeys: ['completionLog', 'completionLogMigratedV1', 'completionLogDeletedIds'],
+    merge: {
+      completionLog: mergeCompletionLog,
+      completionLogDeletedIds: mergeDeletedIds,
+    },
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }
